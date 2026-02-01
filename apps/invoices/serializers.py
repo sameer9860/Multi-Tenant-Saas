@@ -5,4 +5,4 @@ class InvoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Invoice
         fields = '__all__'
-        read_only_fields = ('organization',)  # organization will be auto-set
+        read_only_fields = ('organization',)  

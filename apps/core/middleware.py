@@ -1,5 +1,3 @@
-# apps/core/middleware.py
-
 class TenantMiddleware:
     """
     Middleware to attach organization to every request

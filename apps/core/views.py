@@ -1,4 +1,3 @@
-# apps/core/views.py
 from django.http import JsonResponse
 
 def test_org(request):

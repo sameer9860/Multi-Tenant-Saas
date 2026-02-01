@@ -6,7 +6,6 @@ class InvoiceViewSet(ModelViewSet):
     serializer_class = InvoiceSerializer
 
     def get_queryset(self):
-        # Only invoices for the user's organization
         return Invoice.objects.filter(
             organization=self.request.organization
         )
