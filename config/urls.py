@@ -29,7 +29,10 @@ urlpatterns = [
   
 ]
 
+from django.urls import re_path
+
 urlpatterns += [
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # allow both `/api/token` and `/api/token/` (optional trailing slash)
+    re_path(r'^api/token/?$', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    re_path(r'^api/token/refresh/?$', TokenRefreshView.as_view(), name='token_refresh'),
 ]

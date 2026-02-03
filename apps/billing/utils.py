@@ -1,11 +1,18 @@
 def can_create_invoice(request):
     """
-    Check if the organization is allowed to create more invoices
-    based on its subscription plan.
+    Safely check invoice creation permission based on plan.
     """
-    subscription = request.organization.subscription
+    organization = getattr(request, 'organization', None)
+
+    if not organization:
+        return False  # Block if tenant not resolved
+
+    subscription = getattr(organization, 'subscription', None)
+
+    if not subscription:
+        return False
 
     if subscription.plan == 'FREE':
-        return request.organization.invoices.count() < 10
+        return organization.invoices.count() < 10
 
     return True
