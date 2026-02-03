@@ -49,7 +49,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'apps.core',
     'apps.accounts',
-    'apps.invoices',    
+    'apps.invoices',  
+    'apps.billing',
+  
 ]
 
 MIDDLEWARE = [
