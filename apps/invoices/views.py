@@ -5,6 +5,7 @@ from rest_framework.exceptions import PermissionDenied
 from .serializers import InvoiceSerializer
 from rest_framework.permissions import IsAuthenticated
 from apps.core.permissions import IsOwnerOrAdmin
+from apps.core.models import Organization
 
 class InvoiceViewSet(ModelViewSet):
     serializer_class = InvoiceSerializer
@@ -32,5 +33,12 @@ class InvoiceViewSet(ModelViewSet):
             raise PermissionDenied(
                 "Invoice limit reached. Please upgrade your plan."
             )
+            
+        invoice = serializer.save(organization=self.request.organization) 
+        usage = self.request.organization.usage
+        usage.invoices_created += 1
+        usage.save()
+            
+            
 
         serializer.save(organization=org)

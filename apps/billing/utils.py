@@ -3,6 +3,7 @@ def can_create_invoice(request):
     Safely check invoice creation permission based on plan.
     """
     organization = getattr(request, 'organization', None)
+    usage = getattr(request.organization, 'usage', None)
 
     if not organization:
         return False  # Block if tenant not resolved
