@@ -26,7 +26,7 @@ class Subscription(models.Model):
         return f"{self.organization.name} - {self.plan}"
 
 
-class Usage(models.Models):
+class Usage(models.Model):
     organization = models.OneToOneField(
         Organization,
         on_delete=models.CASCADE,
