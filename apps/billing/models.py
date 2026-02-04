@@ -1,4 +1,5 @@
 from django.db import models
+from apps.core.models import Organization
 
 class Subscription(models.Model):
     organization = models.OneToOneField(
@@ -23,3 +24,13 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f"{self.organization.name} - {self.plan}"
+
+
+class Usage(models.Models):
+    organization = models.OneToOneField(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='usage'
+    )
+    invoices_created = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
