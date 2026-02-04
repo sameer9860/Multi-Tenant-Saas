@@ -24,10 +24,10 @@ from rest_framework_simplejwt.views import (
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('core/', include('apps.core.urls')),
-    path('api/', include('apps.invoices.urls'))
-    
-  
+    path('api/', include('apps.invoices.urls')),
+    path('billing/', include('apps.billing.urls')),
 ]
+
 
 from django.urls import re_path
 
