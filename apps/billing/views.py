@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.parsers import JSONParser, FormParser
 from .serializers import UsageSerializer
 from django.views.generic import TemplateView
 from .models import PaymentTransaction
@@ -79,10 +80,28 @@ class UsageDashboardView(TemplateView):
 
 class UpgradePlanAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, FormParser]
 
     def post(self, request):
-        plan = request.data.get("plan")
-        provider = request.data.get("provider")
+        # Accept plan/provider from JSON, form-encoded body, or query params and normalize case
+        plan_raw = (
+            request.data.get("plan")
+            or request.POST.get("plan")
+            or request.query_params.get("plan")
+        )
+        provider_raw = (
+            request.data.get("provider")
+            or request.POST.get("provider")
+            or request.query_params.get("provider")
+        )
+
+        if not plan_raw:
+            return Response({"error": "plan is required"}, status=400)
+        if not provider_raw:
+            return Response({"error": "provider is required"}, status=400)
+
+        plan = str(plan_raw).strip().upper()
+        provider = str(provider_raw).strip().upper()
 
         if plan not in PLAN_PRICES:
             return Response({"error": "Invalid plan"}, status=400)
@@ -104,15 +123,51 @@ class UpgradePlanAPIView(APIView):
         })
         
 class EsewaVerifyAPIView(APIView):
-    def post(self, request):
-        transaction_id = request.data.get("transaction_id")
+    permission_classes = [AllowAny]
+    parser_classes = [JSONParser, FormParser]
 
-        tx = PaymentTransaction.objects.get(id=transaction_id)
+    def post(self, request):
+        # Accept transaction id from several possible keys and locations
+        transaction_id = (
+            request.data.get("transaction_id")
+            or request.data.get("transaction")
+            or request.data.get("txn")
+            or request.POST.get("transaction_id")
+            or request.POST.get("transaction")
+            or request.POST.get("txn")
+            or request.query_params.get("transaction_id")
+            or request.query_params.get("transaction")
+            or request.query_params.get("txn")
+        )
+        if not transaction_id:
+            return Response({"error": "transaction_id is required"}, status=400)
+
+        # coerce to int where possible
+        try:
+            transaction_id_int = int(transaction_id)
+        except (ValueError, TypeError):
+            return Response({"error": "invalid transaction_id"}, status=400)
+
+        try:
+            tx = PaymentTransaction.objects.get(id=transaction_id_int)
+        except PaymentTransaction.DoesNotExist:
+            return Response({"error": "transaction not found"}, status=404)
+
         tx.status = "SUCCESS"
-        tx.reference_id = "ESEWA_TEST_123"
+        tx.reference_id = (
+            request.data.get("reference_id")
+            or request.POST.get("reference_id")
+            or request.query_params.get("reference_id")
+            or "ESEWA_TEST_123"
+        )
         tx.save()
 
-        subscription = tx.organization.subscription
+        # Ensure a Subscription exists for this organization
+        subscription = getattr(tx.organization, "subscription", None)
+        if not subscription:
+            from .models import Subscription
+            subscription, _ = Subscription.objects.get_or_create(organization=tx.organization)
+
         subscription.plan = tx.plan
         subscription.save()
 
