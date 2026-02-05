@@ -34,3 +34,31 @@ class Usage(models.Model):
     )
     invoices_created = models.PositiveIntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    
+class PaymentTransaction(models.Model):
+    PAYMENT_PROVIDERS = (
+        ("ESEWA", "eSewa"),
+        ("KHALTI", "Khalti"),
+    )
+
+    STATUS_CHOICES = (
+        ("PENDING", "Pending"),
+        ("SUCCESS", "Success"),
+        ("FAILED", "Failed"),
+    )
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="payments"
+    )
+    plan = models.CharField(max_length=20)
+    provider = models.CharField(max_length=10, choices=PAYMENT_PROVIDERS)
+    amount = models.PositiveIntegerField()
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default="PENDING"
+    )
+    reference_id = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
