@@ -102,3 +102,19 @@ class UpgradePlanAPIView(APIView):
             "amount": transaction.amount,
             "provider": provider,
         })
+        
+class EsewaVerifyAPIView(APIView):
+    def post(self, request):
+        transaction_id = request.data.get("transaction_id")
+
+        tx = PaymentTransaction.objects.get(id=transaction_id)
+        tx.status = "SUCCESS"
+        tx.reference_id = "ESEWA_TEST_123"
+        tx.save()
+
+        subscription = tx.organization.subscription
+        subscription.plan = tx.plan
+        subscription.save()
+
+        return Response({"message": "Payment successful"})
+        
