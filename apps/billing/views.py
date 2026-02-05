@@ -3,33 +3,17 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .serializers import UsageSerializer
 from django.views.generic import TemplateView
-from .constants import PLAN_PRICES
 from .models import PaymentTransaction
+from .constants import PLAN_PRICES
 class UpgradePlanView(APIView):
- permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
-def post(self, request):
-        plan = request.data.get("plan")
-        provider = request.data.get("provider")
-
-        if plan not in PLAN_PRICES:
-            return Response({"error": "Invalid plan"}, status=400)
-
-        if provider not in ["ESEWA", "KHALTI"]:
-            return Response({"error": "Invalid provider"}, status=400)
-
-        transaction = PaymentTransaction.objects.create(
-            organization=request.organization,
-            plan=plan,
-            provider=provider,
-            amount=PLAN_PRICES[plan],
-        )
-
-        return Response({
-            "transaction_id": transaction.id,
-            "amount": transaction.amount,
-            "provider": provider,
-        })
+    def post(self, request):
+        plan = request.data.get('plan')
+        subscription = request.organization.subscription
+        subscription.plan = plan
+        subscription.save()
+        return Response({"message": f"Upgraded to {plan}"})
     
 
 
@@ -92,3 +76,29 @@ class UsageDashboardView(TemplateView):
         })
         return context
     
+
+class UpgradePlanAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        plan = request.data.get("plan")
+        provider = request.data.get("provider")
+
+        if plan not in PLAN_PRICES:
+            return Response({"error": "Invalid plan"}, status=400)
+
+        if provider not in ["ESEWA", "KHALTI"]:
+            return Response({"error": "Invalid provider"}, status=400)
+
+        transaction = PaymentTransaction.objects.create(
+            organization=request.organization,
+            plan=plan,
+            provider=provider,
+            amount=PLAN_PRICES[plan],
+        )
+
+        return Response({
+            "transaction_id": transaction.id,
+            "amount": transaction.amount,
+            "provider": provider,
+        })
