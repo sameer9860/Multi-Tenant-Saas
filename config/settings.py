@@ -149,3 +149,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+
+ESEWA_MERCHANT_CODE = "EPAYTEST"  # replace with LIVE code later
+ESEWA_PAYMENT_URL = "https://uat.esewa.com.np/epay/main"
+ESEWA_SUCCESS_URL = "http://localhost:8000/api/payments/esewa/success/"
+ESEWA_FAILURE_URL = "http://localhost:8000/api/payments/esewa/failure/"
