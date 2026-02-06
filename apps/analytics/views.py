@@ -1,6 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
 class UsageView(APIView):
     permission_classes = [IsAuthenticated]
@@ -23,3 +25,6 @@ class UsageView(APIView):
             "limit": limits.get(plan, 0),
             "remaining": limits.get(plan, 0) - used
         })
+@login_required
+def usage_dashboard(request):
+        return render(request, "analytics/usage.html")
