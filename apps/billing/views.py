@@ -6,6 +6,8 @@ from .serializers import UsageSerializer
 from django.views.generic import TemplateView
 from .models import PaymentTransaction
 from .constants import PLAN_PRICES
+from django.conf import settings
+from .models import Payment
 class UpgradePlanView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -173,3 +175,39 @@ class EsewaVerifyAPIView(APIView):
 
         return Response({"message": "Payment successful"})
         
+        
+class EsewaPaymentInit(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        organization = request.organization
+        plan = request.data.get("plan")
+
+        PLAN_PRICES = {
+            "PRO": 1000,
+            "BUSINESS": 3000,
+        }
+
+        if plan not in PLAN_PRICES:
+            return Response({"error": "Invalid plan"}, status=400)
+
+        payment = Payment.objects.create(
+            organization=organization,
+            amount=PLAN_PRICES[plan],
+            plan=plan
+        )
+
+        return Response({
+            "payment_url": settings.ESEWA_PAYMENT_URL,
+            "data": {
+                "amt": payment.amount,
+                "pdc": 0,
+                "psc": 0,
+                "txAmt": 0,
+                "tAmt": payment.amount,
+                "pid": payment.id,
+                "scd": settings.ESEWA_MERCHANT_CODE,
+                "su": settings.ESEWA_SUCCESS_URL,
+                "fu": settings.ESEWA_FAILURE_URL,
+            }
+        })
