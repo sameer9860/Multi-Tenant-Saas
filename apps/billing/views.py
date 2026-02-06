@@ -238,3 +238,10 @@ def esewa_success(request):
     org.subscription.save()
 
     return redirect("/payment-success")        
+
+@api_view(["GET"])
+def esewa_failure(request):
+    pid = request.GET.get("pid")
+
+    Payment.objects.filter(id=pid).update(status="FAILED")
+    return redirect("/payment-failed")
