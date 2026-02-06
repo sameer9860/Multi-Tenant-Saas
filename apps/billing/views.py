@@ -8,6 +8,10 @@ from .models import PaymentTransaction
 from .constants import PLAN_PRICES
 from django.conf import settings
 from .models import Payment
+from rest_framework .decorators import api_view
+from django.shortcuts import get_object_or_404,redirect
+
+
 class UpgradePlanView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -211,3 +215,26 @@ class EsewaPaymentInit(APIView):
                 "fu": settings.ESEWA_FAILURE_URL,
             }
         })
+        
+        
+@api_view(["GET"])
+def esewa_success(request):
+    pid = request.GET.get("pid")
+    refId = request.GET.get("refId")
+
+    try:
+        payment = Payment.objects.get(id=pid, status="PENDING")
+    except Payment.DoesNotExist:
+        return Response({"error": "Invalid payment"}, status=400)
+
+    # ✅ Mark payment successful
+    payment.transaction_id = refId
+    payment.status = "SUCCESS"
+    payment.save()
+
+    # ✅ Upgrade organization plan
+    org = payment.organization
+    org.subscription.plan = payment.plan
+    org.subscription.save()
+
+    return redirect("/payment-success")        
