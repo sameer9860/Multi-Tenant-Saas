@@ -1,35 +1,171 @@
-<div class="max-w-3xl mx-auto mt-10">
-  <h1 class="text-2xl font-bold mb-6">Usage Dashboard</h1>
-
-  <div class="bg-white shadow rounded p-6">
-    <p class="text-gray-600">Plan: <span id="plan"></span></p>
-    <p>Used: <span id="used"></span></p>
-    <p>Limit: <span id="limit"></span></p>
-
-    <div class="w-full bg-gray-200 h-3 rounded mt-3">
-      <div id="progress" class="bg-indigo-600 h-3 rounded"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usage Analytics Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen p-4">
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold text-gray-900">Usage Analytics</h1>
+      <p class="text-gray-600 mt-2">Track your service consumption and plan utilization</p>
     </div>
 
-    <p class="mt-2 text-sm text-gray-500">
-      Remaining: <span id="remaining"></span>
-    </p>
+    <!-- Main Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <!-- Plan Card -->
+      <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-indigo-500">
+        <p class="text-gray-600 text-sm uppercase tracking-wide mb-2">Current Plan</p>
+        <p id="plan" class="text-3xl font-bold text-gray-900 loading-pulse">Loading...</p>
+        <p class="text-xs text-gray-500 mt-3">Active subscription</p>
+      </div>
+
+      <!-- Used Card -->
+      <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-blue-500">
+        <p class="text-gray-600 text-sm uppercase tracking-wide mb-2">Invoices Used</p>
+        <p id="used" class="text-3xl font-bold text-gray-900 loading-pulse">Loading...</p>
+        <p class="text-xs text-gray-500 mt-3">Total consumed</p>
+      </div>
+
+      <!-- Remaining Card -->
+      <div class="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-green-500">
+        <p class="text-gray-600 text-sm uppercase tracking-wide mb-2">Remaining</p>
+        <p id="remaining" class="text-3xl font-bold text-green-600 loading-pulse">Loading...</p>
+        <p class="text-xs text-gray-500 mt-3">Available to use</p>
+      </div>
+    </div>
+
+    <!-- Detailed Usage Section -->
+    <div class="bg-white rounded-2xl shadow-lg p-8">
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">Usage Breakdown</h2>
+        
+        <!-- Usage Percentage -->
+        <div class="mb-8">
+          <div class="flex items-end justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Invoice Utilization</h3>
+            <span class="text-3xl font-bold text-indigo-600" id="percentDisplay">0%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="progress" class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-4 rounded-full transition-all duration-700 ease-out" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Detailed Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6">
+            <p class="text-blue-900 font-semibold mb-2">Total Limit</p>
+            <p id="limit" class="text-2xl font-bold text-blue-600 loading-pulse">Loading...</p>
+            <p class="text-xs text-blue-700 mt-2">Maximum invoices allowed</p>
+          </div>
+          
+          <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6">
+            <p class="text-green-900 font-semibold mb-2">Usage Rate</p>
+            <p id="usageRate" class="text-2xl font-bold text-green-600">0%</p>
+            <p class="text-xs text-green-700 mt-2">Percentage of plan used</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Warning/Info Messages -->
+      <div id="alerts" class="space-y-3 mt-8"></div>
+    </div>
+
+    <!-- Action Button -->
+    <div class="mt-8 flex gap-4">
+      <a href="/billing/upgrade/" class="inline-block bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200 shadow-md hover:shadow-lg">
+        View Plans
+      </a>
+      <button onclick="location.reload()" class="inline-block bg-gray-200 text-gray-800 px-8 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors duration-200">
+        Refresh Data
+      </button>
+    </div>
   </div>
-</div>
 
-<script>
-fetch("/api/usage/", {
-  headers: {
-    "Authorization": "Bearer " + localStorage.getItem("access")
-  }
-})
-.then(res => res.json())
-.then(data => {
-  document.getElementById("plan").innerText = data.plan
-  document.getElementById("used").innerText = data.used
-  document.getElementById("limit").innerText = data.limit
-  document.getElementById("remaining").innerText = data.remaining
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .loading-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
 
-  const percent = (data.used / data.limit) * 100
-  document.getElementById("progress").style.width = percent + "%"
-})
-</script>
+  <script>
+    function fetchUsageData() {
+      fetch("/api/usage/", {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem("access")
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        // Update card values
+        document.getElementById("plan").innerText = data.plan || "Unknown";
+        document.getElementById("used").innerText = (data.used || 0).toLocaleString();
+        document.getElementById("limit").innerText = (data.limit || 0).toLocaleString();
+        document.getElementById("remaining").innerText = (data.remaining || 0).toLocaleString();
+
+        // Calculate and display percentage
+        const percent = data.limit > 0 ? Math.round((data.used / data.limit) * 100) : 0;
+        document.getElementById("percentDisplay").innerText = percent + "%";
+        document.getElementById("usageRate").innerText = percent + "%";
+        
+        // Update progress bar
+        const progressBar = document.getElementById("progress");
+        progressBar.style.width = percent + "%";
+        
+        // Update progress bar color based on usage
+        if (percent >= 90) {
+          progressBar.className = "bg-gradient-to-r from-red-500 to-red-600 h-4 rounded-full transition-all duration-700 ease-out";
+        } else if (percent >= 70) {
+          progressBar.className = "bg-gradient-to-r from-yellow-500 to-yellow-600 h-4 rounded-full transition-all duration-700 ease-out";
+        } else {
+          progressBar.className = "bg-gradient-to-r from-indigo-500 to-indigo-600 h-4 rounded-full transition-all duration-700 ease-out";
+        }
+
+        // Show alerts if usage is high
+        const alertsContainer = document.getElementById("alerts");
+        alertsContainer.innerHTML = "";
+        
+        if (percent >= 90) {
+          alertsContainer.innerHTML = `
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+              <p class="text-red-900 font-semibold">⚠️ High Usage Alert</p>
+              <p class="text-red-700 text-sm mt-1">You are using ${percent}% of your invoice limit. Consider upgrading your plan.</p>
+            </div>
+          `;
+        } else if (percent >= 70) {
+          alertsContainer.innerHTML = `
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-lg">
+              <p class="text-yellow-900 font-semibold">⚡ Approaching Limit</p>
+              <p class="text-yellow-700 text-sm mt-1">You are using ${percent}% of your invoice limit. You may want to upgrade soon.</p>
+            </div>
+          `;
+        } else {
+          alertsContainer.innerHTML = `
+            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg">
+              <p class="text-green-900 font-semibold">✓ Usage Normal</p>
+              <p class="text-green-700 text-sm mt-1">You are using ${percent}% of your invoice limit. You have plenty of capacity.</p>
+            </div>
+          `;
+        }
+      })
+      .catch(err => {
+        console.error("Error fetching usage data:", err);
+        document.getElementById("plan").innerText = "Error";
+        document.getElementById("used").innerText = "—";
+        document.getElementById("limit").innerText = "—";
+      });
+    }
+
+    // Fetch data on page load and every 30 seconds
+    fetchUsageData();
+    setInterval(fetchUsageData, 30000);
+  </script>
+</body>
+</html>

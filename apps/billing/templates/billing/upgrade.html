@@ -1,24 +1,152 @@
-<h1 class="text-2xl font-bold mb-6">Upgrade Plan</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upgrade Your Plan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+  <div class="max-w-6xl mx-auto px-4 py-12">
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-bold text-gray-900 mb-3">Choose Your Plan</h1>
+      <p class="text-lg text-gray-600">Select the plan that best fits your invoicing needs</p>
+    </div>
 
-<div class="grid grid-cols-3 gap-6">
-  <div class="border p-6 rounded">
-    <h2 class="font-bold">FREE</h2>
-    <p>10 invoices</p>
-  </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Free Plan -->
+      <div class="relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col">
+        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600"></div>
+        <div class="p-8 flex-grow flex flex-col">
+          <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Free</h2>
+            <p class="text-gray-600 text-sm">Perfect for getting started</p>
+          </div>
+          
+          <div class="mb-8">
+            <div class="text-4xl font-bold text-gray-900">$0<span class="text-lg text-gray-600">/month</span></div>
+          </div>
 
-  <div class="border p-6 rounded">
-    <h2 class="font-bold">PRO</h2>
-    <p>1000 invoices</p>
-    <button class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded">
-      Upgrade
-    </button>
-  </div>
+          <ul class="space-y-4 mb-8 flex-grow">
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-700">Up to 10 invoices</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-700">Basic support</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-700">Core features</span>
+            </li>
+          </ul>
 
-  <div class="border p-6 rounded">
-    <h2 class="font-bold">BUSINESS</h2>
-    <p>Unlimited invoices</p>
-    <button class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded">
-      Upgrade
-    </button>
+          <button class="w-full bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors duration-200" disabled>
+            Current Plan
+          </button>
+        </div>
+      </div>
+
+      <!-- Pro Plan -->
+      <div class="relative bg-white rounded-2xl shadow-2xl hover:shadow-2xl transition-all duration-300 overflow-hidden transform scale-105 flex flex-col border-2 border-indigo-500">
+        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-400 to-indigo-600"></div>
+        <div class="absolute -top-4 -right-4 bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-bold transform rotate-45">POPULAR</div>
+        <div class="p-8 flex-grow flex flex-col">
+          <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Pro</h2>
+            <p class="text-gray-600 text-sm">For growing businesses</p>
+          </div>
+          
+          <div class="mb-8">
+            <div class="text-4xl font-bold text-gray-900">$29<span class="text-lg text-gray-600">/month</span></div>
+          </div>
+
+          <ul class="space-y-4 mb-8 flex-grow">
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-700">Up to 1,000 invoices</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-700">Priority support</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-700">Advanced analytics</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-700">Custom branding</span>
+            </li>
+          </ul>
+
+          <button class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200 shadow-lg hover:shadow-xl">
+            Upgrade to Pro
+          </button>
+        </div>
+      </div>
+
+      <!-- Business Plan -->
+      <div class="relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col">
+        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-400 to-purple-600"></div>
+        <div class="p-8 flex-grow flex flex-col">
+          <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Business</h2>
+            <p class="text-gray-600 text-sm">For large organizations</p>
+          </div>
+          
+          <div class="mb-8">
+            <div class="text-4xl font-bold text-gray-900">$99<span class="text-lg text-gray-600">/month</span></div>
+          </div>
+
+          <ul class="space-y-4 mb-8 flex-grow">
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-700">Unlimited invoices</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-700">24/7 dedicated support</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-700">API access</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-gray-700">White-label solution</span>
+            </li>
+          </ul>
+
+          <button class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200 shadow-lg hover:shadow-xl">
+            Upgrade to Business
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
+</body>
+</html>
