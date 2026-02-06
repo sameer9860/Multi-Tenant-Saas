@@ -26,7 +26,9 @@ urlpatterns = [
     path('core/', include('apps.core.urls')),
     path('api/', include('apps.invoices.urls')),
     path('billing/', include('apps.billing.urls')),
-    path('payments/', include('apps.billing.urls')),  # for payment-related endpoints
+    path('payments/', include('apps.billing.urls')), 
+    path('analytics/', include('apps.analytics.urls')),  # new line for analytics endpoints
+    # for payment-related endpoints
 ]
 
 
