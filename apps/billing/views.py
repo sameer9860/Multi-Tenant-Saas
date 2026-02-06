@@ -10,8 +10,14 @@ from django.conf import settings
 from .models import Payment
 from rest_framework .decorators import api_view
 from django.shortcuts import get_object_or_404,redirect
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
 
+
+@login_required
+def upgrade_view(request):
+    return render(request, "billing/upgrade.html")
 class UpgradePlanView(APIView):
     permission_classes = [IsAuthenticated]
 
