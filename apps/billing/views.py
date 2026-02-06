@@ -18,6 +18,8 @@ from django.shortcuts import render
 @login_required
 def upgrade_view(request):
     return render(request, "billing/upgrade.html")
+
+
 class UpgradePlanView(APIView):
     permission_classes = [IsAuthenticated]
 
