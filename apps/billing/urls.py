@@ -8,7 +8,7 @@ urlpatterns = [
     path("usage/ui/", UsageDashboardView.as_view(), name="usage-dashboard-ui"),
     path("upgrade/", UpgradePlanAPIView.as_view(), name="upgrade-plan"),
     path("esewa/verify/", EsewaVerifyAPIView.as_view(), name="esewa-verify"),
-      path("esewa/init/", EsewaPaymentInit.as_view()),
+    path("esewa/init/", EsewaPaymentInit.as_view()),
     path("esewa/success/", esewa_success),
     path("esewa/failure/", esewa_failure),
 ]
