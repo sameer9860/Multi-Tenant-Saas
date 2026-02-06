@@ -19,6 +19,15 @@ from django.shortcuts import render
 def upgrade_view(request):
     return render(request, "billing/upgrade.html")
 
+def usage_dashboard(request):
+    return render(request, "billing/usage_dashboard.html")
+
+def payment_success(request):
+    return render(request, "billing/payment_success.html")
+
+def payment_failed(request):
+    return render(request, "billing/payment_failed.html")
+
 
 class UpgradePlanView(APIView):
     permission_classes = [IsAuthenticated]
