@@ -12,7 +12,17 @@ from rest_framework .decorators import api_view
 from django.shortcuts import get_object_or_404,redirect
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.views import LoginView
+from django.urls import reverse_lazy
 
+
+
+class CustomLoginView(LoginView):
+    template_name = 'billing/login.html'
+    
+    def get_success_url(self):
+        return reverse_lazy('analytics:usage')
 
 
 @login_required

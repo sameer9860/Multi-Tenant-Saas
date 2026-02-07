@@ -4,10 +4,11 @@ from django.urls import path
 from .views import (
     UsageDashboardAPIView, UsageDashboardView, UpgradePlanAPIView,
     EsewaVerifyAPIView, EsewaPaymentInit, esewa_success, esewa_failure, 
-    payment_failed, payment_success, upgrade_view
+    payment_failed, payment_success, upgrade_view, CustomLoginView
 )
 
 urlpatterns = [
+    path("login/", CustomLoginView.as_view(), name="login"),
     path("usage/", UsageDashboardAPIView.as_view(), name="usage-dashboard"),    
     path("usage/ui/", UsageDashboardView.as_view(), name="usage-dashboard-ui"),
     path("", UsageDashboardView.as_view(), name="usage-dashboard-ui"),

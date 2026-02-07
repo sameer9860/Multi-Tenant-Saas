@@ -16,12 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
 
 urlpatterns = [
+    path('', RedirectView.as_view(url='/billing/login/', permanent=False), name='home'),
     path('admin/', admin.site.urls),
     path('core/', include('apps.core.urls')),
     path('api/', include('apps.invoices.urls')),
