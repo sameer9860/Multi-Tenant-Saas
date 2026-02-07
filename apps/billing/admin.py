@@ -21,11 +21,59 @@ class UsageAdmin(admin.ModelAdmin):
     search_fields = ('organization__name',)
     readonly_fields = ('updated_at',)
 
+@admin.register(PaymentTransaction)
 class PaymentTransactionAdmin(admin.ModelAdmin):
-    list_display = ('organization', 'plan', 'amount', 'provider', 'status', 'created_at')
-    list_filter = ('provider', 'status', 'plan', 'created_at')
-    search_fields = ('organization__name', 'reference_id')
-    readonly_fields = ('created_at',)
+    """Full payment audit trail visible to admins"""
+    
+    list_display = (
+        "id",
+        "organization",
+        "plan",
+        "amount",
+        "provider",
+        "status",
+        "created_at",
+    )
+    
+    list_filter = (
+        "status",
+        "plan",
+        "provider",
+        "created_at",
+    )
+    
+    search_fields = (
+        "organization__name",
+        "transaction_id",
+        "reference_id",
+    )
+    
+    readonly_fields = (
+        "id",
+        "transaction_id",
+        "created_at",
+        "updated_at",
+    )
+    
+    fieldsets = (
+        ("Payment Info", {
+            "fields": ("id", "transaction_id", "reference_id", "provider")
+        }),
+        ("Organization & Plan", {
+            "fields": ("organization", "plan", "amount")
+        }),
+        ("Status", {
+            "fields": ("status", "created_at", "updated_at")
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        """Payments should only be created via API"""
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """Never delete payment records"""
+        return False
 
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('organization', 'plan', 'amount', 'status', 'created_at')
@@ -37,5 +85,4 @@ class PaymentAdmin(admin.ModelAdmin):
 admin.site.register(PlanLimit, PlanLimitAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(Usage, UsageAdmin)
-admin.site.register(PaymentTransaction, PaymentTransactionAdmin)
 admin.site.register(Payment, PaymentAdmin)
