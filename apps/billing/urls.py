@@ -3,7 +3,7 @@
 from django.urls import path
 from .views import (
     UsageDashboardAPIView, UsageDashboardView, UpgradePlanAPIView,
-    EsewaVerifyAPIView, EsewaPaymentInit, esewa_success, esewa_failure, 
+    EsewaVerifyAPIView, InitiateEsewaPaymentView, esewa_success, esewa_failure, 
     payment_failed, payment_success, upgrade_view, CustomLoginView
 )
 
@@ -17,9 +17,9 @@ urlpatterns = [
     
     # eSewa endpoints
     path("esewa/verify/", EsewaVerifyAPIView.as_view(), name="esewa-verify"),
-    path("esewa/init/", EsewaPaymentInit.as_view()),
-    path("esewa/success/", esewa_success),
-    path("esewa/failure/", esewa_failure),
+    path("esewa/init/", InitiateEsewaPaymentView.as_view(), name="esewa-init"),
+    path("esewa/success/", esewa_success, name="esewa-success"),
+    path("esewa/failure/", esewa_failure, name="esewa-failure"),
     
     # Payment status pages
     path("payment/success/", payment_success, name="payment-success"),
