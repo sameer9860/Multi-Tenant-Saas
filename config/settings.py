@@ -155,8 +155,8 @@ STATIC_URL = 'static/'
 # ============= PAYMENT GATEWAY SETTINGS =============
 
 # eSewa Configuration
-# ESEWA_MERCHANT_CODE = os.getenv("ESEWA_MERCHANT_CODE", "EPAYTEST")
-# ESEWA_MERCHANT_SECRET = os.getenv("ESEWA_MERCHANT_SECRET", "")
+ESEWA_MERCHANT_CODE = os.getenv("ESEWA_MERCHANT_CODE", "EPAYTEST")
+ESEWA_MERCHANT_SECRET = os.getenv("ESEWA_MERCHANT_SECRET", "")
 ESEWA_PAYMENT_URL = "https://uat.esewa.com.np/epay/main"
 ESEWA_SUCCESS_URL = "http://localhost:8000/billing/esewa/success/"
 ESEWA_FAILURE_URL = "http://localhost:8000/billing/esewa/failure/"

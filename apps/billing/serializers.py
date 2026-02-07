@@ -19,6 +19,12 @@ class UsageSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
+   
     def get_invoice_limit(self, obj):
         plan = obj.organization.subscription.plan
-        return 10 if plan == "FREE" else 100
+        if plan == "BASIC":
+            return 1000
+        elif plan == "PRO":
+            return 100000
+        else:
+            return 10
