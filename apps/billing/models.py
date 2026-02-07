@@ -1,6 +1,6 @@
 from django.db import models
-from apps.core.models import Organization
 from django.utils import timezone
+from apps.core.models import Organization
 from datetime import timedelta
 
 class Subscription(models.Model):
@@ -156,48 +156,66 @@ class Payment(models.Model):
         return f"{self.organization.name} - {self.plan} - {self.status}"
     
 class PaymentTransaction(models.Model):
-    PAYMENT_PROVIDERS = (
-        ("ESEWA", "eSewa"),
-        ("KHALTI", "Khalti"),
-    )
-
+    """Complete audit trail for every payment"""
+    
     STATUS_CHOICES = (
         ("PENDING", "Pending"),
         ("SUCCESS", "Success"),
         ("FAILED", "Failed"),
     )
-
+    
+    PROVIDER_CHOICES = (
+        ("ESEWA", "eSewa"),
+        ("KHALTI", "Khalti"),
+    )
+    
     organization = models.ForeignKey(
-        Organization,
-        on_delete=models.CASCADE,
-        related_name="payments"
+        Organization, 
+        on_delete=models.CASCADE, 
+        related_name="payment_transactions"
     )
-    plan = models.CharField(max_length=20)
-    provider = models.CharField(max_length=10, choices=PAYMENT_PROVIDERS)
-    amount = models.PositiveIntegerField()
+    plan = models.CharField(max_length=20)  # PRO, BUSINESS, etc
+    amount = models.PositiveIntegerField()  # in NPR
+    provider = models.CharField(
+        max_length=20, 
+        choices=PROVIDER_CHOICES, 
+        default="ESEWA"
+    )
+    transaction_id = models.CharField(
+        max_length=255, 
+        unique=True,
+        db_index=True
+    )
+    reference_id = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True
+    )
     status = models.CharField(
-        max_length=10, choices=STATUS_CHOICES, default="PENDING"
+        max_length=10, 
+        choices=STATUS_CHOICES, 
+        default="PENDING",
+        db_index=True
     )
-    reference_id = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['organization', 'status']),
+            models.Index(fields=['transaction_id', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.organization.name} - {self.plan} - {self.status}"
     
     def activate_plan(self):
-        """Activate the plan after successful payment"""
-        if self.status == "SUCCESS":
-            subscription = self.organization.subscription
-            subscription.plan = self.plan
-            subscription.is_active = True
-            subscription.start_date = timezone.now()
-            subscription.end_date = timezone.now() + timedelta(days=30)
-            subscription.save()
-            
-            # Reset usage for new plan
-            usage = self.organization.usage
-            usage.invoices_created = 0
-            usage.customers_created = 0
-            usage.team_members_added = 0
-            usage.save()
-            
-            return True
-        return False
-    
+        """Upgrade organization plan after successful payment"""
+        from apps.billing.models import Subscription
+        subscription, _ = Subscription.objects.get_or_create(
+            organization=self.organization
+        )
+        subscription.plan = self.plan
+        subscription.save()
+        return subscription
