@@ -1,7 +1,12 @@
 # apps/billing/urls.py
 
 from django.urls import path
-from .views import UsageDashboardAPIView, UsageDashboardView,UpgradePlanAPIView,EsewaVerifyAPIView,EsewaPaymentInit,esewa_success,esewa_failure, payment_failed, payment_success, upgrade_view
+from .views import (
+    UsageDashboardAPIView, UsageDashboardView, UpgradePlanAPIView,
+    EsewaVerifyAPIView, EsewaPaymentInit, esewa_success, esewa_failure, 
+    payment_failed, payment_success, upgrade_view,
+    KhaltiInitPaymentView, khalti_verify_payment, khalti_callback
+)
 
 urlpatterns = [
     path("usage/", UsageDashboardAPIView.as_view(), name="usage-dashboard"),    
@@ -9,11 +14,19 @@ urlpatterns = [
     path("", UsageDashboardView.as_view(), name="usage-dashboard-ui"),
     path("upgrade/", UpgradePlanAPIView.as_view(), name="upgrade-plan"),
     path("upgrade/ui/", upgrade_view, name="upgrade-plan-ui"),
+    
+    # eSewa endpoints
     path("esewa/verify/", EsewaVerifyAPIView.as_view(), name="esewa-verify"),
     path("esewa/init/", EsewaPaymentInit.as_view()),
     path("esewa/success/", esewa_success),
     path("esewa/failure/", esewa_failure),
+    
+    # Khalti endpoints
+    path("khalti/init/", KhaltiInitPaymentView.as_view(), name="khalti-init"),
+    path("khalti/verify/", khalti_verify_payment, name="khalti-verify"),
+    path("khalti/callback/", khalti_callback, name="khalti-callback"),
+    
+    # Payment status pages
     path("payment/success/", payment_success, name="payment-success"),
     path("payment/failed/", payment_failed, name="payment-failed"),
-    
 ]

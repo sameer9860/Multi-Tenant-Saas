@@ -152,8 +152,16 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 
+# ============= PAYMENT GATEWAY SETTINGS =============
 
-ESEWA_MERCHANT_CODE = "EPAYTEST"  # replace with LIVE code later
+# eSewa Configuration
+# ESEWA_MERCHANT_CODE = os.getenv("ESEWA_MERCHANT_CODE", "EPAYTEST")
+# ESEWA_MERCHANT_SECRET = os.getenv("ESEWA_MERCHANT_SECRET", "")
 ESEWA_PAYMENT_URL = "https://uat.esewa.com.np/epay/main"
-ESEWA_SUCCESS_URL = "http://localhost:8000/api/payments/esewa/success/"
-ESEWA_FAILURE_URL = "http://localhost:8000/api/payments/esewa/failure/"
+ESEWA_SUCCESS_URL = "http://localhost:8000/billing/esewa/success/"
+ESEWA_FAILURE_URL = "http://localhost:8000/billing/esewa/failure/"
+
+# Khalti Configuration
+KHALTI_PUBLIC_KEY = os.getenv("KHALTI_PUBLIC_KEY", "test_public_key")
+KHALTI_SECRET_KEY = os.getenv("KHALTI_SECRET_KEY", "test_secret_key")
+KHALTI_CALLBACK_URL = "http://localhost:8000/billing/khalti/callback/"

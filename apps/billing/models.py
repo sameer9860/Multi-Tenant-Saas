@@ -1,5 +1,7 @@
 from django.db import models
 from apps.core.models import Organization
+from django.utils import timezone
+from datetime import timedelta
 
 class Subscription(models.Model):
     organization = models.OneToOneField(
@@ -26,6 +28,36 @@ class Subscription(models.Model):
         return f"{self.organization.name} - {self.plan}"
 
 
+class PlanLimit(models.Model):
+    """Define feature limits for each plan"""
+    FEATURE_CHOICES = [
+        ('invoices', 'Invoices'),
+        ('customers', 'Customers'),
+        ('team_members', 'Team Members'),
+        ('api_calls', 'API Calls/month'),
+        ('reports', 'Advanced Reports'),
+    ]
+    
+    plan = models.CharField(
+        max_length=20,
+        choices=[
+            ('FREE', 'Free'),
+            ('BASIC', 'Basic'),
+            ('PRO', 'Pro'),
+        ]
+    )
+    feature = models.CharField(max_length=50, choices=FEATURE_CHOICES)
+    limit_value = models.IntegerField()  # -1 = unlimited
+    
+    class Meta:
+        unique_together = ('plan', 'feature')
+        verbose_name_plural = "Plan Limits"
+    
+    def __str__(self):
+        limit = "Unlimited" if self.limit_value == -1 else self.limit_value
+        return f"{self.plan} - {self.feature}: {limit}"
+
+
 class Usage(models.Model):
     organization = models.OneToOneField(
         Organization,
@@ -33,8 +65,79 @@ class Usage(models.Model):
         related_name='usage'
     )
     invoices_created = models.PositiveIntegerField(default=0)
+    customers_created = models.PositiveIntegerField(default=0)
+    team_members_added = models.PositiveIntegerField(default=0)
+    api_calls_used = models.PositiveIntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
     
+    def get_plan(self):
+        """Get current plan for this organization"""
+        try:
+            return self.organization.subscription.plan
+        except:
+            return 'FREE'
+    
+    def get_plan_limit(self, feature):
+        """Get limit for a specific feature"""
+        try:
+            limit = PlanLimit.objects.get(
+                plan=self.get_plan(),
+                feature=feature
+            )
+            return limit.limit_value
+        except PlanLimit.DoesNotExist:
+            return -1  # unlimited if not found
+    
+    def can_create_invoice(self):
+        """Check if organization can create more invoices"""
+        limit = self.get_plan_limit('invoices')
+        if limit == -1:  # unlimited
+            return True, None
+        if self.invoices_created >= limit:
+            return False, f"Reached invoice limit ({limit}). Upgrade your plan."
+        return True, None
+    
+    def can_add_customer(self):
+        """Check if organization can add more customers"""
+        limit = self.get_plan_limit('customers')
+        if limit == -1:  # unlimited
+            return True, None
+        if self.customers_created >= limit:
+            return False, f"Reached customer limit ({limit}). Upgrade your plan."
+        return True, None
+    
+    def can_add_team_member(self):
+        """Check if organization can add more team members"""
+        limit = self.get_plan_limit('team_members')
+        if limit == -1:  # unlimited
+            return True, None
+        if self.team_members_added >= limit:
+            return False, f"Reached team member limit ({limit}). Upgrade your plan."
+        return True, None
+    
+    def increment_invoice_count(self):
+        """Increment invoice count"""
+        can_add, msg = self.can_create_invoice()
+        if can_add:
+            self.invoices_created += 1
+            self.save()
+            return True
+        return False
+    
+    def increment_customer_count(self):
+        """Increment customer count"""
+        can_add, msg = self.can_add_customer()
+        if can_add:
+            self.customers_created += 1
+            self.save()
+            return True
+        return False
+    
+    def reset_monthly_limits(self):
+        """Reset monthly limits (call this on subscription renewal)"""
+        self.api_calls_used = 0
+        self.save()
+
 class Payment(models.Model):
     STATUS_CHOICES = (
         ('PENDING', 'Pending'),
@@ -77,4 +180,24 @@ class PaymentTransaction(models.Model):
     )
     reference_id = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    def activate_plan(self):
+        """Activate the plan after successful payment"""
+        if self.status == "SUCCESS":
+            subscription = self.organization.subscription
+            subscription.plan = self.plan
+            subscription.is_active = True
+            subscription.start_date = timezone.now()
+            subscription.end_date = timezone.now() + timedelta(days=30)
+            subscription.save()
+            
+            # Reset usage for new plan
+            usage = self.organization.usage
+            usage.invoices_created = 0
+            usage.customers_created = 0
+            usage.team_members_added = 0
+            usage.save()
+            
+            return True
+        return False
     
