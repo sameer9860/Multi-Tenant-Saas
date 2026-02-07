@@ -153,7 +153,7 @@ STATIC_URL = 'static/'
 
 # ============= AUTHENTICATION SETTINGS =============
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'analytics:usage'
+LOGIN_REDIRECT_URL = 'usage-dashboard-ui'
 
 # ============= PAYMENT GATEWAY SETTINGS =============
 

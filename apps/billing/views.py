@@ -22,7 +22,7 @@ class CustomLoginView(LoginView):
     template_name = 'billing/login.html'
     
     def get_success_url(self):
-        return reverse_lazy('analytics:usage')
+        return reverse_lazy('usage-dashboard-ui')
 
 
 @login_required
