@@ -21,7 +21,7 @@ const plans = [
     period: "/month",
     description: "Perfect for small businesses",
     features: [
-      "100 invoices/month",
+      "1000 invoices/month",
       "5 team members",
       "Advanced reporting",
       "Priority email support",
