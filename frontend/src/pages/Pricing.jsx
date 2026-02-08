@@ -17,7 +17,7 @@ const plans = [
   },
   {
     name: "BASIC",
-    price: "₹999",
+    price: "₹2,500",
     period: "/month",
     description: "Perfect for small businesses",
     features: [
@@ -32,7 +32,7 @@ const plans = [
   },
   {
     name: "PRO",
-    price: "₹2,999",
+    price: "₹3,900",
     period: "/month",
     description: "For growing enterprises",
     features: [
