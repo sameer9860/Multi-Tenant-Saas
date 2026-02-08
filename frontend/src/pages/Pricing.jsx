@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 const plans = [
   {
     name: "FREE",
-    price: "₹0",
+    price: "Rs 0",
     period: "Forever",
     description: "Get started with our platform",
     features: [
@@ -17,7 +17,7 @@ const plans = [
   },
   {
     name: "BASIC",
-    price: "₹2,500",
+    price: "Rs 2,500",
     period: "/month",
     description: "Perfect for small businesses",
     features: [
@@ -32,7 +32,7 @@ const plans = [
   },
   {
     name: "PRO",
-    price: "₹3,900",
+    price: "Rs 3,900",
     period: "/month",
     description: "For growing enterprises",
     features: [
