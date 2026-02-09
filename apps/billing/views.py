@@ -61,13 +61,17 @@ class InitiateEsewaPaymentView(APIView):
             'pdc': 0,
             'psc': 0,
             'txAmt': 0,
+            # eSewa requires tAmt (total amount). Include it to avoid Bad Request.
+            'tAmt': PLAN_PRICES[plan],
             'pid': transaction_id,
             'scd': getattr(settings, 'ESEWA_MERCHANT_CODE', 'EPAYTEST'),
             'su': success_url,
             'fu': failure_url,
         }
 
-        esewa_url = 'https://uat.esewa.com.np/epay/main?' + urllib.parse.urlencode(params)
+        # Use configured base URL so host can be changed via settings/env
+        base = getattr(settings, 'ESEWA_BASE_URL', 'https://rc.esewa.com.np/epay/main')
+        esewa_url = base + '?' + urllib.parse.urlencode(params)
 
         # Use local mock eSewa page only when explicitly enabled by setting
         if getattr(settings, 'ESEWA_USE_MOCK', False):
@@ -93,34 +97,68 @@ def esewa_success(request):
     """eSewa success callback - VERIFY & UPGRADE"""
     ref_id = request.GET.get("refId")
     pid = request.GET.get("oid") or request.GET.get("pid")
-    
-    # Find PENDING transaction
-    try:
-        payment = PaymentTransaction.objects.get(
-            transaction_id=pid,
-            status="PENDING"
-        )
-    except PaymentTransaction.DoesNotExist:
+    amt = request.GET.get('amt')
+
+    # Try to find the transaction even if status isn't PENDING (handle idempotency)
+    payment = None
+    if pid:
+        payment = PaymentTransaction.objects.filter(transaction_id=pid).first()
+
+    if not payment:
+        # fallback: maybe Payment model exists but no PaymentTransaction
+        payment_record = Payment.objects.filter(transaction_id=pid).first()
+        if payment_record:
+            payment = PaymentTransaction.objects.filter(organization=payment_record.organization, amount=payment_record.amount).order_by('-created_at').first()
+
+    if not payment:
         return HttpResponse("❌ Invalid or already processed payment", status=400)
-    # Verify with eSewa API for real
-    manager = ESewaPaymentManager()
-    result = manager.verify_payment(payment.transaction_id, amount=payment.amount)
 
-    if not result.get('ok'):
-        # mark failed and return
-        PaymentTransaction.objects.filter(id=payment.id).update(status='FAILED')
-        Payment.objects.filter(transaction_id=payment.transaction_id).update(status='FAILED')
-        return HttpResponse(f"❌ Verification failed: {result.get('message')}", status=400)
+    if payment.status == 'SUCCESS':
+        return HttpResponse("✅ Payment already processed", status=200)
 
-    # Amount check passed (or remote amount not available). Complete the payment atomically.
+    if payment.status == 'FAILED':
+        return HttpResponse("❌ Payment previously failed", status=400)
+
+    # Perform verification with eSewa
+    is_mock = getattr(settings, 'ESEWA_USE_MOCK', False) or (ref_id and str(ref_id).startswith('MOCK-'))
+
+    if not is_mock:
+        manager = ESewaPaymentManager()
+        # Prefer amount from callback if provided
+        expected_amount = None
+        try:
+            if amt:
+                expected_amount = int(float(amt))
+        except Exception:
+            expected_amount = payment.amount
+
+        result = manager.verify_payment(payment.transaction_id, amount=expected_amount)
+
+        if not result.get('ok'):
+            # Distinguish temporary verification failures (network/DNS/bad response)
+            # from hard failures (not_verified, amount_mismatch). For temporary
+            # failures, keep the transaction as PENDING so it can be retried
+            # or verified manually later. For hard failures, mark FAILED.
+            msg = str(result.get('message') or '')
+            if msg.startswith('request error') or msg.startswith('bad response'):
+                # Defer verification due to transient error (return 202 Accepted)
+                # Leave payment.status as PENDING so it can be retried.
+                logger.warning('eSewa verification deferred for pid=%s: %s', payment.transaction_id, msg)
+                return HttpResponse(f"⚠️ Verification deferred: {msg}", status=202)
+
+            # Hard failure: mark failed
+            payment.status = 'FAILED'
+            payment.reference_id = ref_id
+            payment.save()
+            Payment.objects.filter(transaction_id=payment.transaction_id).update(status='FAILED')
+            return HttpResponse(f"❌ Verification failed: {msg}", status=400)
+
+    # Verified or mock -> mark SUCCESS and activate
     with transaction.atomic():
         payment.status = 'SUCCESS'
-        payment.reference_id = ref_id or request.GET.get('refId')
+        payment.reference_id = ref_id
         payment.save()
-
         Payment.objects.filter(transaction_id=payment.transaction_id).update(status='SUCCESS')
-
-        # Upgrade the plan
         payment.activate_plan()
 
     return HttpResponse("✅ Payment verified & plan upgraded")

@@ -16,8 +16,8 @@ class ESewaPaymentManager:
     def __init__(self):
         # Merchant code / identifier used by eSewa (configure in settings)
         self.merchant_code = getattr(settings, 'ESEWA_MERCHANT_CODE', 'EPAYTEST')
-        # UAT verification endpoint (eSewa test)
-        self.api_url = "https://uat.esewa.com.np/epay/transrec"  # UAT endpoint frequently used
+        # Use configured verify URL so we can switch between uat/rc/live via settings
+        self.api_url = getattr(settings, 'ESEWA_VERIFY_URL', 'https://rc.esewa.com.np/epay/transrec')
 
     def verify_payment(self, transaction_id: str, amount: int | None = None) -> dict:
         """
