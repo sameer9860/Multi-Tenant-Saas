@@ -159,9 +159,9 @@ LOGIN_REDIRECT_URL = 'usage-dashboard-ui'
 # ============= PAYMENT GATEWAY SETTINGS =============
 
 # eSewa Configuration
-ESEWA_BASE_URL = "https://rc.esewa.com.np/epay/main"
-ESEWA_VERIFY_URL = "https://rc.esewa.com.np/epay/transrec"
-ESEWA_MERCHANT_CODE = "EPAYTEST"
+ESEWA_BASE_URL = os.getenv('ESEWA_BASE_URL')
+ESEWA_VERIFY_URL = os.getenv('ESEWA_VERIFY_URL')
+ESEWA_MERCHANT_CODE = os.getenv('ESEWA_MERCHANT_CODE')
 
 
 
