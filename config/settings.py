@@ -90,6 +90,7 @@ AUTH_USER_MODEL = 'accounts.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
         'apps.core.authentication.OrganizationJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
