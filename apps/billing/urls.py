@@ -20,6 +20,9 @@ urlpatterns = [
     path("esewa/init/", InitiateEsewaPaymentView.as_view(), name="esewa-init"),
     path("esewa/success/", esewa_success, name="esewa-success"),
     path("esewa/failure/", esewa_failure, name="esewa-failure"),
+    # Local mock gateway for development/testing
+    path("mock/esewa/", "apps.billing.views.mock_esewa_view", name="mock-esewa"),
+    path("mock/esewa/pay/", "apps.billing.views.mock_esewa_pay", name="mock-esewa-pay"),
     
     # Payment status pages
     path("payment/success/", payment_success, name="payment-success"),

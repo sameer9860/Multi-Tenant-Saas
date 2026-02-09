@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mock eSewa Payment</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-50 flex items-center justify-center">
+  <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+    <h1 class="text-2xl font-bold mb-4">Mock eSewa Payment</h1>
+    <p class="mb-2">Amount: <strong>₨{{ amt }}</strong></p>
+    <p class="mb-4">Transaction ID: <strong>{{ pid }}</strong></p>
+
+    <form method="post" action="{{ pay_url }}">
+      {% csrf_token %}
+      <input type="hidden" name="pid" value="{{ pid }}">
+      <input type="hidden" name="amt" value="{{ amt }}">
+      <input type="hidden" name="su" value="{{ su }}">
+      <input type="hidden" name="fu" value="{{ fu }}">
+
+      <div class="flex gap-3">
+        <button name="action" value="success" class="flex-1 bg-green-600 text-white py-2 rounded">Simulate Success</button>
+        <button name="action" value="failure" class="flex-1 bg-red-600 text-white py-2 rounded">Simulate Failure</button>
+      </div>
+    </form>
+
+    <p class="text-sm text-gray-600 mt-4">This is a local mock page for development only.</p>
+  </div>
+</body>
+</html>

@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import api_view
 from django.shortcuts import render
-from django.http import HttpResponse
 from django.views.generic import TemplateView
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
@@ -16,6 +15,9 @@ from .models import PaymentTransaction, Payment, Usage, Subscription
 from .constants import PLAN_PRICES, PLAN_LIMITS
 from .payment_gateway import ESewaPaymentManager
 import uuid
+from django.http import HttpResponseRedirect, HttpResponse
+from django.utils.http import urlencode
+from django.views.decorators.csrf import csrf_exempt
 
 
 class InitiateEsewaPaymentView(APIView):
@@ -66,6 +68,17 @@ class InitiateEsewaPaymentView(APIView):
         }
 
         esewa_url = 'https://uat.esewa.com.np/epay/main?' + urllib.parse.urlencode(params)
+
+        # In development, point to a local mock eSewa page so developers
+        # can simulate payment flows without external gateway.
+        if getattr(settings, 'DEBUG', True):
+            mock_params = {
+                'amt': params['amt'],
+                'pid': params['pid'],
+                'su': params['su'],
+                'fu': params['fu'],
+            }
+            esewa_url = request.build_absolute_uri('/billing/mock/esewa/?' + urllib.parse.urlencode(mock_params))
         
         return Response({
             "payment_id": payment.id,
@@ -287,4 +300,45 @@ class EsewaVerifyAPIView(APIView):
             tx.activate_plan()
 
         return Response({"status": "SUCCESS", "plan": tx.plan})
+
+
+def mock_esewa_view(request):
+    """Render a local mock eSewa page for dev testing."""
+    amt = request.GET.get('amt')
+    pid = request.GET.get('pid')
+    su = request.GET.get('su')
+    fu = request.GET.get('fu')
+
+    pay_url = request.build_absolute_uri('/billing/mock/esewa/pay/')
+    return render(request, 'billing/mock_esewa.html', {
+        'amt': amt,
+        'pid': pid,
+        'su': su,
+        'fu': fu,
+        'pay_url': pay_url,
+    })
+
+
+@csrf_exempt
+def mock_esewa_pay(request):
+    """Handle mock payment action and redirect to success/failure callback."""
+    if request.method != 'POST':
+        return HttpResponse('Method not allowed', status=405)
+
+    action = request.POST.get('action')
+    pid = request.POST.get('pid')
+    # amt intentionally unused in mock handler
+    su = request.POST.get('su')
+    fu = request.POST.get('fu')
+
+    # Build redirect url (include pid and a mock refId)
+    if action == 'success' and su:
+        params = {'pid': pid, 'refId': f'MOCK-{pid[:8]}'}
+        return HttpResponseRedirect(su + ('&' if '?' in su else '?') + urlencode(params))
+
+    if fu:
+        params = {'pid': pid}
+        return HttpResponseRedirect(fu + ('&' if '?' in fu else '?') + urlencode(params))
+
+    return HttpResponse('No callback configured', status=400)
 
