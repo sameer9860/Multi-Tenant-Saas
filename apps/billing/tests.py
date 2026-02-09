@@ -34,7 +34,7 @@ class BillingAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('transaction_id', response.data)
-        tx = PaymentTransaction.objects.get(id=response.data['transaction_id'])
+        tx = PaymentTransaction.objects.get(transaction_id=response.data['transaction_id'])
         self.assertEqual(tx.organization, self.org)
 
     def test_upgrade_invalid_plan(self):
@@ -67,9 +67,13 @@ class BillingAPITests(APITestCase):
             plan='PRO',
             provider='ESEWA',
             amount=PLAN_PRICES['PRO'],
+            transaction_id='test-tx-json'
         )
         url = reverse('esewa-verify')
-        data = {"transaction_id": tx.id}
+        data = {
+            "transaction_id": tx.transaction_id,
+            "reference_id": "MOCK-json"
+        }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         tx.refresh_from_db()
@@ -84,9 +88,14 @@ class BillingAPITests(APITestCase):
             plan='BASIC',
             provider='ESEWA',
             amount=PLAN_PRICES['BASIC'],
+            transaction_id='test-tx-form'
         )
         url = reverse('esewa-verify')
-        response = self.client.post(url, {"transaction_id": tx.id})
+        data = {
+            "transaction_id": tx.transaction_id,
+            "reference_id": "MOCK-form"
+        }
+        response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         tx.refresh_from_db()
         self.assertEqual(tx.status, 'SUCCESS')
@@ -105,10 +114,38 @@ class BillingAPITests(APITestCase):
             plan='BASIC',
             provider='ESEWA',
             amount=PLAN_PRICES['BASIC'],
+            transaction_id='test-tx-key'
         )
         url = reverse('esewa-verify')
         # use alternate key 'txn' as some clients might
-        response = self.client.post(url, {"txn": tx.id})
+        response = self.client.post(url, {
+            "txn": tx.transaction_id,
+            "reference_id": "MOCK-key"
+        })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         tx.refresh_from_db()
         self.assertEqual(tx.status, 'SUCCESS')
+
+    def test_esewa_verification_deferred(self):
+        """Test that network errors during verification don't mark payment as FAILED"""
+        tx = PaymentTransaction.objects.create(
+            organization=self.org,
+            plan='BASIC',
+            provider='ESEWA',
+            amount=PLAN_PRICES['BASIC'],
+            transaction_id="deferred-tx-id"
+        )
+        
+        # We need to mock the ESewaPaymentManager.verify_payment to return a transient error
+        from unittest.mock import patch
+        with patch('apps.billing.views.ESewaPaymentManager.verify_payment') as mock_verify:
+            mock_verify.return_value = {"ok": False, "message": "request error: connection timeout"}
+            
+            url = reverse('esewa-verify')
+            response = self.client.post(url, {"transaction_id": tx.transaction_id})
+            
+            self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+            self.assertEqual(response.data['status'], 'PENDING')
+            
+            tx.refresh_from_db()
+            self.assertEqual(tx.status, 'PENDING')

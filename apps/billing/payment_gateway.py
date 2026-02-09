@@ -7,7 +7,10 @@ kept defensive: it attempts to match the amount and transaction id
 before declaring a payment verified.
 """
 import requests
+import logging
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 class ESewaPaymentManager:
@@ -19,13 +22,14 @@ class ESewaPaymentManager:
         # Use configured verify URL so we can switch between uat/rc/live via settings
         self.api_url = getattr(settings, 'ESEWA_VERIFY_URL', 'https://rc.esewa.com.np/epay/transrec')
 
-    def verify_payment(self, transaction_id: str, amount: int | None = None) -> dict:
+    def verify_payment(self, transaction_id: str, amount: int | float | None = None, reference_id: str | None = None) -> dict:
         """
         Verify a transaction with eSewa's verification endpoint.
 
         Args:
             transaction_id: the `pid`/transaction id sent during the payment
-            amount: expected amount (integer)
+            amount: expected amount (integer or float)
+            reference_id: the `refId` returned by eSewa callback
 
         Returns:
             dict: {"ok": bool, "message": str, "remote_amount": int|None}
@@ -33,14 +37,20 @@ class ESewaPaymentManager:
         params = {
             'pid': transaction_id,
             'scd': self.merchant_code,
+            'amt': amount if amount is not None else 0,
+            'rid': reference_id or '',
         }
 
         try:
+            logger.debug("Initiating eSewa verification: url=%s, params=%s", self.api_url, params)
             resp = requests.get(self.api_url, params=params, timeout=10)
+            logger.debug("eSewa verification response: status=%s, text=%s", resp.status_code, resp.text)
         except Exception as e:
+            logger.error("eSewa verification request error for pid=%s: %s", transaction_id, e)
             return {"ok": False, "message": f"request error: {e}", "remote_amount": None}
 
         if resp.status_code != 200:
+            logger.error("eSewa verification bad response: pid=%s, status=%s", transaction_id, resp.status_code)
             return {"ok": False, "message": f"bad response: {resp.status_code}", "remote_amount": None}
 
         text = resp.text.strip()
