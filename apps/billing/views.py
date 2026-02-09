@@ -69,9 +69,8 @@ class InitiateEsewaPaymentView(APIView):
 
         esewa_url = 'https://uat.esewa.com.np/epay/main?' + urllib.parse.urlencode(params)
 
-        # In development, point to a local mock eSewa page so developers
-        # can simulate payment flows without external gateway.
-        if getattr(settings, 'DEBUG', True):
+        # Use local mock eSewa page only when explicitly enabled by setting
+        if getattr(settings, 'ESEWA_USE_MOCK', False):
             mock_params = {
                 'amt': params['amt'],
                 'pid': params['pid'],

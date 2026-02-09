@@ -213,9 +213,33 @@ class PaymentTransaction(models.Model):
     def activate_plan(self):
         """Upgrade organization plan after successful payment"""
         from apps.billing.models import Subscription
+        # Ensure subscription exists
         subscription, _ = Subscription.objects.get_or_create(
             organization=self.organization
         )
+
+        # Update subscription fields atomically
         subscription.plan = self.plan
+        subscription.is_active = True
+        subscription.start_date = timezone.now()
+        # Set a default 30-day period for the subscription
+        subscription.end_date = subscription.start_date + timedelta(days=30)
         subscription.save()
+
+        # Also update organization-level plan for easy access elsewhere
+        try:
+            org = self.organization
+            org.plan = self.plan
+            org.save()
+        except Exception:
+            pass
+
+        # Reset monthly usage counters where appropriate
+        try:
+            usage = getattr(self.organization, 'usage', None)
+            if usage:
+                usage.reset_monthly_limits()
+        except Exception:
+            pass
+
         return subscription

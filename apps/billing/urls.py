@@ -4,7 +4,8 @@ from django.urls import path
 from .views import (
     UsageDashboardAPIView, UsageDashboardView, UpgradePlanAPIView,
     EsewaVerifyAPIView, InitiateEsewaPaymentView, esewa_success, esewa_failure, 
-    payment_failed, payment_success, upgrade_view, CustomLoginView
+    payment_failed, payment_success, upgrade_view, CustomLoginView,
+    mock_esewa_view, mock_esewa_pay
 )
 
 urlpatterns = [
@@ -21,8 +22,8 @@ urlpatterns = [
     path("esewa/success/", esewa_success, name="esewa-success"),
     path("esewa/failure/", esewa_failure, name="esewa-failure"),
     # Local mock gateway for development/testing
-    path("mock/esewa/", "apps.billing.views.mock_esewa_view", name="mock-esewa"),
-    path("mock/esewa/pay/", "apps.billing.views.mock_esewa_pay", name="mock-esewa-pay"),
+    path("mock/esewa/", mock_esewa_view, name="mock-esewa"),
+    path("mock/esewa/pay/", mock_esewa_pay, name="mock-esewa-pay"),
     
     # Payment status pages
     path("payment/success/", payment_success, name="payment-success"),
