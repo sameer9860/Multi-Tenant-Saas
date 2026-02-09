@@ -2,15 +2,19 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import api_view
-from django.shortcuts import redirect, render, get_object_or_404
+from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.generic import TemplateView
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
+from django.db import transaction
+from django.conf import settings
+import urllib.parse
 
-from .models import PaymentTransaction, Usage, Subscription, PlanLimit
+from .models import PaymentTransaction, Payment, Usage, Subscription
 from .constants import PLAN_PRICES, PLAN_LIMITS
+from .payment_gateway import ESewaPaymentManager
 import uuid
 
 
@@ -26,8 +30,7 @@ class InitiateEsewaPaymentView(APIView):
         
         # Generate unique transaction ID
         transaction_id = str(uuid.uuid4())
-        
-        # Create PENDING transaction in DB
+        # Create PENDING transaction in DB (audit)
         payment = PaymentTransaction.objects.create(
             organization=request.organization,
             plan=plan,
@@ -36,17 +39,33 @@ class InitiateEsewaPaymentView(APIView):
             transaction_id=transaction_id,
             status="PENDING"
         )
+
+        # Also create a simple Payment record to represent the intent
+        Payment.objects.create(
+            organization=request.organization,
+            amount=PLAN_PRICES[plan],
+            plan=plan,
+            transaction_id=transaction_id,
+            status='PENDING'
+        )
         
         # Build eSewa payment URL
-        esewa_url = (
-            "https://uat.esewa.com.np/epay/main?"
-            f"amt={PLAN_PRICES[plan]}&"
-            "pdc=0&psc=0&txAmt=0&"
-            f"pid={transaction_id}&"
-            "scd=EPAYTEST&"
-            "su=http://localhost:8000/billing/esewa/success/&"
-            "fu=http://localhost:8000/billing/esewa/failure/"
-        )
+        # build callback URLs using current request (safer across environments)
+        success_url = request.build_absolute_uri('/billing/esewa/success/')
+        failure_url = request.build_absolute_uri('/billing/esewa/failure/')
+
+        params = {
+            'amt': PLAN_PRICES[plan],
+            'pdc': 0,
+            'psc': 0,
+            'txAmt': 0,
+            'pid': transaction_id,
+            'scd': getattr(settings, 'ESEWA_MERCHANT_CODE', 'EPAYTEST'),
+            'su': success_url,
+            'fu': failure_url,
+        }
+
+        esewa_url = 'https://uat.esewa.com.np/epay/main?' + urllib.parse.urlencode(params)
         
         return Response({
             "payment_id": payment.id,
@@ -71,18 +90,27 @@ def esewa_success(request):
         )
     except PaymentTransaction.DoesNotExist:
         return HttpResponse("❌ Invalid or already processed payment", status=400)
-    
-    # ⚠️ In production: Verify with eSewa API
-    # For now: Assume verified if we reach here
-    
-    # Mark as SUCCESS
-    payment.status = "SUCCESS"
-    payment.reference_id = ref_id
-    payment.save()
-    
-    # Upgrade plan
-    payment.activate_plan()
-    
+    # Verify with eSewa API for real
+    manager = ESewaPaymentManager()
+    result = manager.verify_payment(payment.transaction_id, amount=payment.amount)
+
+    if not result.get('ok'):
+        # mark failed and return
+        PaymentTransaction.objects.filter(id=payment.id).update(status='FAILED')
+        Payment.objects.filter(transaction_id=payment.transaction_id).update(status='FAILED')
+        return HttpResponse(f"❌ Verification failed: {result.get('message')}", status=400)
+
+    # Amount check passed (or remote amount not available). Complete the payment atomically.
+    with transaction.atomic():
+        payment.status = 'SUCCESS'
+        payment.reference_id = ref_id or request.GET.get('refId')
+        payment.save()
+
+        Payment.objects.filter(transaction_id=payment.transaction_id).update(status='SUCCESS')
+
+        # Upgrade the plan
+        payment.activate_plan()
+
     return HttpResponse("✅ Payment verified & plan upgraded")
 
 
@@ -90,11 +118,12 @@ def esewa_success(request):
 def esewa_failure(request):
     """eSewa failure callback"""
     pid = request.GET.get("pid")
-    
     PaymentTransaction.objects.filter(
         transaction_id=pid
     ).update(status="FAILED")
-    
+
+    Payment.objects.filter(transaction_id=pid).update(status='FAILED')
+
     return HttpResponse("❌ Payment failed")
 
 
@@ -205,6 +234,15 @@ class UpgradePlanAPIView(APIView):
             status='PENDING'
         )
 
+        # Create a Payment entry for audit/intent
+        Payment.objects.create(
+            organization=request.organization,
+            amount=tx.amount,
+            plan=tx.plan,
+            transaction_id=tx.transaction_id,
+            status='PENDING'
+        )
+
         return Response({
             'transaction_id': tx.transaction_id,
             'amount': tx.amount,
@@ -225,15 +263,28 @@ class EsewaVerifyAPIView(APIView):
             return Response({"error": "transaction_id is required"}, status=400)
 
         try:
-            tx = PaymentTransaction.objects.get(transaction_id=transaction_id)
+            tx = PaymentTransaction.objects.get(transaction_id=transaction_id, status='PENDING')
         except PaymentTransaction.DoesNotExist:
-            return Response({"error": "transaction not found"}, status=404)
+            return Response({"error": "transaction not found or already processed"}, status=404)
 
-        tx.status = 'SUCCESS'
-        tx.reference_id = request.data.get('reference_id', 'ESEWA_TEST_123')
-        tx.save()
+        manager = ESewaPaymentManager()
+        result = manager.verify_payment(tx.transaction_id, amount=tx.amount)
 
-        # Activate subscription
-        tx.activate_plan()
-        return Response({"message": "Payment successful"})
+        if not result.get('ok'):
+            tx.status = 'FAILED'
+            tx.save()
+            Payment.objects.filter(transaction_id=tx.transaction_id).update(status='FAILED')
+            return Response({"error": "verification_failed", "detail": result.get('message')}, status=400)
+
+        # Verified -> atomically mark success and upgrade
+        with transaction.atomic():
+            tx.status = 'SUCCESS'
+            tx.reference_id = request.data.get('reference_id') or 'ESEWA_CALLBACK'
+            tx.save()
+
+            Payment.objects.filter(transaction_id=tx.transaction_id).update(status='SUCCESS')
+
+            tx.activate_plan()
+
+        return Response({"status": "SUCCESS", "plan": tx.plan})
 

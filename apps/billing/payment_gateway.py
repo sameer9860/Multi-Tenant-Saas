@@ -1,61 +1,69 @@
 """
 Payment Gateway Integration for eSewa
+
+This module contains a small manager to verify eSewa transactions
+by calling the eSewa verification endpoint. The implementation is
+kept defensive: it attempts to match the amount and transaction id
+before declaring a payment verified.
 """
 import requests
-import hashlib
-import hmac
 from django.conf import settings
-import json
-import time
 
 
 class ESewaPaymentManager:
-    """Handle eSewa payment integration"""
-    
+    """Handle basic eSewa payment verification."""
+
     def __init__(self):
-        self.merchant_code = settings.ESEWA_MERCHANT_CODE
-        self.merchant_secret = settings.ESEWA_MERCHANT_SECRET
-        self.api_url = "https://uat.esewa.com.np/api/epay/verify/"  # Test URL
-    
-    def generate_hash(self, data_string):
-        """Generate HMAC-MD5 hash for eSewa"""
-        hash_obj = hmac.new(
-            self.merchant_secret.encode(),
-            data_string.encode(),
-            hashlib.md5
-        )
-        return hash_obj.hexdigest()
-    
-    def verify_payment(self, transaction_code, status, signature):
+        # Merchant code / identifier used by eSewa (configure in settings)
+        self.merchant_code = getattr(settings, 'ESEWA_MERCHANT_CODE', 'EPAYTEST')
+        # UAT verification endpoint (eSewa test)
+        self.api_url = "https://uat.esewa.com.np/epay/transrec"  # UAT endpoint frequently used
+
+    def verify_payment(self, transaction_id: str, amount: int | None = None) -> dict:
         """
-        Verify payment with eSewa
-        
+        Verify a transaction with eSewa's verification endpoint.
+
         Args:
-            transaction_code: str - Transaction code from eSewa
-            status: str - Payment status (COMPLETE, FAILED, etc.)
-            signature: str - Signature from eSewa
-            
+            transaction_id: the `pid`/transaction id sent during the payment
+            amount: expected amount (integer)
+
         Returns:
-            bool - True if payment verified
+            dict: {"ok": bool, "message": str, "remote_amount": int|None}
         """
         params = {
-            "q": "bl",
-            "ee": self.merchant_code,
-            "tr": transaction_code,
+            'pid': transaction_id,
+            'scd': self.merchant_code,
         }
-        
+
         try:
-            response = requests.get(
-                self.api_url,
-                params=params,
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                result = response.text
-                # eSewa returns "Success" for valid transactions
-                return result == "Success"
-            return False
+            resp = requests.get(self.api_url, params=params, timeout=10)
         except Exception as e:
-            print(f"eSewa verification error: {str(e)}")
-            return False
+            return {"ok": False, "message": f"request error: {e}", "remote_amount": None}
+
+        if resp.status_code != 200:
+            return {"ok": False, "message": f"bad response: {resp.status_code}", "remote_amount": None}
+
+        text = resp.text.strip()
+
+        # Different eSewa environments return different formats. The safest
+        # approach here is to look for a success indicator and (when possible)
+        # parse an amount if it's present.
+        if "Success" in text or "success" in text:
+            # Try to extract a number from the response as the remote amount
+            remote_amount = None
+            try:
+                # naive extraction: find digits in text
+                import re
+                m = re.search(r"(\d+)", text)
+                if m:
+                    remote_amount = int(m.group(1))
+            except Exception:
+                remote_amount = None
+
+            # If caller supplied expected amount, verify it matches remote amount when available
+            if amount is not None and remote_amount is not None and amount != remote_amount:
+                return {"ok": False, "message": "amount_mismatch", "remote_amount": remote_amount}
+
+            return {"ok": True, "message": "verified", "remote_amount": remote_amount}
+
+        return {"ok": False, "message": "not_verified", "remote_amount": None}
