@@ -159,10 +159,8 @@ LOGIN_REDIRECT_URL = 'usage-dashboard-ui'
 # ============= PAYMENT GATEWAY SETTINGS =============
 
 # eSewa Configuration
-ESEWA_MERCHANT_CODE = "EPAYTEST"  # replace with LIVE code later
-ESEWA_PAYMENT_URL = "https://uat.esewa.com.np/epay/main"
-ESEWA_SUCCESS_URL = "http://localhost:8000/api/payments/esewa/success/"
-ESEWA_FAILURE_URL = "http://localhost:8000/api/payments/esewa/failure/"
-
+ESEWA_BASE_URL = "https://rc.esewa.com.np/epay/main"
+ESEWA_VERIFY_URL = "https://rc.esewa.com.np/epay/transrec"
+ESEWA_MERCHANT_CODE = "EPAYTEST"
 
 
