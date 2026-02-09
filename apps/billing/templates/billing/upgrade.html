@@ -95,7 +95,7 @@
             </li>
           </ul>
 
-          <button class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200 shadow-lg hover:shadow-xl">
+          <button data-plan="PRO" class="upgrade-btn w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200 shadow-lg hover:shadow-xl">
             Upgrade to Pro
           </button>
         </div>
@@ -141,12 +141,67 @@
             </li>
           </ul>
 
-          <button class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200 shadow-lg hover:shadow-xl">
+          <button data-plan="BASIC" class="upgrade-btn w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200 shadow-lg hover:shadow-xl">
             Upgrade to Business
           </button>
         </div>
       </div>
     </div>
   </div>
+  <script>
+    // Small helper to get CSRF token from cookies
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    async function initiateEsewa(plan) {
+      const url = '/billing/esewa/init/';
+      const csrftoken = getCookie('csrftoken');
+
+      try {
+        const resp = await fetch(url, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken || ''
+          },
+          body: JSON.stringify({ plan })
+        });
+
+        if (!resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          alert('Error initiating payment: ' + (data.error || resp.statusText));
+          return;
+        }
+
+        const data = await resp.json();
+        if (data.esewa_url) {
+          // Redirect user to eSewa
+          window.location.href = data.esewa_url;
+        } else {
+          alert('Payment initiation returned invalid response');
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      }
+    }
+
+    document.querySelectorAll('.upgrade-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const plan = btn.getAttribute('data-plan');
+        if (!plan) return;
+        // disable button to prevent double clicks
+        btn.disabled = true;
+        btn.textContent = 'Redirecting...';
+        initiateEsewa(plan).finally(() => {
+          btn.disabled = false;
+          btn.textContent = btn.getAttribute('data-plan') === 'PRO' ? 'Upgrade to Pro' : 'Upgrade to Business';
+        });
+      });
+    });
+  </script>
 </body>
 </html>
