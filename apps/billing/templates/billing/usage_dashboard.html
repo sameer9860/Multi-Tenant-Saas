@@ -1,248 +1,312 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Usage Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen p-4">
   <!-- Messages Popup -->
   {% if messages %}
-    <div id="messages-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3">
-      {% for message in messages %}
-        <div class="message-toast transform transition-all duration-500 ease-out translate-x-full opacity-0 bg-white border-l-4 {% if message.tags == 'success' %}border-green-500 text-green-800{% else %}border-blue-500 text-blue-800{% endif %} shadow-2xl rounded-lg p-5 flex items-start gap-4 max-w-md">
-          <div class="flex-shrink-0">
-            {% if message.tags == 'success' %}
-              <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            {% else %}
-              <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            {% endif %}
-          </div>
-          <div class="flex-grow">
-            <p class="font-bold text-lg mb-1">{{ message.tags|capfirst }}</p>
-            <p class="text-sm opacity-90">{{ message }}</p>
-          </div>
-          <button onclick="this.parentElement.remove()" class="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-      {% endfor %}
+  <div id="messages-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3">
+    {% for message in messages %}
+    <div
+      class="message-toast transform transition-all duration-500 ease-out translate-x-full opacity-0 bg-white border-l-4 {% if message.tags == 'success' %}border-green-500 text-green-800{% else %}border-blue-500 text-blue-800{% endif %} shadow-2xl rounded-lg p-5 flex items-start gap-4 max-w-md">
+      <div class="flex-shrink-0">
+        {% if message.tags == 'success' %}
+        <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        {% else %}
+        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        {% endif %}
+      </div>
+      <div class="flex-grow">
+        <p class="font-bold text-lg mb-1">{{ message.tags|capfirst }}</p>
+        <p class="text-sm opacity-90">{{ message }}</p>
+      </div>
+      <button onclick="this.parentElement.remove()"
+        class="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
     </div>
-    <script>
-      window.addEventListener('DOMContentLoaded', () => {
-        const toasts = document.querySelectorAll('.message-toast');
-        toasts.forEach((toast, index) => {
-          setTimeout(() => {
-            toast.classList.remove('translate-x-full', 'opacity-0');
-            toast.classList.add('translate-x-0', 'opacity-100');
-          }, index * 200);
-          
-          // Auto hide after 8 seconds
-          setTimeout(() => {
-            toast.classList.add('translate-x-full', 'opacity-0');
-            setTimeout(() => toast.remove(), 500);
-          }, 8000);
-        });
+    {% endfor %}
+  </div>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const toasts = document.querySelectorAll('.message-toast');
+      toasts.forEach((toast, index) => {
+        setTimeout(() => {
+          toast.classList.remove('translate-x-full', 'opacity-0');
+          toast.classList.add('translate-x-0', 'opacity-100');
+        }, index * 200);
+
+        // Auto hide after 8 seconds
+        setTimeout(() => {
+          toast.classList.add('translate-x-full', 'opacity-0');
+          setTimeout(() => toast.remove(), 500);
+        }, 8000);
       });
-    </script>
+    });
+  </script>
   {% endif %}
 
   <div class="max-w-4xl mx-auto">
     <!-- Header Section -->
-    <div class="mb-8">
-      <h1 class="text-4xl font-bold text-gray-900">📊 Usage Dashboard</h1>
-      <p class="text-gray-600 mt-2">Monitor your current plan and invoice usage</p>
+    <div class="mb-8 flex justify-between items-end">
+      <div>
+        <h1 class="text-4xl font-bold text-gray-900">📊 Usage Dashboard</h1>
+        <p class="text-gray-600 mt-2">Monitor your current plan and invoice usage</p>
+      </div>
+      <a href="{% url 'payment-history' %}"
+        class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm">
+        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+          </path>
+        </svg>
+        Payment History
+      </a>
     </div>
 
     {% if org_missing %}
-      <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
-        <div class="w-16 h-16 mx-auto bg-yellow-100 rounded-full flex items-center justify-center mb-4">
-          <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-        </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Sign In Required</h2>
-        <p class="text-gray-600 mb-6">Please sign in to your account to view your usage information.</p>
-        <a href="{{ login_url|default:'/accounts/login/' }}" class="inline-block bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200 shadow-md hover:shadow-lg">
-          Sign In
-        </a>
+    <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
+      <div class="w-16 h-16 mx-auto bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
       </div>
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Sign In Required</h2>
+      <p class="text-gray-600 mb-6">Please sign in to your account to view your usage information.</p>
+      <a href="{{ login_url|default:'/accounts/login/' }}"
+        class="inline-block bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200 shadow-md hover:shadow-lg">
+        Sign In
+      </a>
+    </div>
     {% endif %}
 
     {% if not org_missing %}
-      <!-- Main Card -->
-      <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-        
-        <!-- Premium Plan Badge Header -->
-        <div class="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 p-8 text-white">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-indigo-100 text-sm uppercase tracking-widest font-semibold mb-2">Current Plan</p>
-              <h2 class="text-5xl font-bold">
-                {% if plan == 'FREE' %}
-                  🆓 {{ plan }}
-                {% elif plan == 'BASIC' %}
-                  ⭐ {{ plan }}
-                {% elif plan == 'PRO' %}
-                  🚀 {{ plan }}
-                {% else %}
-                  {{ plan }}
-                {% endif %}
-              </h2>
-            </div>
-            <div class="text-right">
-              <div class="bg-white/20 backdrop-blur-sm rounded-xl px-6 py-4">
-                <p class="text-indigo-100 text-sm uppercase tracking-wide mb-1">Total Invoices Created</p>
-                <p class="text-4xl font-bold">{{ invoices_used|default:0 }}</p>
-              </div>
+    <!-- Main Card -->
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+
+      <!-- Premium Plan Badge Header -->
+      <div class="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 p-8 text-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-indigo-100 text-sm uppercase tracking-widest font-semibold mb-2">Current Plan</p>
+            <h2 class="text-5xl font-bold">
+              {% if plan == 'FREE' %}
+              🆓 {{ plan }}
+              {% elif plan == 'BASIC' %}
+              ⭐ {{ plan }}
+              {% elif plan == 'PRO' %}
+              🚀 {{ plan }}
+              {% else %}
+              {{ plan }}
+              {% endif %}
+            </h2>
+          </div>
+          <div class="text-right">
+            <div class="bg-white/20 backdrop-blur-sm rounded-xl px-6 py-4">
+              <p class="text-indigo-100 text-sm uppercase tracking-wide mb-1">Total Invoices Created</p>
+              <p class="text-4xl font-bold">{{ invoices_used|default:0 }}</p>
             </div>
           </div>
-        </div>
-
-        <!-- Usage Section -->
-        <div class="p-8">
-          
-          <!-- Invoice Limit Card -->
-          {% if invoice_limit %}
-            <div class="mb-10 bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-8">
-              <div class="flex items-center justify-between mb-6">
-                <div>
-                  <p class="text-indigo-600 text-sm uppercase tracking-widest font-semibold mb-1">Invoice Capacity</p>
-                  <h3 class="text-2xl font-bold text-gray-900">
-                    <span class="text-indigo-600">{{ invoices_used|default:0 }}</span>
-                    <span class="text-gray-400">/</span>
-                    <span class="text-gray-700">{{ invoice_limit }}</span>
-                  </h3>
-                </div>
-                <div class="text-right">
-                  <p class="text-5xl font-bold text-indigo-600">{{ invoice_percent|default:0|floatformat:1 }}%</p>
-                  <p class="text-sm text-gray-600 mt-1">
-                    {% if invoice_percent >= 90 %}
-                      ⚠️ Almost full
-                    {% elif invoice_percent >= 70 %}
-                      📈 Getting close
-                    {% else %}
-                      ✅ Plenty available
-                    {% endif %}
-                  </p>
-                </div>
-              </div>
-              
-              <!-- Progress Bar -->
-              <div class="relative">
-                <div class="w-full bg-gray-300 rounded-full h-5 overflow-hidden shadow-inner" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ invoice_percent|default:0|floatformat:0 }}">
-                  <div class="bg-gradient-to-r from-indigo-500 to-purple-600 h-5 rounded-full transition-all duration-700 ease-out shadow-lg" style="width: {{ invoice_percent|default:0 }}%;"></div>
-                </div>
-              </div>
-              
-              <!-- Usage Info -->
-              <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-indigo-200">
-                <div class="text-center">
-                  <p class="text-gray-600 text-xs uppercase tracking-wide mb-1">Used</p>
-                  <p class="text-2xl font-bold text-indigo-600">{{ invoices_used|default:0 }}</p>
-                </div>
-                <div class="text-center">
-                  <p class="text-gray-600 text-xs uppercase tracking-wide mb-1">Remaining</p>
-                  <p class="text-2xl font-bold text-green-600">{{ remaining_invoices|default:0 }}</p>
-                </div>
-                <div class="text-center">
-                  <p class="text-gray-600 text-xs uppercase tracking-wide mb-1">Limit</p>
-                  <p class="text-2xl font-bold text-gray-700">{{ invoice_limit }}</p>
-                </div>
-              </div>
-            </div>
-          {% else %}
-            <!-- Unlimited Plan Badge -->
-            <div class="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 border-2 border-green-300 rounded-2xl p-8 mb-10 shadow-sm">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mr-6">
-                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </div>
-                  <div>
-                    <p class="font-bold text-green-900 text-xl">🎉 Unlimited Invoices</p>
-                    <p class="text-sm text-green-700 mt-1">You have unlimited invoice capacity on your <strong>{{ plan }}</strong> plan.</p>
-                  </div>
-                </div>
-                <div class="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold">
-                  NO LIMITS
-                </div>
-              </div>
-            </div>
-          {% endif %}
-
-          <!-- Stats Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 pb-10 border-b border-gray-200">
-            
-            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-blue-600 text-xs uppercase tracking-widest font-semibold mb-2">Current Status</p>
-                  <p class="text-3xl font-bold text-blue-900">✅ Active</p>
-                  <p class="text-sm text-blue-700 mt-2">Your plan is active & operational</p>
-                </div>
-              </div>
-            </div>
-
-            {% if last_updated %}
-              <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-                <p class="text-purple-600 text-xs uppercase tracking-widest font-semibold mb-2">Last Updated</p>
-                <p class="text-lg font-semibold text-purple-900">{{ last_updated }}</p>
-                <p class="text-sm text-purple-700 mt-2">Plan information synced</p>
-              </div>
-            {% endif %}
-
-            <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
-              <p class="text-orange-600 text-xs uppercase tracking-widest font-semibold mb-2">Plan Tier</p>
-              <p class="text-3xl font-bold text-orange-900">
-                {% if plan == 'FREE' %}
-                  Starter
-                {% elif plan == 'BASIC' %}
-                  Professional
-                {% elif plan == 'PRO' %}
-                  Enterprise
-                {% else %}
-                  {{ plan }}
-                {% endif %}
-              </p>
-              <p class="text-sm text-orange-700 mt-2">Premium features unlocked</p>
-            </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button id="dashboard-upgrade-btn" data-plan="BASIC" class="group bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-4 px-6 rounded-xl font-semibold hover:from-indigo-700 hover:to-indigo-800 transition-all duration-300 shadow-md hover:shadow-xl text-center transform hover:scale-105 flex items-center justify-center gap-2">
-                <span>⬆️ Upgrade Plan</span>
-                <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                </svg>
-              </button>
-            <button onclick="window.print()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-4 px-6 rounded-xl font-semibold transition-colors duration-200 text-center transform hover:scale-105 flex items-center justify-center gap-2">
-              <span>📥 Download Report</span>
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-              </svg>
-            </button>
-          </div>
-
-          <!-- Info Alert -->
-          <div class="mt-8 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-            <p class="text-sm text-blue-800">
-              <strong>💡 Tip:</strong> Upgrade your plan anytime to unlock more features and increase your invoice limit.
-            </p>
-          </div>
-
         </div>
       </div>
+
+      <!-- Usage Section -->
+      <div class="p-8">
+
+        <!-- Invoice Limit Card -->
+        {% if invoice_limit %}
+        <div class="mb-10 bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-8">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <p class="text-indigo-600 text-sm uppercase tracking-widest font-semibold mb-1">Invoice Capacity</p>
+              <h3 class="text-2xl font-bold text-gray-900">
+                <span class="text-indigo-600">{{ invoices_used|default:0 }}</span>
+                <span class="text-gray-400">/</span>
+                <span class="text-gray-700">{{ invoice_limit }}</span>
+              </h3>
+            </div>
+            <div class="text-right">
+              <p class="text-5xl font-bold text-indigo-600">{{ invoice_percent|default:0|floatformat:1 }}%</p>
+              <p class="text-sm text-gray-600 mt-1">
+                {% if invoice_percent >= 90 %}
+                ⚠️ Almost full
+                {% elif invoice_percent >= 70 %}
+                📈 Getting close
+                {% else %}
+                ✅ Plenty available
+                {% endif %}
+              </p>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="relative">
+            <div class="w-full bg-gray-300 rounded-full h-5 overflow-hidden shadow-inner" role="progressbar"
+              aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ invoice_percent|default:0|floatformat:0 }}">
+              <div
+                class="bg-gradient-to-r from-indigo-500 to-purple-600 h-5 rounded-full transition-all duration-700 ease-out shadow-lg"
+                style="width: {{ invoice_percent|default:0 }}%;"></div>
+            </div>
+          </div>
+
+          <!-- Usage Info -->
+          <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-indigo-200">
+            <div class="text-center">
+              <p class="text-gray-600 text-xs uppercase tracking-wide mb-1">Used</p>
+              <p class="text-2xl font-bold text-indigo-600">{{ invoices_used|default:0 }}</p>
+            </div>
+            <div class="text-center">
+              <p class="text-gray-600 text-xs uppercase tracking-wide mb-1">Remaining</p>
+              <p class="text-2xl font-bold text-green-600">{{ remaining_invoices|default:0 }}</p>
+            </div>
+            <div class="text-center">
+              <p class="text-gray-600 text-xs uppercase tracking-wide mb-1">Limit</p>
+              <p class="text-2xl font-bold text-gray-700">{{ invoice_limit }}</p>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <!-- Unlimited Plan Badge -->
+        <div
+          class="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 border-2 border-green-300 rounded-2xl p-8 mb-10 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mr-6">
+                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="font-bold text-green-900 text-xl">🎉 Unlimited Invoices</p>
+                <p class="text-sm text-green-700 mt-1">You have unlimited invoice capacity on your <strong>{{ plan
+                    }}</strong> plan.</p>
+              </div>
+            </div>
+            <div class="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold">
+              NO LIMITS
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 pb-10 border-b border-gray-200">
+
+          <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-blue-600 text-xs uppercase tracking-widest font-semibold mb-2">Current Status</p>
+                <p class="text-3xl font-bold text-blue-900">✅ Active</p>
+                <p class="text-sm text-blue-700 mt-2">Your plan is active & operational</p>
+              </div>
+            </div>
+          </div>
+
+          {% if last_updated %}
+          <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+            <p class="text-purple-600 text-xs uppercase tracking-widest font-semibold mb-2">Last Updated</p>
+            <p class="text-lg font-semibold text-purple-900">{{ last_updated }}</p>
+            <p class="text-sm text-purple-700 mt-2">Plan information synced</p>
+          </div>
+          {% endif %}
+
+          <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+            <p class="text-orange-600 text-xs uppercase tracking-widest font-semibold mb-2">Plan Tier</p>
+            <p class="text-3xl font-bold text-orange-900">
+              {% if plan == 'FREE' %}
+              Starter
+              {% elif plan == 'BASIC' %}
+              Professional
+              {% elif plan == 'PRO' %}
+              Enterprise
+              {% else %}
+              {{ plan }}
+              {% endif %}
+            </p>
+            <p class="text-sm text-orange-700 mt-2">Premium features unlocked</p>
+          </div>
+        </div>
+
+        <!-- Subscription Summary Card -->
+        <div class="mb-10 p-6 bg-slate-900 rounded-2xl text-white shadow-xl relative overflow-hidden group">
+          <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM13.536 14.95a1 1 0 010-1.414l.707-.707a1 1 0 111.414 1.414l-.707.707a1 1 0 01-1.414 0zM6.464 14.95l.707-.707a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414z">
+              </path>
+            </svg>
+          </div>
+          <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <h4 class="text-slate-400 text-xs font-bold uppercase tracking-[0.2em] mb-2">Subscription Summary</h4>
+              <div class="flex items-center gap-3">
+                <span class="text-2xl font-bold">Current Plan: {{ plan }}</span>
+                <span
+                  class="px-2 py-0.5 bg-green-500/20 text-green-400 text-[10px] font-bold rounded uppercase">Active</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-8">
+              <div>
+                <p class="text-slate-500 text-[10px] uppercase font-bold mb-1">Renews</p>
+                <p class="text-sm font-semibold">Manual</p>
+              </div>
+              <div>
+                <p class="text-slate-500 text-[10px] uppercase font-bold mb-1">Usage</p>
+                <p class="text-sm font-semibold">{{ invoices_used }} / {{ invoice_limit|default:"∞" }}</p>
+              </div>
+              <div class="hidden sm:block">
+                <p class="text-slate-500 text-[10px] uppercase font-bold mb-1">Status</p>
+                <p class="text-sm font-semibold text-green-400">SUCCESS</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button id="dashboard-upgrade-btn" data-plan="BASIC"
+            class="group bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-4 px-6 rounded-xl font-semibold hover:from-indigo-700 hover:to-indigo-800 transition-all duration-300 shadow-md hover:shadow-xl text-center transform hover:scale-105 flex items-center justify-center gap-2">
+            <span>⬆️ Upgrade Plan</span>
+            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+            </svg>
+          </button>
+          <button onclick="window.print()"
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-4 px-6 rounded-xl font-semibold transition-colors duration-200 text-center transform hover:scale-105 flex items-center justify-center gap-2">
+            <span>📥 Download Report</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Info Alert -->
+        <div class="mt-8 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+          <p class="text-sm text-blue-800">
+            <strong>💡 Tip:</strong> Upgrade your plan anytime to unlock more features and increase your invoice limit.
+          </p>
+        </div>
+
+      </div>
+    </div>
     {% endif %}
   </div>
   <script>
@@ -296,4 +360,5 @@
     });
   </script>
 </body>
+
 </html>

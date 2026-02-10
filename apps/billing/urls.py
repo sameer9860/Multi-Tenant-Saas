@@ -5,7 +5,7 @@ from .views import (
     UsageDashboardAPIView, UsageDashboardView, UpgradePlanAPIView,
     EsewaVerifyAPIView, InitiateEsewaPaymentView, esewa_success, esewa_failure, 
     payment_failed, payment_success, upgrade_view, CustomLoginView,
-    mock_esewa_view, mock_esewa_pay
+    mock_esewa_view, mock_esewa_pay, PaymentListAPIView, PaymentHistoryView, ReceiptView
 )
 
 urlpatterns = [
@@ -15,6 +15,11 @@ urlpatterns = [
     path("", UsageDashboardView.as_view(), name="usage-dashboard-ui"),
     path("upgrade/", UpgradePlanAPIView.as_view(), name="upgrade-plan"),
     path("upgrade/ui/", upgrade_view, name="upgrade-plan-ui"),
+    
+    # Payment History & Receipts
+    path("api/payments/", PaymentListAPIView.as_view(), name="payment-list-api"),
+    path("payments/history/", PaymentHistoryView.as_view(), name="payment-history"),
+    path("payments/receipt/<int:pk>/", ReceiptView.as_view(), name="payment-receipt"),
     
     # eSewa endpoints
     path("esewa/verify/", EsewaVerifyAPIView.as_view(), name="esewa-verify"),

@@ -1,7 +1,7 @@
 # apps/billing/serializers.py
 
 from rest_framework import serializers
-from .models import Usage
+from .models import Usage, PaymentTransaction
 
 class UsageSerializer(serializers.ModelSerializer):
     plan = serializers.CharField(
@@ -28,3 +28,16 @@ class UsageSerializer(serializers.ModelSerializer):
             return 100000
         else:
             return 10
+
+class PaymentTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentTransaction
+        fields = [
+            'transaction_id',
+            'plan',
+            'amount',
+            'status',
+            'provider',
+            'created_at',
+            'updated_at'
+        ]

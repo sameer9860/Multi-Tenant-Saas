@@ -2,9 +2,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import api_view
-from django.shortcuts import render
-from django.views.generic import TemplateView
+from django.shortcuts import render, get_object_or_404
+from django.views.generic import TemplateView, DetailView
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 from django.db import transaction
@@ -21,7 +22,8 @@ logger = logging.getLogger(__name__)
 from .models import PaymentTransaction, Payment, Usage, Subscription
 from .constants import PLAN_PRICES, PLAN_LIMITS
 from .payment_gateway import ESewaPaymentManager
-from django.http import HttpResponseRedirect, HttpResponse
+from .serializers import PaymentTransactionSerializer
+from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.utils.http import urlencode
 from django.views.decorators.csrf import csrf_exempt
 
@@ -376,4 +378,44 @@ def mock_esewa_pay(request):
         return HttpResponseRedirect(fu + ('&' if '?' in fu else '?') + urlencode(params))
 
     return HttpResponse('No callback configured', status=400)
+
+
+# ========== Payment History & Receipts =============
+
+class PaymentListAPIView(APIView):
+    """API to return payment history for the current organization"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        payments = PaymentTransaction.objects.filter(
+            organization=request.organization
+        ).order_by('-created_at')
+        serializer = PaymentTransactionSerializer(payments, many=True)
+        return Response(serializer.data)
+
+
+class PaymentHistoryView(LoginRequiredMixin, TemplateView):
+    """UI for payment history"""
+    template_name = 'billing/payment_history.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['payments'] = PaymentTransaction.objects.filter(
+            organization=self.request.organization
+        ).order_by('-created_at')
+        return context
+
+
+class ReceiptView(LoginRequiredMixin, DetailView):
+    """Detailed view for a single payment receipt"""
+    model = PaymentTransaction
+    template_name = 'billing/receipt.html'
+    context_object_name = 'payment'
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        # Security: ensure payment belongs to user's organization
+        if obj.organization != self.request.organization:
+            raise Http404("Receipt not found")
+        return obj
 
