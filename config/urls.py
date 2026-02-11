@@ -31,6 +31,7 @@ urlpatterns = [
     path('billing/', include('apps.billing.urls')),
     path('payments/', include('apps.billing.urls')), 
     path('analytics/', include('apps.analytics.urls')),  # new line for analytics endpoints
+    path("api/crm/", include("crm.urls")),  
     # for payment-related endpoints
 ]
 
