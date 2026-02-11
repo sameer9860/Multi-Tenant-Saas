@@ -1,6 +1,6 @@
 from django.db import models
-from organizations.models import Organization
 from django.contrib.auth import get_user_model
+from apps.core.models import Organization   
 
 User = get_user_model()
 
