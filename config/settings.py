@@ -54,11 +54,13 @@ INSTALLED_APPS = [
     'apps.analytics',
     'apps.subscriptions',
     'crm',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -163,6 +165,9 @@ LOGIN_REDIRECT_URL = 'usage-dashboard-ui'
 ESEWA_BASE_URL = os.getenv('ESEWA_BASE_URL')
 ESEWA_VERIFY_URL = os.getenv('ESEWA_VERIFY_URL')
 ESEWA_MERCHANT_CODE = os.getenv('ESEWA_MERCHANT_CODE')
+
+# CORS Configuration
+CORS_ALLOW_ALL_ORIGINS = True # Set to False and specify CORS_ALLOWED_ORIGINS in production
 
 
 

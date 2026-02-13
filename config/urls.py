@@ -27,6 +27,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('core/', include('apps.core.urls')),
     path('api/', include('apps.invoices.urls')),
+    path('api/accounts/', include('apps.accounts.urls')),
     path('api/subscription/', include('apps.subscriptions.urls')),
     path('billing/', include('apps.billing.urls')),
     path('payments/', include('apps.billing.urls')), 

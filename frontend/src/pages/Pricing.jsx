@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 const plans = [
   {
@@ -10,10 +10,10 @@ const plans = [
       "10 invoices/month",
       "1 team member",
       "Basic reporting",
-      "Email support"
+      "Email support",
     ],
     canUpgrade: false,
-    buttonText: "Current Plan"
+    buttonText: "Current Plan",
   },
   {
     name: "BASIC",
@@ -25,10 +25,10 @@ const plans = [
       "5 team members",
       "Advanced reporting",
       "Priority email support",
-      "Custom branding"
+      "Custom branding",
     ],
     canUpgrade: true,
-    buttonText: "Upgrade to Basic"
+    buttonText: "Upgrade to Basic",
   },
   {
     name: "PRO",
@@ -41,10 +41,10 @@ const plans = [
       "Advanced analytics",
       "24/7 phone support",
       "Custom integrations",
-      "API access"
+      "API access",
     ],
     canUpgrade: true,
-    buttonText: "Upgrade to Pro"
+    buttonText: "Upgrade to Pro",
   },
 ];
 
@@ -52,19 +52,42 @@ export default function Pricing() {
   const [loading, setLoading] = useState(false);
   const [currentPlan, setCurrentPlan] = useState("FREE");
 
+  React.useEffect(() => {
+    fetchCurrentPlan();
+  }, []);
+
+  const fetchCurrentPlan = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const response = await fetch("/api/accounts/profile/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentPlan(data.organization.plan);
+      }
+    } catch (err) {
+      console.error("Failed to fetch plan:", err);
+    }
+  };
+
   const handleUpgrade = async (planName) => {
     if (loading) return;
-    
+
     setLoading(true);
-    
+
     try {
       const token = localStorage.getItem("token");
-      
+
       const response = await fetch("/api/subscription/upgrade/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ plan: planName }),
       });
@@ -74,7 +97,7 @@ export default function Pricing() {
       if (response.ok) {
         alert(`✅ Successfully upgraded to ${planName} plan!`);
         setCurrentPlan(planName);
-        
+
         // Reload usage dashboard after 1 second
         setTimeout(() => {
           window.location.reload();
@@ -98,7 +121,8 @@ export default function Pricing() {
           Simple, Transparent Pricing
         </h1>
         <p className="text-xl text-gray-600">
-          Choose the perfect plan for your business. Upgrade or downgrade anytime.
+          Choose the perfect plan for your business. Upgrade or downgrade
+          anytime.
         </p>
       </div>
 
@@ -183,7 +207,8 @@ export default function Pricing() {
               Can I change my plan anytime?
             </h4>
             <p className="text-gray-600">
-              Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.
+              Yes! You can upgrade or downgrade your plan at any time. Changes
+              take effect immediately.
             </p>
           </div>
           <div>
@@ -191,7 +216,8 @@ export default function Pricing() {
               What happens when I upgrade?
             </h4>
             <p className="text-gray-600">
-              Your usage limits increase instantly. You get access to premium features immediately.
+              Your usage limits increase instantly. You get access to premium
+              features immediately.
             </p>
           </div>
           <div>
@@ -199,7 +225,8 @@ export default function Pricing() {
               Is there a free trial?
             </h4>
             <p className="text-gray-600">
-              Yes! Start with FREE plan and upgrade whenever you're ready. No credit card required.
+              Yes! Start with FREE plan and upgrade whenever you're ready. No
+              credit card required.
             </p>
           </div>
         </div>

@@ -14,18 +14,23 @@ const Leads = () => {
     assigned_to: "",
   });
 
-  // Mock user for role-based testing - in real app would come from auth context/localstorage
+  // Get user from localStorage
   const [user, setUser] = useState({
-    role: localStorage.getItem("user_role") || "ADMIN", // Defaulting to ADMIN for demo
+    role: localStorage.getItem("user_role") || "STAFF",
     token: localStorage.getItem("token") || "",
   });
 
   useEffect(() => {
+    if (!user.token) {
+      window.location.href = "/login"; // Simple redirect if no token
+      return;
+    }
     fetchLeads();
   }, []);
 
   const fetchLeads = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await fetch("/api/crm/leads/", {
         headers: {
@@ -35,34 +40,22 @@ const Leads = () => {
       if (response.status === 403) {
         setError("Lead limit reached. Upgrade your plan.");
         setLeads([]);
+      } else if (response.status === 401) {
+        setError("Session expired. Please login again.");
+        localStorage.clear();
+        window.location.href = "/login";
       } else if (!response.ok) {
-        throw new Error("Failed to fetch leads");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.detail || "Failed to fetch leads from server.",
+        );
       } else {
         const data = await response.json();
         setLeads(data);
-        setError(null);
       }
     } catch (err) {
       console.error("Fetch error:", err);
-      // Fallback for demo if API is not running
-      setLeads([
-        {
-          id: 1,
-          name: "John Doe",
-          email: "john@example.com",
-          phone: "123-456-7890",
-          status: "NEW",
-          assigned_to: "Admin",
-        },
-        {
-          id: 2,
-          name: "Jane Smith",
-          email: "jane@example.com",
-          phone: "987-654-3210",
-          status: "CONTACTED",
-          assigned_to: "Staff",
-        },
-      ]);
+      setError(err.message);
     } finally {
       setLoading(false);
     }

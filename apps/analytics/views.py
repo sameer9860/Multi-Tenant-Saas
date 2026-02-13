@@ -9,21 +9,19 @@ class UsageView(APIView):
 
     def get(self, request):
         org = request.organization
-        plan = org.subscription.plan
-
-        limits = {
-            "FREE": 10,
-            "PRO": 1000,
-            "BUSINESS": 10000,
-        }
-
-        used = org.invoices.count()
+        if not org:
+             return Response({"error": "Organization not found"}, status=404)
+             
+        plan = org.plan # Use org.plan if available or org.subscription.plan
+        
+        leads_count = org.leads.count()
+        clients_count = org.clients.count()
 
         return Response({
             "plan": plan,
-            "used": used,
-            "limit": limits.get(plan, 0),
-            "remaining": limits.get(plan, 0) - used
+            "leads_count": leads_count,
+            "clients_count": clients_count,
+            "organization_name": org.name
         })
 @login_required
 def usage_dashboard(request):
