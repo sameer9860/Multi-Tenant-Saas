@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import render, get_object_or_404
 from django.views.generic import TemplateView, DetailView
 from django.contrib.auth.decorators import login_required
@@ -146,6 +146,7 @@ def _process_esewa_verification(payment, ref_id, amt=None):
 
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def esewa_success(request):
     """eSewa success callback - VERIFY & UPGRADE"""
     ref_id = request.GET.get("refId")
@@ -168,12 +169,13 @@ def esewa_success(request):
 
     status_code, message = _process_esewa_verification(payment, ref_id, amt)
     if status_code == 200:
-        messages.success(request, f"🎉 Success! Your plan has been upgraded to {payment.plan}.")
-        return HttpResponseRedirect(reverse('usage-dashboard-ui'))
+        # Redirect to React dashboard with success message
+        return HttpResponseRedirect(f'/dashboard?payment_success=true&plan={payment.plan}')
     return HttpResponse(message, status=status_code)
 
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def esewa_failure(request):
     """eSewa failure callback"""
     pid = request.GET.get("pid")

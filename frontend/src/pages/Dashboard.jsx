@@ -18,12 +18,32 @@ const Dashboard = () => {
     full_name: "",
     role: "",
   });
-  const [loading, setLoading] = useState(true);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successPlan, setSuccessPlan] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check for payment success parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get("payment_success");
+    const plan = urlParams.get("plan");
+
+    if (paymentSuccess === "true" && plan) {
+      setShowSuccessMessage(true);
+      setSuccessPlan(plan);
+
+      // Clean up URL parameters
+      window.history.replaceState({}, document.title, "/dashboard");
+
+      // Auto-hide message after 5 seconds
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 5000);
+    }
+
     fetchDashboardData();
     fetchProfileData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchProfileData = async () => {
@@ -72,8 +92,6 @@ const Dashboard = () => {
       }
     } catch (err) {
       console.error("Failed to fetch dashboard data:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -240,6 +258,53 @@ const Dashboard = () => {
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-12 bg-slate-50/50">
+          {/* Success Message Banner */}
+          {showSuccessMessage && (
+            <div className="fixed top-8 right-8 z-50 animate-slide-in-right">
+              <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border-2 border-white/20">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={3}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <div className="font-black text-lg">Payment Successful!</div>
+                  <div className="text-white/90 font-medium">
+                    Your plan has been upgraded to {successPlan}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSuccessMessage(false)}
+                  className="ml-4 text-white/80 hover:text-white transition-colors"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="max-w-6xl mx-auto">
             <header className="flex justify-between items-center mb-12">
               <div>

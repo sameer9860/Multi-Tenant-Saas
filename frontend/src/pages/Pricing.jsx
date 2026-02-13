@@ -95,6 +95,12 @@ export default function Pricing() {
       const data = await response.json();
 
       if (response.ok) {
+        if (data.requires_payment && data.esewa_url) {
+          // Redirect to eSewa payment page
+          window.location.href = data.esewa_url;
+          return;
+        }
+
         alert(`✅ Successfully upgraded to ${planName} plan!`);
         setCurrentPlan(planName);
 

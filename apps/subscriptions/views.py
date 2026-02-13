@@ -28,26 +28,76 @@ class UpgradePlanView(APIView):
         # ✅ Get organization from middleware
         organization = request.organization
         
-        # ✅ Get or create subscription
-        subscription, created = Subscription.objects.get_or_create(
-            organization=organization
+        # If upgrading to FREE (downgrade), we can do it immediately or handle it separately
+        # But usually users want to upgrade TO a paid plan.
+        from apps.billing.constants import PLAN_PRICES
+        from apps.billing.views import InitiateEsewaPaymentView
+        import uuid
+        from django.conf import settings
+        import urllib.parse
+        from apps.billing.models import PaymentTransaction, Payment
+
+        if plan == "FREE" or PLAN_PRICES.get(plan, 0) == 0:
+            subscription, _ = Subscription.objects.get_or_create(organization=organization)
+            subscription.plan = "FREE"
+            subscription.save()
+            organization.plan = "FREE"
+            organization.save()
+            return Response({"message": "Successfully moved to FREE plan", "plan": "FREE"})
+
+        # For paid plans, initiate eSewa payment
+        transaction_id = str(uuid.uuid4())
+        amount = PLAN_PRICES[plan]
+        
+        # Create PENDING transaction
+        PaymentTransaction.objects.create(
+            organization=organization,
+            plan=plan,
+            amount=amount,
+            provider="ESEWA",
+            transaction_id=transaction_id,
+            status="PENDING"
+        )
+        
+        Payment.objects.create(
+            organization=organization,
+            amount=amount,
+            plan=plan,
+            transaction_id=transaction_id,
+            status='PENDING'
         )
 
-        # 🚨 MOCK upgrade (no payment processing yet)
-        old_plan = subscription.plan
-        subscription.plan = plan
-        subscription.save()
+        success_url = request.build_absolute_uri('/billing/esewa/success/')
+        failure_url = request.build_absolute_uri('/billing/esewa/failure/')
 
-        # ✅ Also update organization.plan for consistency
-        organization.plan = plan
-        organization.save()
+        params = {
+            'amt': amount,
+            'pdc': 0,
+            'psc': 0,
+            'txAmt': 0,
+            'tAmt': amount,
+            'pid': transaction_id,
+            'scd': getattr(settings, 'ESEWA_MERCHANT_CODE', 'EPAYTEST'),
+            'su': success_url,
+            'fu': failure_url,
+        }
 
-        return Response(
-            {
-                "message": f"Successfully upgraded from {old_plan} to {plan}",
-                "old_plan": old_plan,
-                "plan": plan,
-                "organization": organization.name,
-            },
-            status=status.HTTP_200_OK
-        )
+        base = getattr(settings, 'ESEWA_BASE_URL', 'https://rc.esewa.com.np/epay/main')
+        esewa_url = base + '?' + urllib.parse.urlencode(params)
+
+        if getattr(settings, 'ESEWA_USE_MOCK', False):
+            mock_params = {
+                'amt': params['amt'],
+                'pid': params['pid'],
+                'su': params['su'],
+                'fu': params['fu'],
+            }
+            esewa_url = request.build_absolute_uri('/billing/mock/esewa/?' + urllib.parse.urlencode(mock_params))
+
+        return Response({
+            "requires_payment": True,
+            "esewa_url": esewa_url,
+            "transaction_id": transaction_id,
+            "amount": amount,
+            "plan": plan
+        })
