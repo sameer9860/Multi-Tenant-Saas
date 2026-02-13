@@ -8,12 +8,40 @@ const Dashboard = () => {
     subscription_plan: "Loading...",
     organization_name: "Loading...",
   });
+  const [usage, setUsage] = useState({
+    leads: { used: 0, limit: 0 },
+    clients: { used: 0, limit: 0 },
+    invoices: { used: 0, limit: 0 },
+  });
+  const [profile, setProfile] = useState({
+    email: "",
+    full_name: "",
+    role: "",
+  });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboardData();
+    fetchProfileData();
   }, []);
+
+  const fetchProfileData = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch("/api/accounts/profile/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setProfile(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch profile:", err);
+    }
+  };
 
   const fetchDashboardData = async () => {
     const token = localStorage.getItem("token");
@@ -38,6 +66,9 @@ const Dashboard = () => {
           subscription_plan: data.plan || "N/A",
           organization_name: data.organization_name || "My Organization",
         });
+        if (data.usage) {
+          setUsage(data.usage);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch dashboard data:", err);
@@ -49,6 +80,37 @@ const Dashboard = () => {
   const logout = () => {
     localStorage.clear();
     navigate("/login");
+  };
+
+  const UsageBar = ({ label, used, limit, colorClass }) => {
+    const percentage = limit ? Math.min((used / limit) * 100, 100) : 0;
+    const isUnlimited = limit === null;
+
+    return (
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+            {label}
+          </span>
+          <span className="text-sm font-black text-slate-900">
+            {used} / {isUnlimited ? "∞" : limit}
+          </span>
+        </div>
+        {!isUnlimited && (
+          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full ${colorClass} transition-all duration-1000 ease-out`}
+              style={{ width: `${percentage}%` }}
+            ></div>
+          </div>
+        )}
+        {isUnlimited && (
+          <div className="w-full h-3 bg-indigo-50 rounded-full overflow-hidden">
+            <div className="h-full w-full bg-indigo-600/20"></div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -144,7 +206,15 @@ const Dashboard = () => {
             </button>
           </nav>
 
-          <div className="pt-10 border-t border-slate-100">
+          <div className="pt-8 border-t border-slate-100 flex flex-col gap-4">
+            <div className="px-4">
+              <div className="text-sm font-black text-slate-900 truncate">
+                {profile.full_name || "User"}
+              </div>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                {profile.role || "Staff"}
+              </div>
+            </div>
             <button
               onClick={logout}
               className="w-full flex items-center gap-3 px-4 py-3 text-rose-500 hover:bg-rose-50 rounded-xl font-bold transition-all"
@@ -192,7 +262,7 @@ const Dashboard = () => {
             </header>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col">
                 <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
                   <svg
@@ -231,7 +301,7 @@ const Dashboard = () => {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                     />
                   </svg>
                 </div>
@@ -272,6 +342,33 @@ const Dashboard = () => {
                 >
                   Upgrade Now
                 </button>
+              </div>
+            </div>
+
+            {/* Usage Limits Section */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-black text-slate-900 mb-8">
+                Plan Usage & Limits
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <UsageBar
+                  label="Leads Usage"
+                  used={usage.leads.used}
+                  limit={usage.leads.limit}
+                  colorClass="bg-blue-600"
+                />
+                <UsageBar
+                  label="Clients Usage"
+                  used={usage.clients.used}
+                  limit={usage.clients.limit}
+                  colorClass="bg-amber-500"
+                />
+                <UsageBar
+                  label="Invoices Usage"
+                  used={usage.invoices.used}
+                  limit={usage.invoices.limit}
+                  colorClass="bg-indigo-600"
+                />
               </div>
             </div>
           </div>

@@ -9,16 +9,16 @@ from .views import (
 )
 
 urlpatterns = [
-    path("login/", CustomLoginView.as_view(), name="login"),
+    # path("login/", CustomLoginView.as_view(), name="login"),
     path("usage/", UsageDashboardAPIView.as_view(), name="usage-dashboard"),    
-    path("usage/ui/", UsageDashboardView.as_view(), name="usage-dashboard-ui"),
-    path("", UsageDashboardView.as_view(), name="usage-dashboard-ui"),
+    # path("usage/ui/", UsageDashboardView.as_view(), name="usage-dashboard-ui"),
+    # path("", UsageDashboardView.as_view(), name="usage-dashboard-ui"),
     path("upgrade/", UpgradePlanAPIView.as_view(), name="upgrade-plan"),
-    path("upgrade/ui/", upgrade_view, name="upgrade-plan-ui"),
+    # path("upgrade/ui/", upgrade_view, name="upgrade-plan-ui"),
     
     # Payment History & Receipts
     path("api/payments/", PaymentListAPIView.as_view(), name="payment-list-api"),
-    path("payments/history/", PaymentHistoryView.as_view(), name="payment-history"),
+    # path("payments/history/", PaymentHistoryView.as_view(), name="payment-history"),
     path("payments/receipt/<int:pk>/", ReceiptView.as_view(), name="payment-receipt"),
     
     # eSewa endpoints
