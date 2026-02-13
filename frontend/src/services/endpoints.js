@@ -15,6 +15,7 @@ export const ENDPOINTS = {
   billing: {
     payments: '/billing/api/payments/',
     paymentsFallback: '/payments/api/payments/', // Alternative path
+    paymentsList: '/api/billing/payments/', // Payment model endpoint
   },
 
   // Accounts/Profile endpoints - Routes to /api/accounts/profile/
