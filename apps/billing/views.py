@@ -169,8 +169,10 @@ def esewa_success(request):
 
     status_code, message = _process_esewa_verification(payment, ref_id, amt)
     if status_code == 200:
-        # Redirect to React dashboard with success message
-        return HttpResponseRedirect(f'/dashboard?payment_success=true&plan={payment.plan}')
+        # Redirect to React frontend dashboard with success message
+        # Use settings.FRONTEND_URL if available, otherwise default to localhost:3000
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        return HttpResponseRedirect(f'{frontend_url}/dashboard?payment_success=true&plan={payment.plan}')
     return HttpResponse(message, status=status_code)
 
 

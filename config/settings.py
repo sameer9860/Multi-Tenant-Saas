@@ -161,6 +161,9 @@ LOGIN_REDIRECT_URL = 'usage-dashboard-ui'
 
 # ============= PAYMENT GATEWAY SETTINGS =============
 
+# Frontend URL for redirects after payment
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+
 # eSewa Configuration
 ESEWA_BASE_URL = os.getenv('ESEWA_BASE_URL')
 ESEWA_VERIFY_URL = os.getenv('ESEWA_VERIFY_URL')
