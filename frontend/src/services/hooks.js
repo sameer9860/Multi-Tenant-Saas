@@ -1,0 +1,236 @@
+/**
+ * Custom React Hooks for API calls
+ * Provides reusable data fetching with loading and error states
+ */
+
+import { useState, useEffect, useCallback } from 'react';
+import api from './api';
+import { getEndpoint } from './endpoints';
+
+/**
+ * Generic hook for API calls with automatic retry and error handling
+ */
+export const useApiCall = (endpoint) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await api.get(endpoint);
+      setData(result);
+      setError(null);
+    } catch (err) {
+      console.error(`Error fetching ${endpoint}:`, err);
+      setError({
+        message: err.message,
+        code: err.code,
+        details: err.details,
+      });
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [endpoint]);
+
+  useEffect(() => {
+    fetchData();
+  }, [endpoint, fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+};
+
+/**
+ * Hook for fetching dashboard analytics
+ */
+export const useDashboardData = () => {
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchAnalytics = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Try primary endpoint first
+      const endpoint = getEndpoint('analytics', 'usage');
+      console.log('[useDashboardData] Fetching from:', endpoint.primary);
+
+      try {
+        const data = await api.get(endpoint.primary);
+        setAnalytics(data);
+        setError(null);
+      } catch (primaryError) {
+        console.warn('[useDashboardData] Primary endpoint failed, trying fallback:', endpoint.fallback);
+
+        // Try fallback endpoint
+        const fallbackData = await api.get(endpoint.fallback);
+        setAnalytics(fallbackData);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('[useDashboardData] All endpoints failed:', err);
+      setError({
+        message: err.message || 'Failed to load dashboard data',
+        code: err.code,
+        details: err.details,
+      });
+      setAnalytics(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  return { analytics, loading, error, refetch: fetchAnalytics };
+};
+
+/**
+ * Hook for fetching payment history
+ */
+export const usePaymentHistory = () => {
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchPayments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Try primary endpoint first
+      const endpoint = getEndpoint('billing', 'payments');
+      console.log('[usePaymentHistory] Fetching from:', endpoint.primary);
+
+      try {
+        const data = await api.get(endpoint.primary);
+        setPayments(Array.isArray(data) ? data : data.results || []);
+        setError(null);
+      } catch (primaryError) {
+        console.warn('[usePaymentHistory] Primary endpoint failed, trying fallback:', endpoint.fallback);
+
+        // Try fallback endpoint
+        const fallbackData = await api.get(endpoint.fallback);
+        setPayments(Array.isArray(fallbackData) ? fallbackData : fallbackData.results || []);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('[usePaymentHistory] All endpoints failed:', err);
+      setError({
+        message: err.message || 'Failed to load payment history',
+        code: err.code,
+        details: err.details,
+      });
+      setPayments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [fetchPayments]);
+
+  return { payments, loading, error, refetch: fetchPayments };
+};
+
+/**
+ * Hook for fetching user profile
+ */
+export const useUserProfile = () => {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchProfile = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const endpoint = getEndpoint('accounts', 'profile');
+      console.log('[useUserProfile] Fetching from:', endpoint.primary);
+
+      try {
+        const data = await api.get(endpoint.primary);
+        setProfile(data);
+        setError(null);
+      } catch (primaryError) {
+        console.warn('[useUserProfile] Primary endpoint failed, trying fallback:', endpoint.fallback);
+
+        const fallbackData = await api.get(endpoint.fallback);
+        setProfile(fallbackData);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('[useUserProfile] All endpoints failed:', err);
+      setError({
+        message: err.message || 'Failed to load user profile',
+        code: err.code,
+        details: err.details,
+      });
+      setProfile(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  return { profile, loading, error, refetch: fetchProfile };
+};
+
+/**
+ * Hook for fetching invoices
+ */
+export const useInvoices = () => {
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchInvoices = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const endpoint = getEndpoint('invoices', 'list');
+      console.log('[useInvoices] Fetching from:', endpoint.primary);
+
+      try {
+        const data = await api.get(endpoint.primary);
+        setInvoices(Array.isArray(data) ? data : data.results || []);
+        setError(null);
+      } catch (primaryError) {
+        console.warn('[useInvoices] Primary endpoint failed, trying fallback:', endpoint.fallback);
+
+        const fallbackData = await api.get(endpoint.fallback);
+        setInvoices(Array.isArray(fallbackData) ? fallbackData : fallbackData.results || []);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('[useInvoices] All endpoints failed:', err);
+      setError({
+        message: err.message || 'Failed to load invoices',
+        code: err.code,
+        details: err.details,
+      });
+      setInvoices([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchInvoices();
+  }, [fetchInvoices]);
+
+  return { invoices, loading, error, refetch: fetchInvoices };
+};

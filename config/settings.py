@@ -34,7 +34,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*'] if DEBUG else os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -101,12 +101,14 @@ REST_FRAMEWORK = {
     ),
 }
 
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'AUTH_HEADER_TYPES': ('Bearer',),
-}
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8000",
+]
 
+CORS_ALLOW_CREDENTIALS = True
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -153,24 +155,41 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
-# ============= AUTHENTICATION SETTINGS =============
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'usage-dashboard-ui'
+# Default primary key field type
+# https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
-# ============= PAYMENT GATEWAY SETTINGS =============
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Frontend URL for redirects after payment
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+}
 
-# eSewa Configuration
-ESEWA_BASE_URL = os.getenv('ESEWA_BASE_URL')
-ESEWA_VERIFY_URL = os.getenv('ESEWA_VERIFY_URL')
-ESEWA_MERCHANT_CODE = os.getenv('ESEWA_MERCHANT_CODE')
+# eSewa Settings
+ESEWA_BASE_URL = os.getenv('ESEWA_BASE_URL', 'https://rc.esewa.com.np/epay/main')
+ESEWA_VERIFY_URL = os.getenv('ESEWA_VERIFY_URL', 'https://rc.esewa.com.np/epay/transrec')
+ESEWA_MERCHANT_CODE = os.getenv('ESEWA_MERCHANT_CODE', 'EPAYTEST')
+ESEWA_USE_MOCK = os.getenv('ESEWA_USE_MOCK', 'False') == 'True'
 
-# CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = True # Set to False and specify CORS_ALLOWED_ORIGINS in production
-
-
-
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+    },
+}

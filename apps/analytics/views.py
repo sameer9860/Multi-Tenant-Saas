@@ -20,6 +20,14 @@ class UsageView(APIView):
         invoices_count = org.invoices.count()
         
         limits = PLAN_LIMITS.get(plan, {})
+        
+        # Determine invoice limits based on plan
+        invoice_limit = None
+        if plan == "FREE":
+            invoice_limit = 10
+        elif plan == "BASIC":
+            invoice_limit = 1000
+        # PRO and others have unlimited invoices (None)
 
         return Response({
             "plan": plan,
@@ -35,13 +43,16 @@ class UsageView(APIView):
                 },
                 "invoices": {
                     "used": invoices_count,
-                    "limit": 10 if plan == "FREE" else 1000 if plan == "BASIC" else None, # Legacy invoice limits
+                    "limit": invoice_limit,
                 }
             },
             # Flat fields for simple dashboard summary
             "leads_count": leads_count,
             "clients_count": clients_count,
+            "invoices_count": invoices_count,
+            "subscription_plan": plan,
         })
+
 @login_required
 def usage_dashboard(request):
         return render(request, "analytics/usage.html")

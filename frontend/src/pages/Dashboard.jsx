@@ -2,30 +2,37 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PaymentHistory from "../components/PaymentHistory";
 import ReceiptModal from "../components/ReceiptModal";
+import { useDashboardData, usePaymentHistory, useUserProfile } from "../services/hooks";
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
-    leads_count: 0,
-    clients_count: 0,
-    subscription_plan: "Loading...",
-    organization_name: "Loading...",
-  });
-  const [usage, setUsage] = useState({
-    leads: { used: 0, limit: 0 },
-    clients: { used: 0, limit: 0 },
-    invoices: { used: 0, limit: 0 },
-  });
-  const [profile, setProfile] = useState({
-    email: "",
-    full_name: "",
-    role: "",
-  });
+  const navigate = useNavigate();
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successPlan, setSuccessPlan] = useState("");
-  const [payments, setPayments] = useState([]);
-  const [loadingPayments, setLoadingPayments] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState(null);
-  const navigate = useNavigate();
+  const [dismissedError, setDismissedError] = useState(false);
+
+  // Use custom hooks for data fetching
+  const { analytics, error: analyticsError } = useDashboardData();
+  const { payments, loading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = usePaymentHistory();
+  const { profile, error: profileError } = useUserProfile();
+
+  // Determine overall error state (only show if not dismissed)
+  const error = !dismissedError ? (analyticsError || paymentsError || profileError) : null;
+
+  // Format analytics data for display
+  const stats = {
+    leads_count: analytics?.leads_count || 0,
+    clients_count: analytics?.clients_count || 0,
+    invoices_count: analytics?.invoices_count || 0,
+    subscription_plan: analytics?.subscription_plan || "Loading...",
+    organization_name: analytics?.organization_name || "Loading...",
+  };
+
+  const usage = {
+    leads: analytics?.usage?.leads || { used: 0, limit: 0 },
+    clients: analytics?.usage?.clients || { used: 0, limit: 0 },
+    invoices: analytics?.usage?.invoices || { used: 0, limit: 0 },
+  };
 
   useEffect(() => {
     // Check for payment success parameter
@@ -46,83 +53,13 @@ const Dashboard = () => {
       }, 5000);
     }
 
-    fetchDashboardData();
-    fetchProfileData();
-    fetchPaymentHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchProfileData = async () => {
-    const token = localStorage.getItem("token");
-    try {
-      const response = await fetch("/api/accounts/profile/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setProfile(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch profile:", err);
-    }
-  };
-
-  const fetchDashboardData = async () => {
+    // Redirect to login if not authenticated
     const token = localStorage.getItem("token");
     if (!token) {
+      console.warn("No token found, redirecting to login");
       navigate("/login");
-      return;
     }
-
-    try {
-      // Fetching analytics data
-      const response = await fetch("/api/analytics/usage/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStats({
-          leads_count: data.leads_count || 0,
-          clients_count: data.clients_count || 0,
-          subscription_plan: data.plan || "N/A",
-          organization_name: data.organization_name || "My Organization",
-        });
-        if (data.usage) {
-          setUsage(data.usage);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch dashboard data:", err);
-    }
-  };
-
-  const fetchPaymentHistory = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    try {
-      setLoadingPayments(true);
-      const response = await fetch("/api/billing/api/payments/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPayments(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch payment history:", err);
-    } finally {
-      setLoadingPayments(false);
-    }
-  };
+  }, [navigate]);
 
   const logout = () => {
     localStorage.clear();
@@ -142,7 +79,7 @@ const Dashboard = () => {
     const isUnlimited = limit === null;
 
     return (
-      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex justify-between items-center mb-4">
           <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">
             {label}
@@ -168,11 +105,27 @@ const Dashboard = () => {
     );
   };
 
+  const StatCard = ({ icon: Icon, label, value, color }) => {
+    return (
+      <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 hover:shadow-2xl hover:shadow-slate-300/50 transition-all duration-300 flex flex-col">
+        <div className={`w-14 h-14 ${color} rounded-2xl flex items-center justify-center mb-6`}>
+          {Icon}
+        </div>
+        <span className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-2">
+          {label}
+        </span>
+        <span className="text-4xl font-black text-slate-900">
+          {value}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Sidebar Navigation */}
       <div className="flex h-screen overflow-hidden">
-        <div className="w-80 bg-white border-r border-slate-100 p-8 flex flex-col shadow-sm">
+        <div className="w-80 bg-white border-r border-slate-100 p-8 flex flex-col shadow-sm overflow-y-auto">
           <div className="mb-12 flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-100 flex items-center justify-center">
               <svg
@@ -201,7 +154,7 @@ const Dashboard = () => {
             </div>
             <button
               onClick={() => navigate("/dashboard")}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-bold transition-all"
+              className="w-full flex items-center gap-3 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-bold transition-all hover:bg-indigo-100"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -264,10 +217,10 @@ const Dashboard = () => {
           <div className="pt-8 border-t border-slate-100 flex flex-col gap-4">
             <div className="px-4">
               <div className="text-sm font-black text-slate-900 truncate">
-                {profile.full_name || "User"}
+                {profile?.full_name || "User"}
               </div>
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                {profile.role || "Staff"}
+                {profile?.role || "Staff"}
               </div>
             </div>
             <button
@@ -295,6 +248,31 @@ const Dashboard = () => {
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-12 bg-slate-50/50">
+          {/* Error Banner */}
+          {error && (
+            <div className="fixed top-8 right-8 z-50 bg-rose-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>{error.message}</span>
+              <button
+                onClick={() => setDismissedError(true)}
+                className="ml-2 font-bold hover:opacity-80"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* Success Message Banner */}
           {showSuccessMessage && (
             <div className="fixed top-8 right-8 z-50 animate-slide-in-right">
@@ -342,20 +320,21 @@ const Dashboard = () => {
             </div>
           )}
 
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-7xl mx-auto">
+            {/* Header Section */}
             <header className="flex justify-between items-center mb-12">
               <div>
-                <h1 className="text-4xl font-black text-slate-900 mb-2">
+                <h1 className="text-5xl font-black text-slate-900 mb-3">
                   Dashboard
                 </h1>
-                <p className="text-slate-500 font-medium">
-                  Overview for{" "}
-                  <span className="text-indigo-600">
-                    {stats.organization_name}
+                <p className="text-slate-500 font-medium text-lg">
+                  Welcome back,{" "}
+                  <span className="text-indigo-600 font-bold">
+                    {profile?.full_name || "User"}
                   </span>
                 </p>
               </div>
-              <div className="flex items-center gap-4 bg-white px-6 py-3 rounded-2xl shadow-sm border border-slate-100">
+              <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-2xl shadow-md border border-slate-100">
                 <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">
                   {stats.subscription_plan} PLAN
@@ -363,13 +342,13 @@ const Dashboard = () => {
               </div>
             </header>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-              <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col">
-                <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+              <StatCard
+                icon={
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-7 w-7"
+                    className="h-7 w-7 text-blue-600"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -381,20 +360,17 @@ const Dashboard = () => {
                       d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                     />
                   </svg>
-                </div>
-                <span className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">
-                  Total Leads
-                </span>
-                <span className="text-4xl font-black text-slate-900">
-                  {stats.leads_count}
-                </span>
-              </div>
+                }
+                label="Total Leads"
+                value={stats.leads_count}
+                color="bg-blue-50"
+              />
 
-              <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col">
-                <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-6">
+              <StatCard
+                icon={
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-7 w-7"
+                    className="h-7 w-7 text-amber-600"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -403,20 +379,39 @@ const Dashboard = () => {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                     />
                   </svg>
-                </div>
-                <span className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-1">
-                  Active Clients
-                </span>
-                <span className="text-4xl font-black text-slate-900">
-                  {stats.clients_count}
-                </span>
-              </div>
+                }
+                label="Active Clients"
+                value={stats.clients_count}
+                color="bg-amber-50"
+              />
 
-              <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col bg-indigo-600">
-                <div className="w-14 h-14 bg-white/20 text-white rounded-2xl flex items-center justify-center mb-6">
+              <StatCard
+                icon={
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-7 w-7 text-green-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                }
+                label="Total Invoices"
+                value={stats.invoices_count}
+                color="bg-green-50"
+              />
+
+              <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-8 rounded-3xl shadow-xl shadow-indigo-200/50 border border-indigo-400/30 hover:shadow-2xl hover:shadow-indigo-300/50 transition-all duration-300 flex flex-col text-white">
+                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-7 w-7"
@@ -432,15 +427,15 @@ const Dashboard = () => {
                     />
                   </svg>
                 </div>
-                <span className="text-white/60 font-bold text-xs uppercase tracking-widest mb-1">
+                <span className="text-white/80 font-bold text-xs uppercase tracking-widest mb-2">
                   Current Plan
                 </span>
-                <span className="text-4xl font-black text-white">
+                <span className="text-4xl font-black mb-4">
                   {stats.subscription_plan}
                 </span>
                 <button
                   onClick={() => navigate("/pricing")}
-                  className="mt-6 bg-white py-3 rounded-xl font-bold text-indigo-600 text-sm hover:bg-slate-50 transition-colors"
+                  className="mt-auto bg-white text-indigo-600 py-3 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors"
                 >
                   Upgrade Now
                 </button>
@@ -449,9 +444,14 @@ const Dashboard = () => {
 
             {/* Usage Limits Section */}
             <div className="mb-12">
-              <h2 className="text-2xl font-black text-slate-900 mb-8">
-                Plan Usage & Limits
-              </h2>
+              <div className="mb-8">
+                <h2 className="text-3xl font-black text-slate-900 mb-2">
+                  Plan Usage & Limits
+                </h2>
+                <p className="text-slate-500 font-medium">
+                  Monitor your resource usage across your plan
+                </p>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <UsageBar
                   label="Leads Usage"
@@ -469,7 +469,7 @@ const Dashboard = () => {
                   label="Invoices Usage"
                   used={usage.invoices.used}
                   limit={usage.invoices.limit}
-                  colorClass="bg-indigo-600"
+                  colorClass="bg-green-500"
                 />
               </div>
             </div>
@@ -477,12 +477,17 @@ const Dashboard = () => {
             {/* Payment History Section */}
             <div className="mb-12">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-black text-slate-900">
-                  Payment History
-                </h2>
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900 mb-2">
+                    Payment History
+                  </h2>
+                  <p className="text-slate-500 font-medium">
+                    Track all your transactions and receipts
+                  </p>
+                </div>
                 {payments.length > 0 && (
                   <button
-                    onClick={fetchPaymentHistory}
+                    onClick={refetchPayments}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
                   >
                     <svg
@@ -506,7 +511,7 @@ const Dashboard = () => {
               <PaymentHistory
                 payments={payments}
                 onViewReceipt={handleViewReceipt}
-                loading={loadingPayments}
+                loading={paymentsLoading}
               />
             </div>
           </div>
