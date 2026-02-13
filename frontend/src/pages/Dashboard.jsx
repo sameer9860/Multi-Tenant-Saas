@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import PaymentHistory from "../components/PaymentHistory";
+import ReceiptModal from "../components/ReceiptModal";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -20,6 +22,9 @@ const Dashboard = () => {
   });
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successPlan, setSuccessPlan] = useState("");
+  const [payments, setPayments] = useState([]);
+  const [loadingPayments, setLoadingPayments] = useState(true);
+  const [selectedPayment, setSelectedPayment] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,6 +48,7 @@ const Dashboard = () => {
 
     fetchDashboardData();
     fetchProfileData();
+    fetchPaymentHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -95,9 +101,40 @@ const Dashboard = () => {
     }
   };
 
+  const fetchPaymentHistory = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      setLoadingPayments(true);
+      const response = await fetch("/api/billing/api/payments/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPayments(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch payment history:", err);
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
   const logout = () => {
     localStorage.clear();
     navigate("/login");
+  };
+
+  const handleViewReceipt = (payment) => {
+    setSelectedPayment(payment);
+  };
+
+  const handleCloseReceipt = () => {
+    setSelectedPayment(null);
   };
 
   const UsageBar = ({ label, used, limit, colorClass }) => {
@@ -436,9 +473,54 @@ const Dashboard = () => {
                 />
               </div>
             </div>
+
+            {/* Payment History Section */}
+            <div className="mb-12">
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-black text-slate-900">
+                  Payment History
+                </h2>
+                {payments.length > 0 && (
+                  <button
+                    onClick={fetchPaymentHistory}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    Refresh
+                  </button>
+                )}
+              </div>
+              <PaymentHistory
+                payments={payments}
+                onViewReceipt={handleViewReceipt}
+                loading={loadingPayments}
+              />
+            </div>
           </div>
         </main>
       </div>
+
+      {/* Receipt Modal */}
+      {selectedPayment && (
+        <ReceiptModal
+          payment={selectedPayment}
+          organizationName={stats.organization_name}
+          onClose={handleCloseReceipt}
+        />
+      )}
     </div>
   );
 };

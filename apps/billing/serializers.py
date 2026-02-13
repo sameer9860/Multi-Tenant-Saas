@@ -33,6 +33,7 @@ class PaymentTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentTransaction
         fields = [
+            'id',
             'transaction_id',
             'plan',
             'amount',
