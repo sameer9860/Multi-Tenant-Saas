@@ -5,6 +5,7 @@ import DashboardLayout from "../components/DashboardLayout";
 const plans = [
   {
     name: "FREE",
+    tier: 0,
     price: "Rs 0",
     period: "Forever",
     description: "Get started with our platform",
@@ -14,11 +15,11 @@ const plans = [
       "Basic reporting",
       "Email support",
     ],
-    canUpgrade: false,
-    buttonText: "Current Plan",
+    buttonText: "Get Started",
   },
   {
     name: "BASIC",
+    tier: 1,
     price: "Rs 2,500",
     period: "/month",
     description: "Perfect for small businesses",
@@ -29,11 +30,11 @@ const plans = [
       "Priority email support",
       "Custom branding",
     ],
-    canUpgrade: true,
     buttonText: "Upgrade to Basic",
   },
   {
     name: "PRO",
+    tier: 2,
     price: "Rs 3,900",
     period: "/month",
     description: "For growing enterprises",
@@ -45,7 +46,6 @@ const plans = [
       "Custom integrations",
       "API access",
     ],
-    canUpgrade: true,
     buttonText: "Upgrade to Pro",
   },
 ];
@@ -78,6 +78,8 @@ export default function Pricing() {
       console.error("Failed to fetch plan:", err);
     }
   };
+
+  const currentPlanTier = plans.find((p) => p.name === currentPlan)?.tier || 0;
 
   const handleUpgrade = async (planName) => {
     if (loading) return;
@@ -139,72 +141,99 @@ export default function Pricing() {
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-3 gap-8">
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              className={`rounded-2xl shadow-lg overflow-hidden transition-transform transform hover:scale-105 ${
-                plan.name === currentPlan
-                  ? "ring-2 ring-green-500 bg-white scale-105"
-                  : "bg-white"
-              }`}
-            >
-              {/* Badge for current plan */}
-              {plan.name === currentPlan && (
-                <div className="bg-green-500 text-white py-2 px-4 text-center font-semibold">
-                  ✓ Current Plan
+          {plans.map((plan) => {
+            const isCurrentPlan = plan.name === currentPlan;
+            const isDisabled = plan.tier <= currentPlanTier;
+
+            return (
+              <div
+                key={plan.name}
+                className={`rounded-2xl shadow-lg overflow-hidden transition-transform transform hover:scale-105 ${
+                  isCurrentPlan
+                    ? "ring-2 ring-green-500 bg-white scale-105"
+                    : "bg-white"
+                }`}
+              >
+                {/* Badge for current plan */}
+                {isCurrentPlan && (
+                  <div className="bg-green-500 text-white py-2 px-4 text-center font-semibold">
+                    ✓ Current Plan
+                  </div>
+                )}
+
+                {/* Plan Details */}
+                <div className="p-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    {plan.name}
+                  </h2>
+                  <p className="text-gray-600 text-sm mb-6">
+                    {plan.description}
+                  </p>
+
+                  {/* Price */}
+                  <div className="mb-6">
+                    <span className="text-5xl font-bold text-gray-900">
+                      {plan.price}
+                    </span>
+                    <span className="text-gray-600 ml-2">{plan.period}</span>
+                  </div>
+
+                  {/* Features */}
+                  <ul className="space-y-4 mb-8">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-start">
+                        <svg
+                          className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span className="text-gray-700">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Button */}
+                  <button
+                    onClick={() => handleUpgrade(plan.name)}
+                    disabled={loading || isDisabled}
+                    className={`w-full py-3 px-6 rounded-lg font-semibold transition-all ${
+                      isDisabled
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed hidden"
+                        : "bg-black text-white hover:bg-gray-800 active:scale-95"
+                    } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    {loading
+                      ? "Processing..."
+                      : isCurrentPlan
+                        ? "Current Plan"
+                        : plan.buttonText}
+                  </button>
+                  {isDisabled && !isCurrentPlan && (
+                    <button
+                      disabled
+                      className="w-full py-3 px-6 rounded-lg font-semibold transition-all bg-gray-100 text-gray-400 cursor-not-allowed"
+                    >
+                      Included
+                    </button>
+                  )}
+                  {isCurrentPlan && (
+                    <button
+                      disabled
+                      className="w-full py-3 px-6 rounded-lg font-semibold transition-all bg-green-50 text-green-600 cursor-default border border-green-200"
+                    >
+                      Active Plan
+                    </button>
+                  )}
                 </div>
-              )}
-
-              {/* Plan Details */}
-              <div className="p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {plan.name}
-                </h2>
-                <p className="text-gray-600 text-sm mb-6">{plan.description}</p>
-
-                {/* Price */}
-                <div className="mb-6">
-                  <span className="text-5xl font-bold text-gray-900">
-                    {plan.price}
-                  </span>
-                  <span className="text-gray-600 ml-2">{plan.period}</span>
-                </div>
-
-                {/* Features */}
-                <ul className="space-y-4 mb-8">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start">
-                      <svg
-                        className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span className="text-gray-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Button */}
-                <button
-                  onClick={() => handleUpgrade(plan.name)}
-                  disabled={loading || !plan.canUpgrade}
-                  className={`w-full py-3 px-6 rounded-lg font-semibold transition-all ${
-                    !plan.canUpgrade
-                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-black text-white hover:bg-gray-800 active:scale-95"
-                  } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  {loading ? "Processing..." : plan.buttonText}
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* FAQ Section */}
