@@ -2,7 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PaymentHistory from "../components/PaymentHistory";
 import ReceiptModal from "../components/ReceiptModal";
-import { useDashboardData, usePaymentHistory, useUserProfile } from "../services/hooks";
+import {
+  useDashboardData,
+  usePaymentHistory,
+  useUserProfile,
+} from "../services/hooks";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -13,11 +17,18 @@ const Dashboard = () => {
 
   // Use custom hooks for data fetching
   const { analytics, error: analyticsError } = useDashboardData();
-  const { payments, loading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = usePaymentHistory();
+  const {
+    payments,
+    loading: paymentsLoading,
+    error: paymentsError,
+    refetch: refetchPayments,
+  } = usePaymentHistory();
   const { profile, error: profileError } = useUserProfile();
 
   // Determine overall error state (only show if not dismissed)
-  const error = !dismissedError ? (analyticsError || paymentsError || profileError) : null;
+  const error = !dismissedError
+    ? analyticsError || paymentsError || profileError
+    : null;
 
   // Format analytics data for display
   const stats = {
@@ -108,15 +119,15 @@ const Dashboard = () => {
   const StatCard = ({ icon: Icon, label, value, color }) => {
     return (
       <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 hover:shadow-2xl hover:shadow-slate-300/50 transition-all duration-300 flex flex-col">
-        <div className={`w-14 h-14 ${color} rounded-2xl flex items-center justify-center mb-6`}>
+        <div
+          className={`w-14 h-14 ${color} rounded-2xl flex items-center justify-center mb-6`}
+        >
           {Icon}
         </div>
         <span className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-2">
           {label}
         </span>
-        <span className="text-4xl font-black text-slate-900">
-          {value}
-        </span>
+        <span className="text-4xl font-black text-slate-900">{value}</span>
       </div>
     );
   };
@@ -191,6 +202,26 @@ const Dashboard = () => {
                 />
               </svg>
               Leads
+            </button>
+            <button
+              onClick={() => navigate("/dashboard/crm/pipeline")}
+              className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-xl font-semibold transition-all"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
+                />
+              </svg>
+              Pipeline
             </button>
             <button
               onClick={() => navigate("/pricing")}

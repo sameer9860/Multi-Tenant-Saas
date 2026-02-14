@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Pricing from './pages/Pricing';
 import Leads from './pages/dashboard/crm/leads';
 import CreateLead from './pages/dashboard/crm/CreateLead';
+import Pipeline from './pages/dashboard/crm/Pipeline';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 
@@ -38,6 +39,12 @@ function App() {
         <Route path="/dashboard/crm/leads/create" element={
           <ProtectedRoute>
             <CreateLead />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/crm/pipeline" element={
+          <ProtectedRoute>
+            <Pipeline />
           </ProtectedRoute>
         } />
 
