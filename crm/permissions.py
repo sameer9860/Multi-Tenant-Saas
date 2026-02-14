@@ -13,3 +13,28 @@ class IsAdminOrReadOnly(BasePermission):
 
         # Write permissions are only allowed for ADMIN and OWNER users
         return getattr(request.user, 'role', None) in ["ADMIN", "OWNER"]
+
+
+class IsAdminOwnerOrStaffUpdate(BasePermission):
+    """
+    Custom permission:
+    - Admin/Owner: Full access (Create, Read, Update, Delete)
+    - Staff: Read and Update only (No Create, No Delete)
+    """
+
+    def has_permission(self, request, view):
+        # Allow read-only methods for everyone (authenticated)
+        if request.method in ["GET", "HEAD", "OPTIONS"]:
+            return True
+        
+        user_role = getattr(request.user, 'role', None)
+
+        # Allow Update (PUT, PATCH) for Admin, Owner, AND Staff
+        if request.method in ["PUT", "PATCH"]:
+            return user_role in ["ADMIN", "OWNER", "STAFF"]
+        
+        # Allow Create (POST) and Delete (DELETE) only for Admin/Owner
+        if request.method in ["POST", "DELETE"]:
+            return user_role in ["ADMIN", "OWNER"]
+            
+        return False

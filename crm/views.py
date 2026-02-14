@@ -3,13 +3,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from .models import Lead, Client
 from .serializers import LeadSerializer, ClientSerializer
-from .permissions import IsAdminOrReadOnly
+from .permissions import IsAdminOrReadOnly, IsAdminOwnerOrStaffUpdate
 from apps.subscriptions.limits import PLAN_LIMITS
 
 
 class LeadViewSet(viewsets.ModelViewSet):
     serializer_class = LeadSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticated, IsAdminOwnerOrStaffUpdate]
 
     def get_queryset(self):
         org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
