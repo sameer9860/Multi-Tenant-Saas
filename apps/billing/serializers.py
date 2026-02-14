@@ -44,6 +44,8 @@ class PaymentTransactionSerializer(serializers.ModelSerializer):
         ]
 
 class PaymentSerializer(serializers.ModelSerializer):
+    provider = serializers.SerializerMethodField()
+
     class Meta:
         model = Payment
         fields = [
@@ -53,4 +55,8 @@ class PaymentSerializer(serializers.ModelSerializer):
             'amount',
             'status',
             'created_at',
+            'provider',
         ]
+
+    def get_provider(self, obj):
+        return "eSewa"
