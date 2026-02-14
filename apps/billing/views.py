@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 from .models import PaymentTransaction, Payment, Usage, Subscription
 from .constants import PLAN_PRICES, PLAN_LIMITS
 from .payment_gateway import ESewaPaymentManager
-from .serializers import PaymentTransactionSerializer
+from .serializers import PaymentTransactionSerializer, PaymentSerializer
 from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.utils.http import urlencode
 from django.views.decorators.csrf import csrf_exempt
@@ -391,10 +391,10 @@ class PaymentListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        payments = PaymentTransaction.objects.filter(
+        payments = Payment.objects.filter(
             organization=request.organization
         ).order_by('-created_at')
-        serializer = PaymentTransactionSerializer(payments, many=True)
+        serializer = PaymentSerializer(payments, many=True)
         return Response(serializer.data)
 
 
@@ -404,7 +404,7 @@ class PaymentHistoryView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['payments'] = PaymentTransaction.objects.filter(
+        context['payments'] = Payment.objects.filter(
             organization=self.request.organization
         ).order_by('-created_at')
         return context

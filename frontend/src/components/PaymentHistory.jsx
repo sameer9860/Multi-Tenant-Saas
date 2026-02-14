@@ -158,7 +158,7 @@ const PaymentHistory = ({ payments, onViewReceipt, loading }) => {
                   {formatAmount(payment.amount)}
                 </td>
                 <td className="py-4 text-sm font-bold text-slate-600">
-                  {payment.provider}
+                  {payment.provider || "-"}
                 </td>
                 <td className="py-4">{getStatusBadge(payment.status)}</td>
                 <td className="py-4 text-right">
