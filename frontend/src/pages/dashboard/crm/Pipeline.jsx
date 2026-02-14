@@ -8,6 +8,7 @@ import {
 } from "@dnd-kit/core";
 import { Column } from "../../../components/Column";
 import { LeadCard } from "../../../components/LeadCard";
+import DashboardLayout from "../../../components/DashboardLayout";
 
 const Pipeline = () => {
   const [leads, setLeads] = useState([]);
@@ -66,7 +67,6 @@ const Pipeline = () => {
       (lead.status === "LOST" || lead.status === "CONVERTED") &&
       newStatus === "NEW"
     ) {
-      // Optional: Add a toast notification here
       console.warn("Cannot move from LOST/CONVERTED to NEW");
       return;
     }
@@ -111,47 +111,51 @@ const Pipeline = () => {
 
   if (loading)
     return (
-      <div className="p-8 text-center text-slate-500">Loading pipeline...</div>
+      <DashboardLayout title="Deals Pipeline">
+        <div className="p-8 text-center text-slate-500">
+          Loading pipeline...
+        </div>
+      </DashboardLayout>
     );
   if (error)
-    return <div className="p-8 text-center text-rose-500">Error: {error}</div>;
+    return (
+      <DashboardLayout title="Deals Pipeline">
+        <div className="p-8 text-center text-rose-500">Error: {error}</div>
+      </DashboardLayout>
+    );
 
   return (
-    <div className="p-8 h-full">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-slate-900 mb-2">
-          Deals Pipeline
-        </h1>
-        <p className="text-slate-500">
-          Drag and drop leads to update their status
-        </p>
+    <DashboardLayout
+      title="Deals Pipeline"
+      subtitle="Drag and drop leads to update their status"
+    >
+      <div className="h-full">
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100vh-250px)] overflow-x-auto pb-4">
+            <Column status="NEW" title="New Leads" leads={groupedLeads.NEW} />
+            <Column
+              status="CONTACTED"
+              title="Contacted"
+              leads={groupedLeads.CONTACTED}
+            />
+            <Column
+              status="CONVERTED"
+              title="Converted"
+              leads={groupedLeads.CONVERTED}
+            />
+            <Column status="LOST" title="Lost" leads={groupedLeads.LOST} />
+          </div>
+
+          <DragOverlay>
+            {activeLead ? <LeadCard lead={activeLead} /> : null}
+          </DragOverlay>
+        </DndContext>
       </div>
-
-      <DndContext
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100vh-250px)] overflow-x-auto pb-4">
-          <Column status="NEW" title="New Leads" leads={groupedLeads.NEW} />
-          <Column
-            status="CONTACTED"
-            title="Contacted"
-            leads={groupedLeads.CONTACTED}
-          />
-          <Column
-            status="CONVERTED"
-            title="Converted"
-            leads={groupedLeads.CONVERTED}
-          />
-          <Column status="LOST" title="Lost" leads={groupedLeads.LOST} />
-        </div>
-
-        <DragOverlay>
-          {activeLead ? <LeadCard lead={activeLead} /> : null}
-        </DragOverlay>
-      </DndContext>
-    </div>
+    </DashboardLayout>
   );
 };
 
