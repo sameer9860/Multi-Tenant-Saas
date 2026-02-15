@@ -57,7 +57,7 @@ export const useDashboardData = () => {
 
     try {
       // Try primary endpoint first
-      const endpoint = getEndpoint('analytics', 'usage');
+      const endpoint = getEndpoint('crm', 'dashboard');
       console.log('[useDashboardData] Fetching from:', endpoint.primary);
 
       try {

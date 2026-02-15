@@ -42,6 +42,8 @@ export const ENDPOINTS = {
     leadsFallback: '/crm/leads/',
     clients: '/api/crm/clients/',
     clientsFallback: '/crm/clients/',
+    dashboard: '/api/crm/dashboard/',
+    dashboardFallback: '/crm/dashboard/',
   },
 };
 
