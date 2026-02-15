@@ -8,6 +8,10 @@ import {
   usePaymentHistory,
   useUserProfile,
 } from "../services/hooks";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { Pie } from "react-chartjs-2";
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -33,11 +37,34 @@ const Dashboard = () => {
 
   // Format analytics data for display
   const stats = {
-    leads_count: analytics?.leads_count || 0,
-    clients_count: analytics?.clients_count || 0,
-    invoices_count: analytics?.invoices_count || 0,
-    subscription_plan: analytics?.subscription_plan || "Loading...",
+    leads_count: analytics?.total_leads || 0,
+    clients_count: analytics?.total_clients || 0,
+    invoices_count: analytics?.total_invoices || 0,
+    subscription_plan: analytics?.plan || "Loading...",
     organization_name: analytics?.organization_name || "Loading...",
+    conversion_rate: analytics?.conversion_rate || 0,
+    status_counts: analytics?.status_counts || {
+      NEW: 0,
+      CONTACTED: 0,
+      CONVERTED: 0,
+      LOST: 0,
+    },
+  };
+
+  const chartData = {
+    labels: ["New", "Contacted", "Converted", "Lost"],
+    datasets: [
+      {
+        data: [
+          stats.status_counts.NEW,
+          stats.status_counts.CONTACTED,
+          stats.status_counts.CONVERTED,
+          stats.status_counts.LOST,
+        ],
+        backgroundColor: ["#3B82F6", "#FACC15", "#22C55E", "#EF4444"],
+        borderWidth: 1,
+      },
+    ],
   };
 
   const usage = {
@@ -289,6 +316,28 @@ const Dashboard = () => {
           color="bg-green-50"
         />
 
+        <StatCard
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-7 w-7 text-purple-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+              />
+            </svg>
+          }
+          label="Conversion Rate"
+          value={`${stats.conversion_rate.toFixed(1)}%`}
+          color="bg-purple-50"
+        />
+
         <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-8 rounded-3xl shadow-xl shadow-indigo-200/50 border border-indigo-400/30 hover:shadow-2xl hover:shadow-indigo-300/50 transition-all duration-300 flex flex-col text-white">
           <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
             <svg
@@ -350,6 +399,51 @@ const Dashboard = () => {
             limit={usage.invoices.limit}
             colorClass="bg-green-500"
           />
+        </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
+          <h3 className="text-xl font-bold text-slate-900 mb-6 self-start">
+            Lead Status Distribution
+          </h3>
+          <div className="w-64 h-64">
+            <Pie data={chartData} />
+          </div>
+        </div>
+
+        <div className="bg-indigo-900 p-8 rounded-3xl shadow-xl text-white flex flex-col justify-center items-start relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16 pointer-events-none"></div>
+
+          <h3 className="text-2xl font-bold mb-4 relative z-10">
+            Maximize Your Conversion
+          </h3>
+          <p className="text-indigo-200 mb-8 relative z-10">
+            Track your lead statuses to identify bottlenecks in your sales
+            pipeline. Focus on moving "New" leads to "Contacted" and then
+            "Converted".
+          </p>
+          <div className="flex gap-4 relative z-10">
+            <div className="text-center">
+              <div className="text-3xl font-black">
+                {stats.status_counts.NEW}
+              </div>
+              <div className="text-xs uppercase tracking-wider opacity-70">
+                New Leads
+              </div>
+            </div>
+            <div className="w-px bg-white/20"></div>
+            <div className="text-center">
+              <div className="text-3xl font-black">
+                {stats.status_counts.CONVERTED}
+              </div>
+              <div className="text-xs uppercase tracking-wider opacity-70">
+                Converted
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
