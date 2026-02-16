@@ -303,6 +303,32 @@ const DashboardLayout = ({ children, title, subtitle }) => {
           </button>
 
           <button
+            onClick={() => navigate("/dashboard/crm/activity")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+              isActive("/dashboard/crm/activity")
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+            } ${isSidebarCollapsed ? "justify-center px-2" : ""}`}
+            title={isSidebarCollapsed ? "Activity Log" : ""}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            {!isSidebarCollapsed && <span>Activity Log</span>}
+          </button>
+
+          <button
             onClick={() => navigate("/pricing")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
               isActive("/pricing")
