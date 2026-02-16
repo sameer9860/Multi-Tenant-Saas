@@ -5,6 +5,7 @@ import CreateLead from './pages/dashboard/crm/CreateLead';
 import Pipeline from './pages/dashboard/crm/Pipeline';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import ActivityLog from './pages/dashboard/crm/ActivityLog';
 
 // Basic Auth Guard Component
 const ProtectedRoute = ({ children }) => {
@@ -45,6 +46,12 @@ function App() {
         <Route path="/dashboard/crm/pipeline" element={
           <ProtectedRoute>
             <Pipeline />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/crm/activity" element={
+          <ProtectedRoute>
+            <ActivityLog />
           </ProtectedRoute>
         } />
 

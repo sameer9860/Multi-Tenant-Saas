@@ -3,8 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
-from .models import Lead, Client
-from .serializers import LeadSerializer, ClientSerializer
+from .models import Lead, Client, LeadActivity
+from .serializers import LeadSerializer, ClientSerializer, LeadActivitySerializer
 from .permissions import IsAdminOrReadOnly, IsAdminOwnerOrStaffUpdate
 from apps.subscriptions.limits import PLAN_LIMITS
 
@@ -30,7 +30,48 @@ class LeadViewSet(viewsets.ModelViewSet):
         if limit is not None and org.leads.count() >= limit:
             raise PermissionDenied("Lead limit reached. Upgrade your plan.")
 
-        serializer.save(organization=org)
+        lead = serializer.save(organization=org)
+
+        LeadActivity.objects.create(
+            organization=org,
+            lead=lead,
+            user=self.request.user,
+            action="CREATED"
+        )
+
+    def perform_update(self, serializer):
+        lead = self.get_object()
+        old_status = lead.status
+
+        updated_lead = serializer.save()
+
+        if old_status != updated_lead.status:
+            org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+            LeadActivity.objects.create(
+                organization=org,
+                lead=updated_lead,
+                user=self.request.user,
+                action="STATUS_CHANGED",
+                old_value=old_status,
+                new_value=updated_lead.status
+            )
+
+
+
+class LeadActivityViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = LeadActivitySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        user = self.request.user
+        queryset = LeadActivity.objects.filter(organization=org)
+
+        # Smart Improvement: Staff only see their assigned leads' activities
+        if getattr(user, 'role', None) == 'STAFF':
+            queryset = queryset.filter(lead__assigned_to=user)
+
+        return queryset.order_by("-created_at")
 
 
 class ClientViewSet(viewsets.ModelViewSet):
