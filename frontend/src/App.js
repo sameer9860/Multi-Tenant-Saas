@@ -6,6 +6,9 @@ import Pipeline from './pages/dashboard/crm/Pipeline';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ActivityLog from './pages/dashboard/crm/ActivityLog';
+import InvoiceList from './pages/InvoiceList';
+import InvoiceCreate from './pages/InvoiceCreate';
+import InvoicePrint from './pages/InvoicePrint';
 
 // Basic Auth Guard Component
 const ProtectedRoute = ({ children }) => {
@@ -52,6 +55,25 @@ function App() {
         <Route path="/dashboard/crm/activity" element={
           <ProtectedRoute>
             <ActivityLog />
+          </ProtectedRoute>
+        } />
+
+        {/* Invoice Routes */}
+        <Route path="/dashboard/invoices" element={
+          <ProtectedRoute>
+            <InvoiceList />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/invoices/create" element={
+          <ProtectedRoute>
+            <InvoiceCreate />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/invoices/:id/print" element={
+          <ProtectedRoute>
+            <InvoicePrint />
           </ProtectedRoute>
         } />
 
