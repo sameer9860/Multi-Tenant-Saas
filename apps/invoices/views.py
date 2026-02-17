@@ -1,44 +1,53 @@
 from rest_framework.viewsets import ModelViewSet
-from .models import Invoice
-from apps.billing.utils import can_create_invoice
 from rest_framework.exceptions import PermissionDenied
-from .serializers import InvoiceSerializer
 from rest_framework.permissions import IsAuthenticated
-from apps.core.permissions import IsOwnerOrAdmin
-from apps.core.models import Organization
+from .models import Invoice, Customer, InvoiceItem, InvoicePayment
+from .serializers import InvoiceSerializer, CustomerSerializer, InvoiceItemSerializer, InvoicePaymentSerializer
+
+class CustomerViewSet(ModelViewSet):
+    serializer_class = CustomerSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Customer.objects.filter(organization=self.request.organization)
+
+    def perform_create(self, serializer):
+        serializer.save(organization=self.request.organization)
 
 class InvoiceViewSet(ModelViewSet):
     serializer_class = InvoiceSerializer
-    queryset = Invoice.objects.all()
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Invoice.objects.filter(
             organization=self.request.organization
-        )
+        ).prefetch_related('items', 'payments')
 
     def perform_create(self, serializer):
-        # Try middleware-provided organization first, then fallback to the authenticated user's organization.
-        org = getattr(self.request, "organization", None)
-        user = getattr(self.request, "user", None)
+        org = self.request.organization
+        usage = org.usage
 
-        if not org and user and getattr(user, "is_authenticated", False):
-            org = getattr(user, "organization", None)
+        # Check usage limits
+        can_add, msg = usage.can_create_invoice()
+        if not can_add:
+            raise PermissionDenied(msg)
 
-        if not org:
-            # More explicit error for callers
-            raise PermissionDenied("Organization not resolved. Ensure you are authenticated and your account is associated with an organization.")
+        # Save invoice
+        invoice = serializer.save(organization=org)
 
-        # billing check
-        if not can_create_invoice(self.request):
-            raise PermissionDenied(
-                "Invoice limit reached. Please upgrade your plan."
-            )
-            
-        invoice = serializer.save(organization=self.request.organization) 
-        usage = self.request.organization.usage
-        usage.invoices_created += 1
-        usage.save()
-            
-            
+        # Increment usage count
+        usage.increment_invoice_count()
 
-        serializer.save(organization=org)
+class InvoiceItemViewSet(ModelViewSet):
+    serializer_class = InvoiceItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return InvoiceItem.objects.filter(invoice__organization=self.request.organization)
+
+class InvoicePaymentViewSet(ModelViewSet):
+    serializer_class = InvoicePaymentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return InvoicePayment.objects.filter(invoice__organization=self.request.organization)
