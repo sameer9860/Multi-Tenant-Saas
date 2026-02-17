@@ -1,4 +1,6 @@
+from decimal import Decimal
 from django.db import models
+from django.utils import timezone
 from apps.core.models import Organization
 
 class Customer(models.Model):
@@ -57,6 +59,7 @@ class Invoice(models.Model):
 
     def __str__(self):
 
+
         return self.invoice_number
 
     def save(self, *args, **kwargs):
@@ -80,7 +83,7 @@ class Invoice(models.Model):
     def calculate_totals(self):
         items = self.items.all()
         self.subtotal = sum(item.total for item in items)
-        self.vat_amount = self.subtotal * 0.13  # example 13% VAT
+        self.vat_amount = self.subtotal * Decimal('0.13')  # example 13% VAT
         self.total = self.subtotal + self.vat_amount
         self.balance = self.total - self.paid_amount
         self.save()
