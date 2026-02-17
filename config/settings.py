@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     'apps.analytics',
     'apps.subscriptions',
     'crm',
-    'billing',
     'corsheaders',
 ]
 
