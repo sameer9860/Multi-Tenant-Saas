@@ -427,6 +427,67 @@ const Dashboard = () => {
           </div>
         </div>
 
+          {/* Invoice Quick Create */}
+          <div className="mb-12">
+            <div className="mb-8">
+              <h2 className="text-3xl font-black text-slate-900 mb-2">
+                Invoice Quick Create
+              </h2>
+              <p className="text-slate-500 font-medium">Quickly calculate totals from subtotal and VAT percentage</p>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div>
+                  <label className="text-sm font-bold text-slate-500">Subtotal</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={subtotal}
+                    onChange={(e) => setSubtotal(e.target.value)}
+                    className="w-full mt-2 p-3 border rounded-lg"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-bold text-slate-500">VAT %</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={vatPercent}
+                    onChange={(e) => setVatPercent(e.target.value)}
+                    className="w-full mt-2 p-3 border rounded-lg"
+                    placeholder="13"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-bold text-slate-500">VAT Amount</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={vatAmountDisplay}
+                    className="w-full mt-2 p-3 border rounded-lg bg-slate-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-bold text-slate-500">Total</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={totalDisplay}
+                    className="w-full mt-2 p-3 border rounded-lg bg-slate-50"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+
         <div className="bg-indigo-900 p-8 rounded-3xl shadow-xl text-white flex flex-col justify-center items-start relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16 pointer-events-none"></div>
