@@ -8,6 +8,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
   const { profile } = useUserProfile();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLeadsMenuOpen, setIsLeadsMenuOpen] = useState(true);
+  const [isInvoicesMenuOpen, setIsInvoicesMenuOpen] = useState(true);
 
   const logout = () => {
     localStorage.clear();
@@ -16,6 +17,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
 
   const isActive = (path) => location.pathname === path;
   const isLeadsActive = location.pathname.includes("/dashboard/crm/leads");
+  const isInvoicesActive = location.pathname.includes("/dashboard/invoices");
 
   const sidebarClasses = `${
     isSidebarCollapsed ? "w-20" : "w-80"
@@ -327,6 +329,153 @@ const DashboardLayout = ({ children, title, subtitle }) => {
             </svg>
             {!isSidebarCollapsed && <span>Activity Log</span>}
           </button>
+
+          {/* Invoices Dropdown */}
+          <div className="space-y-1">
+            <button
+              onClick={() =>
+                !isSidebarCollapsed && setIsInvoicesMenuOpen(!isInvoicesMenuOpen)
+              }
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
+                isInvoicesActive && !isSidebarCollapsed
+                  ? "text-indigo-700"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              } ${isSidebarCollapsed ? "justify-center px-2 cursor-default" : "cursor-pointer"}`}
+              title={isSidebarCollapsed ? "Invoices" : ""}
+            >
+              <div className="flex items-center gap-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-5 w-5 flex-shrink-0 ${isInvoicesActive && isSidebarCollapsed ? "text-indigo-600" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                {!isSidebarCollapsed && <span>Invoices</span>}
+              </div>
+              {!isSidebarCollapsed && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-4 w-4 transition-transform duration-200 ${isInvoicesMenuOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              )}
+            </button>
+
+            {(isInvoicesMenuOpen || isSidebarCollapsed) && (
+              <div
+                className={`${isSidebarCollapsed ? "space-y-2" : "pl-11 space-y-1"}`}
+              >
+                {/* Create Invoice Item */}
+                <button
+                  onClick={() => navigate("/dashboard/invoices/create")}
+                  className={`w-full flex items-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive("/dashboard/invoices/create")
+                      ? "text-indigo-600 bg-indigo-50"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  } ${isSidebarCollapsed ? "justify-center p-2" : "px-3"}`}
+                  title="Create Invoice"
+                >
+                  {isSidebarCollapsed ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 opacity-50"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                      Create Invoice
+                    </>
+                  )}
+                </button>
+
+                {/* Invoice List Item */}
+                <button
+                  onClick={() => navigate("/dashboard/invoices")}
+                  className={`w-full flex items-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive("/dashboard/invoices")
+                      ? "text-indigo-600 bg-indigo-50"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  } ${isSidebarCollapsed ? "justify-center p-2" : "px-3"}`}
+                  title="Invoice List"
+                >
+                  {isSidebarCollapsed ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                      />
+                    </svg>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 opacity-50"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                        />
+                      </svg>
+                      Invoice List
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => navigate("/pricing")}

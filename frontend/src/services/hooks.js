@@ -234,3 +234,72 @@ export const useInvoices = () => {
 
   return { invoices, loading, error, refetch: fetchInvoices };
 };
+
+/**
+ * Hook for fetching customers
+ */
+export const useCustomers = () => {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchCustomers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await api.get('/api/invoices/customers/');
+      setCustomers(Array.isArray(data) ? data : data.results || []);
+      setError(null);
+    } catch (err) {
+      console.error('[useCustomers] Failed to load customers:', err);
+      setError({
+        message: err.message || 'Failed to load customers',
+        code: err.code,
+        details: err.details,
+      });
+      setCustomers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
+
+  return { customers, loading, error, refetch: fetchCustomers };
+};
+
+/**
+ * Hook for creating invoice
+ */
+export const useCreateInvoice = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+
+  const createInvoice = useCallback(async (invoiceData) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const result = await api.post('/api/invoices/invoices/', invoiceData);
+      setSuccess(true);
+      return result;
+    } catch (err) {
+      console.error('[useCreateInvoice] Failed to create invoice:', err);
+      setError({
+        message: err.message || 'Failed to create invoice',
+        code: err.code,
+        details: err.details,
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { createInvoice, loading, error, success };
+};
