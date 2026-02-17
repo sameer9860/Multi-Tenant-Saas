@@ -19,6 +19,10 @@ const Dashboard = () => {
   const [successPlan, setSuccessPlan] = useState("");
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [dismissedError, setDismissedError] = useState(false);
+  const [subtotal, setSubtotal] = useState("");
+  const [vatPercent, setVatPercent] = useState("13");
+  const [vatAmountDisplay, setVatAmountDisplay] = useState("0.00");
+  const [totalDisplay, setTotalDisplay] = useState("0.00");
 
   // Use custom hooks for data fetching
   const { analytics, error: analyticsError } = useDashboardData();
@@ -99,6 +103,16 @@ const Dashboard = () => {
       navigate("/login");
     }
   }, [navigate]);
+
+  // Auto-calculate VAT amount and total when subtotal or VAT% change
+  useEffect(() => {
+    const s = parseFloat(subtotal) || 0;
+    const v = parseFloat(vatPercent) || 0;
+    const vatAmount = +(s * v) / 100;
+    const total = s + vatAmount;
+    setVatAmountDisplay(vatAmount.toFixed(2));
+    setTotalDisplay(total.toFixed(2));
+  }, [subtotal, vatPercent]);
 
   const handleViewReceipt = (payment) => {
     setSelectedPayment(payment);
