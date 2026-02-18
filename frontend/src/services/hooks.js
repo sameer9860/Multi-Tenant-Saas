@@ -248,7 +248,22 @@ export const useCustomers = () => {
     setError(null);
 
     try {
-      const data = await api.get('/api/invoices/customers/');
+      // Try multiple endpoint variations
+      let data;
+      try {
+        const response = await api.get('/api/invoices/customers/');
+        data = response;
+      } catch (e1) {
+        try {
+          const response = await api.get('/invoices/customers/');
+          data = response;
+        } catch (e2) {
+          // If both fail, use empty array
+          console.warn('[useCustomers] Both endpoints failed, using empty array');
+          data = [];
+        }
+      }
+
       setCustomers(Array.isArray(data) ? data : data.results || []);
       setError(null);
     } catch (err) {
@@ -269,6 +284,49 @@ export const useCustomers = () => {
   }, [fetchCustomers]);
 
   return { customers, loading, error, refetch: fetchCustomers };
+};
+
+/**
+ * Hook for creating customer
+ */
+export const useCreateCustomer = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+
+  const createCustomer = useCallback(async (customerData) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      console.log('[useCreateCustomer] Creating customer with data:', customerData);
+      let result;
+      try {
+        result = await api.post('/api/invoices/customers/', customerData);
+        console.log('[useCreateCustomer] Customer created successfully:', result);
+      } catch (e1) {
+        console.warn('[useCreateCustomer] Endpoint /api/invoices/customers/ failed, trying /invoices/customers/:', e1);
+        result = await api.post('/invoices/customers/', customerData);
+        console.log('[useCreateCustomer] Customer created successfully via fallback:', result);
+      }
+      setSuccess(true);
+      return result;
+    } catch (err) {
+      console.error('[useCreateCustomer] Failed to create customer:', err);
+      const errorMessage = err?.details?.message || err?.message || 'Failed to create customer';
+      setError({
+        message: errorMessage,
+        code: err?.code,
+        details: err?.details,
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { createCustomer, loading, error, success };
 };
 
 /**

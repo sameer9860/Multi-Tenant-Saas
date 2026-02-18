@@ -34,10 +34,11 @@ const InvoiceList = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "USD",
-    }).format(amount);
+      currency: "INR",
+      minimumFractionDigits: 2,
+    }).format(amount).replace("\u20b9", "Rs. ");
   };
 
   const formatDate = (date) => {
