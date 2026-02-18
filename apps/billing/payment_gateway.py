@@ -18,9 +18,9 @@ class ESewaPaymentManager:
 
     def __init__(self):
         # Merchant code / identifier used by eSewa (configure in settings)
-        self.merchant_code = getattr(settings, 'ESEWA_MERCHANT_CODE', 'EPAYTEST')
+        self.merchant_code = getattr(settings, 'ESEWA_MERCHANT_CODE')
         # Use configured verify URL so we can switch between uat/rc/live via settings
-        self.api_url = getattr(settings, 'ESEWA_VERIFY_URL', 'https://rc-epay.esewa.com.np/epay/transrec')
+        self.api_url = getattr(settings, 'ESEWA_VERIFY_URL')
 
     def verify_payment(self, transaction_id: str, amount: int | float | None = None, reference_id: str | None = None) -> dict:
         """

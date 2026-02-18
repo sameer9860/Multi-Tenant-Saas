@@ -168,9 +168,9 @@ SIMPLE_JWT = {
 }
 
 # eSewa Settings
-ESEWA_BASE_URL = os.getenv('ESEWA_BASE_URL', 'https://rc-epay.esewa.com.np/epay/main')
-ESEWA_VERIFY_URL = os.getenv('ESEWA_VERIFY_URL', 'https://rc-epay.esewa.com.np/epay/transrec')
-ESEWA_MERCHANT_CODE = os.getenv('ESEWA_MERCHANT_CODE', 'EPAYTEST')
+ESEWA_BASE_URL = os.getenv("ESEWA_BASE_URL")
+ESEWA_VERIFY_URL = os.getenv("ESEWA_VERIFY_URL")
+ESEWA_MERCHANT_CODE = os.getenv("ESEWA_MERCHANT_CODE")
 ESEWA_USE_MOCK = os.getenv('ESEWA_USE_MOCK', 'False') == 'True'
 
 LOGGING = {
