@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 
 const plans = [
@@ -23,6 +22,7 @@ const plans = [
     price: "Rs 2,500",
     period: "/month",
     description: "Perfect for small businesses",
+    showTrialBadge: true,
     features: [
       "1000 invoices/month",
       "5 team members",
@@ -38,6 +38,7 @@ const plans = [
     price: "Rs 3,900",
     period: "/month",
     description: "For growing enterprises",
+    showTrialBadge: true,
     features: [
       "Unlimited invoices",
       "Unlimited team members",
@@ -50,25 +51,32 @@ const plans = [
   },
 ];
 
+function getTrialDaysLeft(trialEnd) {
+  if (!trialEnd) return null;
+  const diff = new Date(trialEnd) - new Date();
+  if (diff <= 0) return 0;
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
 export default function Pricing() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [currentPlan, setCurrentPlan] = useState("FREE");
-  const userRole = localStorage.getItem("user_role") || "STAFF";
+  const [trialInfo, setTrialInfo] = useState({
+    is_trial: false,
+    trial_end: null,
+  });
 
   React.useEffect(() => {
     fetchCurrentPlan();
+    fetchTrialInfo();
   }, []);
 
   const fetchCurrentPlan = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
-
     try {
       const response = await fetch("/api/accounts/profile/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
@@ -79,16 +87,30 @@ export default function Pricing() {
     }
   };
 
+  const fetchTrialInfo = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const response = await fetch("/api/billing/usage/", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTrialInfo({ is_trial: data.is_trial, trial_end: data.trial_end });
+      }
+    } catch (err) {
+      console.error("Failed to fetch trial info:", err);
+    }
+  };
+
   const currentPlanTier = plans.find((p) => p.name === currentPlan)?.tier || 0;
+  const trialDaysLeft = getTrialDaysLeft(trialInfo.trial_end);
 
   const handleUpgrade = async (planName) => {
     if (loading) return;
-
     setLoading(true);
-
     try {
       const token = localStorage.getItem("token");
-
       const response = await fetch("/api/subscription/upgrade/", {
         method: "POST",
         headers: {
@@ -97,20 +119,14 @@ export default function Pricing() {
         },
         body: JSON.stringify({ plan: planName }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
         if (data.requires_payment && data.esewa_url) {
-          // Redirect to eSewa payment page
           window.location.href = data.esewa_url;
           return;
         }
-
         alert(`✅ Successfully upgraded to ${planName} plan!`);
         setCurrentPlan(planName);
-
-        // Reload usage dashboard after 1 second
         setTimeout(() => {
           window.location.reload();
         }, 1000);
@@ -139,6 +155,28 @@ export default function Pricing() {
           </p>
         </div>
 
+        {/* Trial Banner */}
+        {trialInfo.is_trial && trialDaysLeft !== null && (
+          <div className="mb-8 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🎉</span>
+              <div>
+                <p className="font-bold text-lg">
+                  🎁 Your 7-Day Free Trial is Active!
+                </p>
+                <p className="text-indigo-100 text-sm">
+                  {trialDaysLeft > 0
+                    ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left — explore BASIC or PRO features now. No payment needed during trial.`
+                    : "Your trial has ended. Upgrade to BASIC or PRO to unlock more features."}
+                </p>
+              </div>
+            </div>
+            <div className="flex-shrink-0 bg-white text-indigo-600 font-bold text-2xl rounded-lg px-5 py-2 shadow">
+              {trialDaysLeft > 0 ? `${trialDaysLeft}d left` : "Expired"}
+            </div>
+          </div>
+        )}
+
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-3 gap-8">
           {plans.map((plan) => {
@@ -154,8 +192,18 @@ export default function Pricing() {
                     : "bg-white"
                 }`}
               >
-                {/* Badge for current plan */}
-                {isCurrentPlan && (
+                {/* Trial badge on BASIC/PRO while user is on trial */}
+                {plan.showTrialBadge &&
+                  trialInfo.is_trial &&
+                  trialDaysLeft > 0 && (
+                    <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-2 px-4 text-center font-semibold text-sm tracking-wide">
+                      🎁 Try Free for {trialDaysLeft} Day
+                      {trialDaysLeft !== 1 ? "s" : ""}
+                    </div>
+                  )}
+
+                {/* Badge for current plan (non-trial) */}
+                {isCurrentPlan && !(plan.isTrial && trialInfo.is_trial) && (
                   <div className="bg-green-500 text-white py-2 px-4 text-center font-semibold">
                     ✓ Current Plan
                   </div>
@@ -265,8 +313,9 @@ export default function Pricing() {
                 Is there a free trial?
               </h4>
               <p className="text-gray-600">
-                Yes! Start with FREE plan and upgrade whenever you're ready. No
-                credit card required.
+                Yes! Every new account gets a <strong>7-day free trial</strong>.
+                No credit card required. After the trial, you stay on the FREE
+                plan or upgrade to unlock more features.
               </p>
             </div>
           </div>

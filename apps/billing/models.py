@@ -62,8 +62,9 @@ class Subscription(models.Model):
             self.save(update_fields=['plan', 'is_active', 'is_trial'])
 
     def save(self, *args, **kwargs):
-        # Auto-set 7-day trial for new FREE subscriptions
-        if not self.pk and self.is_trial and not self.trial_end:
+        # Auto-set 7-day trial for subscriptions that are on trial but missing trial_end
+        # Handles both new records and existing ones created before the trial system
+        if self.is_trial and not self.trial_end:
             self.trial_end = timezone.now() + timedelta(days=7)
         super().save(*args, **kwargs)
 

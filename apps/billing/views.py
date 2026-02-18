@@ -223,11 +223,16 @@ class UsageDashboardAPIView(APIView):
             return Response({'detail': 'Organization not found'}, status=400)
 
         usage, _ = Usage.objects.get_or_create(organization=org)
+        subscription, _ = Subscription.objects.get_or_create(organization=org)
+
         data = {
             'plan': getattr(org.subscription, 'plan', 'FREE'),
             'invoices_used': usage.invoices_created,
             'invoice_limit': Usage.get_plan_limit(usage, 'invoices') if hasattr(usage, 'get_plan_limit') else None,
             'customers_used': usage.customers_created,
+            # Trial info
+            'is_trial': subscription.is_trial,
+            'trial_end': subscription.trial_end.isoformat() if subscription.trial_end else None,
         }
         return Response(data)
 
