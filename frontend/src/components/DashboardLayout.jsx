@@ -540,10 +540,10 @@ const DashboardLayout = ({ children, title, subtitle }) => {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-12 bg-slate-50/50">
+      <main className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
         <div className="max-w-7xl mx-auto">
           {(title || subtitle) && (
-            <header className="mb-12">
+            <header className="mb-8">
               {title && (
                 <h1 className="text-3xl font-black text-slate-900 mb-2">
                   {title}

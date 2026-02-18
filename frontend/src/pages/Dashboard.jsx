@@ -169,7 +169,7 @@ const Dashboard = () => {
 
   const StatCard = ({ icon: Icon, label, value, color }) => {
     return (
-      <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 hover:shadow-2xl hover:shadow-slate-300/50 transition-all duration-300 flex flex-col">
+      <div className="bg-white p-6 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 hover:shadow-2xl hover:shadow-slate-300/50 transition-all duration-300 flex flex-col max-w-xs">
         <div
           className={`w-14 h-14 ${color} rounded-2xl flex items-center justify-center mb-6`}
         >
@@ -178,7 +178,7 @@ const Dashboard = () => {
         <span className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-2">
           {label}
         </span>
-        <span className="text-4xl font-black text-slate-900">{value}</span>
+        <span className="text-3xl font-black text-slate-900">{value}</span>
       </div>
     );
   };
@@ -258,9 +258,9 @@ const Dashboard = () => {
       )}
 
       {/* Header Section */}
-      <header className="flex justify-between items-center mb-12">
+      <header className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-5xl font-black text-slate-900 mb-3">Dashboard</h1>
+          <h1 className="text-4xl font-black text-slate-900 mb-3">Dashboard</h1>
           <p className="text-slate-500 font-medium text-lg">
             Welcome back,{" "}
             <span className="text-indigo-600 font-bold">
@@ -277,7 +277,7 @@ const Dashboard = () => {
       </header>
 
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <StatCard
           icon={
             <svg
@@ -399,8 +399,8 @@ const Dashboard = () => {
       </div>
 
       {/* Usage Limits Section */}
-      <div className="mb-12">
-        <div className="mb-8">
+      <div className="mb-8">
+        <div className="mb-6">
           <h2 className="text-3xl font-black text-slate-900 mb-2">
             Plan Usage & Limits
           </h2>
@@ -408,7 +408,7 @@ const Dashboard = () => {
             Monitor your resource usage across your plan
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <UsageBar
             label="Leads Usage"
             used={usage.leads.used}
@@ -431,18 +431,18 @@ const Dashboard = () => {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
           <h3 className="text-xl font-bold text-slate-900 mb-6 self-start">
             Lead Status Distribution
           </h3>
-          <div className="w-64 h-64">
+          <div className="w-48 h-48">
             <Pie data={chartData} />
           </div>
         </div>
 
 
-        <div className="bg-indigo-900 p-8 rounded-3xl shadow-xl text-white flex flex-col justify-center items-start relative overflow-hidden">
+        <div className="bg-indigo-900 p-6 rounded-3xl shadow-xl text-white flex flex-col justify-center items-start relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16 pointer-events-none"></div>
 
@@ -477,7 +477,7 @@ const Dashboard = () => {
       </div>
 
       {/* Payment History Section */}
-      <div className="mb-12">
+      <div className="mb-8">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-3xl font-black text-slate-900 mb-2">

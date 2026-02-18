@@ -115,7 +115,7 @@ const PaymentHistory = ({ payments, onViewReceipt, loading }) => {
   }
 
   return (
-    <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
+    <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 max-h-96 overflow-y-auto">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>

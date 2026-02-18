@@ -20,9 +20,10 @@ PLAN_LIMITS = {
         "api_calls": 10000,
     },
     "PRO": {
-        "invoices": 999999,
-        "customers": 999999,
-        "team_members": 999999,
-        "api_calls": 999999,
+        # None means unlimited; the UI and views interpret None specially
+        "invoices": None,
+        "customers": None,
+        "team_members": None,
+        "api_calls": None,
     },
 }

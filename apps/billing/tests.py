@@ -149,3 +149,11 @@ class BillingAPITests(APITestCase):
             
             tx.refresh_from_db()
             self.assertEqual(tx.status, 'PENDING')
+
+    def test_plan_limits_constant_values(self):
+        """Ensure the invoice limits in constants match expected values."""
+        from .constants import PLAN_LIMITS
+        self.assertEqual(PLAN_LIMITS['FREE']['invoices'], 10)
+        self.assertEqual(PLAN_LIMITS['BASIC']['invoices'], 1000)
+        # PRO should be unlimited (None) for nicer UI handling
+        self.assertIsNone(PLAN_LIMITS['PRO']['invoices'])
