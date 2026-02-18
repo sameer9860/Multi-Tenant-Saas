@@ -77,6 +77,12 @@ function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/dashboard/invoices/:id" element={
+          <ProtectedRoute>
+            <InvoicePrint />
+          </ProtectedRoute>
+        } />
+
         {/* Default Redirects */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

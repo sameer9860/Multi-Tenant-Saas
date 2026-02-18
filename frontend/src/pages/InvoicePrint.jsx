@@ -1,34 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
+import { useInvoice } from "../services/hooks";
 
 const InvoicePrint = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [invoice, setInvoice] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchInvoice = async () => {
-      try {
-        const response = await fetch(`/api/invoices/invoices/${id}/`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        if (!response.ok) throw new Error("Failed to load invoice");
-        const data = await response.json();
-        setInvoice(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInvoice();
-  }, [id]);
+  const { invoice, loading, error } = useInvoice(id);
 
   const handlePrint = () => {
     window.print();
@@ -39,7 +17,9 @@ const InvoicePrint = () => {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 2,
-    }).format(amount).replace("\u20b9", "Rs. ");
+    })
+      .format(amount)
+      .replace("\u20b9", "Rs. ");
   };
 
   const formatDate = (date) => {
@@ -156,8 +136,8 @@ const InvoicePrint = () => {
                 <p className="text-xs font-bold text-slate-500 uppercase mb-2">
                   From
                 </p>
-                <p className="font-bold text-slate-900">Your Company</p>
-                <p className="text-sm text-slate-600">Company Address</p>
+                <p className="font-bold text-slate-900">Multi Tenant SaaS </p>
+                <p className="text-sm text-slate-600">Dhading,Nepal</p>
               </div>
               <div className="text-right">
                 <p className="text-xs font-bold text-slate-500 uppercase mb-2">
@@ -300,9 +280,7 @@ const InvoicePrint = () => {
           {/* Footer */}
           <div className="border-t border-slate-200 pt-8 text-center text-sm text-slate-500">
             <p>Thank you for your business!</p>
-            <p className="mt-2">
-              Questions? Contact us at support@company.com
-            </p>
+            <p className="mt-2">Questions? Contact us at support@company.com</p>
           </div>
         </div>
       </div>

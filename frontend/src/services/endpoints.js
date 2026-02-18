@@ -28,6 +28,8 @@ export const ENDPOINTS = {
   invoices: {
     list: '/api/invoices/',
     listFallback: '/invoices/',
+    items: '/api/invoice-items/',
+    itemsFallback: '/invoice-items/',
   },
 
   // Customer endpoints - Django router registers customers at /api/customers/

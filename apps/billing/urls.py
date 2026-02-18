@@ -17,7 +17,7 @@ urlpatterns = [
     # path("upgrade/ui/", upgrade_view, name="upgrade-plan-ui"),
     
     # Payment History & Receipts
-    path("api/payments/", PaymentListAPIView.as_view(), name="payment-list-api"),
+    path("payments/", PaymentListAPIView.as_view(), name="payment-list-api"),
     # path("payments/history/", PaymentHistoryView.as_view(), name="payment-history"),
     path("payments/receipt/<int:pk>/", ReceiptView.as_view(), name="payment-receipt"),
     

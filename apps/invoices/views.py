@@ -12,12 +12,25 @@ logger = logging.getLogger(__name__)
 class CustomerViewSet(ModelViewSet):
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [parsers.JSONParser, parsers.FormParser]
 
     def get_queryset(self):
         return Customer.objects.filter(organization=self.request.organization)
 
     def perform_create(self, serializer):
-        serializer.save(organization=self.request.organization)
+        org = self.request.organization
+        usage = org.usage
+
+        # Check usage limits
+        can_add, msg = usage.can_add_customer()
+        if not can_add:
+            raise PermissionDenied(msg)
+
+        # Save customer
+        serializer.save(organization=org)
+
+        # Increment usage count
+        usage.increment_customer_count()
 
 class InvoiceViewSet(ModelViewSet):
     serializer_class = InvoiceSerializer

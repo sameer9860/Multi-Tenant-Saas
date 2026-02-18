@@ -236,6 +236,50 @@ export const useInvoices = () => {
 };
 
 /**
+ * Hook for fetching a single invoice
+ */
+export const useInvoice = (id) => {
+  const [invoice, setInvoice] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchInvoice = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const endpoint = getEndpoint('invoices', 'list');
+      const invoiceUrl = `${endpoint.primary}${id}/`;
+      const fallbackUrl = `${endpoint.fallback}${id}/`;
+
+      try {
+        const data = await api.get(invoiceUrl);
+        setInvoice(data);
+      } catch (e1) {
+        console.warn(`[useInvoice] Primary failed for ${invoiceUrl}, trying fallback:`, fallbackUrl);
+        const data = await api.get(fallbackUrl);
+        setInvoice(data);
+      }
+    } catch (err) {
+      console.error('[useInvoice] Failed to load invoice:', err);
+      setError({
+        message: err.message || 'Failed to load invoice',
+        code: err.code,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchInvoice();
+  }, [fetchInvoice]);
+
+  return { invoice, loading, error, refetch: fetchInvoice };
+};
+
+/**
  * Hook for fetching customers
  */
 export const useCustomers = () => {
@@ -300,14 +344,15 @@ export const useCreateCustomer = () => {
     setSuccess(false);
 
     try {
+      const endpoint = getEndpoint('customers', 'create');
       console.log('[useCreateCustomer] Creating customer with data:', customerData);
       let result;
       try {
-        result = await api.post('/api/customers/', customerData);
+        result = await api.post(endpoint.primary, customerData);
         console.log('[useCreateCustomer] Customer created successfully:', result);
       } catch (e1) {
-        console.warn('[useCreateCustomer] Endpoint /api/customers/ failed, trying /customers/:', e1);
-        result = await api.post('/customers/', customerData);
+        console.warn(`[useCreateCustomer] Primary endpoint ${endpoint.primary} failed, trying fallback:`, e1);
+        result = await api.post(endpoint.fallback, customerData);
         console.log('[useCreateCustomer] Customer created successfully via fallback:', result);
       }
       setSuccess(true);
