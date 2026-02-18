@@ -47,12 +47,14 @@ class APIService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
+      // avoid overwriting the serialized body when spreading options
+      const { body: rawBody, ...otherOpts } = options;
       const response = await fetch(url, {
         method: options.method || 'GET',
-        headers: this.getHeaders(options.body !== undefined),
-        body: options.body ? JSON.stringify(options.body) : undefined,
+        headers: this.getHeaders(rawBody !== undefined),
+        body: rawBody !== undefined ? JSON.stringify(rawBody) : undefined,
         signal: controller.signal,
-        ...options,
+        ...otherOpts,
       });
 
       clearTimeout(timeoutId);
@@ -165,4 +167,4 @@ class APIError extends Error {
 const api = new APIService();
 
 export default api;
-export { APIError };
+export { APIError, APIService };
