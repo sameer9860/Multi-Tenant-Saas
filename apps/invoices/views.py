@@ -19,9 +19,10 @@ class InvoiceViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # include customer in queryset so serializer can efficiently serialize nested data
         return Invoice.objects.filter(
             organization=self.request.organization
-        ).prefetch_related('items', 'payments')
+        ).select_related('customer').prefetch_related('items', 'payments')
 
     def perform_create(self, serializer):
         org = self.request.organization

@@ -248,14 +248,14 @@ export const useCustomers = () => {
     setError(null);
 
     try {
-      // Try multiple endpoint variations
+      // Try primary and fallback endpoints for customers
       let data;
       try {
-        const response = await api.get('/api/invoices/customers/');
+        const response = await api.get('/api/customers/');
         data = response;
       } catch (e1) {
         try {
-          const response = await api.get('/invoices/customers/');
+          const response = await api.get('/customers/');
           data = response;
         } catch (e2) {
           // If both fail, use empty array
@@ -303,11 +303,11 @@ export const useCreateCustomer = () => {
       console.log('[useCreateCustomer] Creating customer with data:', customerData);
       let result;
       try {
-        result = await api.post('/api/invoices/customers/', customerData);
+        result = await api.post('/api/customers/', customerData);
         console.log('[useCreateCustomer] Customer created successfully:', result);
       } catch (e1) {
-        console.warn('[useCreateCustomer] Endpoint /api/invoices/customers/ failed, trying /invoices/customers/:', e1);
-        result = await api.post('/invoices/customers/', customerData);
+        console.warn('[useCreateCustomer] Endpoint /api/customers/ failed, trying /customers/:', e1);
+        result = await api.post('/customers/', customerData);
         console.log('[useCreateCustomer] Customer created successfully via fallback:', result);
       }
       setSuccess(true);

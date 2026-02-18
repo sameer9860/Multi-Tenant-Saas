@@ -5,7 +5,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.core.models import Organization
 from apps.accounts.models import User
-from .models import Invoice
+from .models import Invoice, Customer
 
 
 class InvoiceAuthTests(APITestCase):
@@ -24,19 +24,45 @@ class InvoiceAuthTests(APITestCase):
         )
         self.client = APIClient()
 
-    def test_create_invoice_with_token_sets_organization(self):
+    def authenticate(self):
         refresh = RefreshToken.for_user(self.user)
         access = str(refresh.access_token)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
 
-        data = {"customer_name": "ACME", "amount": "100.00"}
-        response = self.client.post(reverse('invoice-list'), data, format='json')
+    def test_create_customer_endpoint(self):
+        # ensure customers can be created and organization is set automatically
+        self.authenticate()
+        payload = {"name": "Test Customer"}
+        resp = self.client.post(reverse('customer-list'), payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['name'], payload['name'])
+        self.assertEqual(resp.data['organization'], self.org.id)
 
+    def test_create_invoice_with_customer_id(self):
+        # create a customer first
+        self.authenticate()
+        customer = Customer.objects.create(
+            organization=self.org,
+            name="ACME Corp",
+        )
+        data = {
+            "customer_id": customer.id,
+            "date": "2023-01-01",
+            "subtotal": "100.00",
+            "vat_amount": "13.00",
+            "total": "113.00",
+        }
+        response = self.client.post(reverse('invoice-list'), data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # invoice should belong to org and include nested customer
         invoice = Invoice.objects.get(id=response.data['id'])
         self.assertEqual(invoice.organization, self.org)
+        self.assertEqual(invoice.customer, customer)
+        # response should embed customer object
+        self.assertIsInstance(response.data.get('customer'), dict)
+        self.assertEqual(response.data['customer']['name'], customer.name)
 
     def test_create_invoice_without_credentials_returns_401(self):
-        data = {"customer_name": "NoAuth", "amount": "10.00"}
+        data = {"customer_id": 999, "date": "2023-01-01", "subtotal": "10.00", "vat_amount": "1.30", "total": "11.30"}
         response = self.client.post(reverse('invoice-list'), data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

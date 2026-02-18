@@ -179,7 +179,16 @@ const InvoiceList = () => {
                   </td>
                   <td className="py-4 px-6">
                     <span className="text-slate-700 font-medium">
-                      {invoice.customer?.name || "Unknown"}
+                      {(() => {
+                        if (invoice.customer && typeof invoice.customer === 'object') {
+                          return invoice.customer.name;
+                        }
+                        if (invoice.customer) {
+                          // customer is just an id, show it as fallback
+                          return `#${invoice.customer}`;
+                        }
+                        return "Unknown";
+                      })()}
                     </span>
                   </td>
                   <td className="py-4 px-6">
