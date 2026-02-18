@@ -30,6 +30,14 @@ export const ENDPOINTS = {
     listFallback: '/invoices/',
   },
 
+  // Customer endpoints - Django router registers customers at /api/customers/
+  customers: {
+    list: '/api/customers/',
+    listFallback: '/customers/',
+    create: '/api/customers/',
+    createFallback: '/customers/',
+  },
+
   // Subscriptions endpoints - Routes to /api/subscription/
   subscriptions: {
     list: '/api/subscription/',

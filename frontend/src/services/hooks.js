@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import api from './api';
-import { getEndpoint } from './endpoints';
+import { getEndpoint, ENDPOINTS } from './endpoints';
 
 /**
  * Generic hook for API calls with automatic retry and error handling
@@ -343,7 +343,8 @@ export const useCreateInvoice = () => {
     setSuccess(false);
 
     try {
-      const result = await api.post('/api/invoices/invoices/', invoiceData);
+      const url = ENDPOINTS.invoices.list;
+      const result = await api.post(url, invoiceData);
       setSuccess(true);
       return result;
     } catch (err) {

@@ -143,7 +143,7 @@ const InvoiceCreate = () => {
     }
 
     const invoiceData = {
-      customer: customerId,
+      customer_id: customerId,
       date: formData.date,
       due_date: formData.due_date,
       subtotal: formData.subtotal,
@@ -209,12 +209,28 @@ const InvoiceCreate = () => {
                   </label>
                   <input
                     type="text"
+                    list="customers-list"
                     value={customerNameInput}
-                    onChange={(e) => setCustomerNameInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomerNameInput(val);
+                      // if user picked an existing customer name, associate its id
+                      const match = customers.find((c) => c.name === val);
+                      if (match) {
+                        setSelectedCustomerId(match.id);
+                      } else {
+                        setSelectedCustomerId(null);
+                      }
+                    }}
                     placeholder="Enter customer name"
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                     required
                   />
+                  <datalist id="customers-list">
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.name} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
