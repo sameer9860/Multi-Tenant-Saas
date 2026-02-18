@@ -135,8 +135,7 @@ const InvoiceCreate = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const saveInvoice = async () => {
     setCustomerError(null); // Clear previous errors
 
     let customerId = selectedCustomerId;
@@ -152,7 +151,7 @@ const InvoiceCreate = () => {
       });
       if (!newCustomer) {
         // useCreateCustomer hook will set the error state which is displayed in UI
-        return;
+        return null;
       }
       console.log("Customer created with ID:", newCustomer.id);
       customerId = newCustomer.id;
@@ -162,20 +161,20 @@ const InvoiceCreate = () => {
       const errMsg = "Please enter a customer name";
       setCustomerError(errMsg);
       alert(errMsg);
-      return;
+      return null;
     }
 
     if (items.every((item) => !item.description)) {
       alert("Please add at least one invoice item");
-      return;
+      return null;
     }
 
     const statusValue =
       paidAmount >= formData.total
         ? "PAID"
         : paidAmount > 0
-        ? "PARTIAL"
-        : "DUE";
+          ? "PARTIAL"
+          : "DUE";
 
     const invoiceData = {
       // send all commonly-accepted customer keys so backend can decide
@@ -223,7 +222,16 @@ const InvoiceCreate = () => {
           }
         }
       }
-      navigate("/dashboard/invoices");
+      return result;
+    }
+    return null;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const result = await saveInvoice();
+    if (result) {
+      navigate(`/dashboard/invoices/${result.id}/print`);
     }
   };
 
@@ -575,10 +583,10 @@ const InvoiceCreate = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 4v16m8-8H4"
+                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm0 0V9a2 2 0 012-2h6a2 2 0 012 2v8"
                   />
                 </svg>
-                Create Invoice
+                Create and Print Invoice
               </>
             )}
           </button>
