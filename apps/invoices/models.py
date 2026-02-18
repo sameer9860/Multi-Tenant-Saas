@@ -1,5 +1,5 @@
 from decimal import Decimal
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from apps.core.models import Organization
 
@@ -62,9 +62,12 @@ class Invoice(models.Model):
 
         return self.invoice_number
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         if not self.invoice_number:
-            last_invoice = Invoice.objects.filter(
+            # select_for_update locks the last invoice row so concurrent
+            # saves cannot generate the same number (race-condition safe)
+            last_invoice = Invoice.objects.select_for_update().filter(
                 organization=self.organization
             ).order_by("-created_at").first()
 
