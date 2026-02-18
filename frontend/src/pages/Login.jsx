@@ -32,6 +32,8 @@ const Login = () => {
       const data = await response.json();
       localStorage.setItem("token", data.access);
       localStorage.setItem("refresh_token", data.refresh);
+      // record login time so we can expire sessions after a period
+      localStorage.setItem("login_time", Date.now().toString());
 
       const profileRes = await fetch("/api/accounts/profile/", {
         headers: {

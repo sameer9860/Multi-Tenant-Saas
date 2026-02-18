@@ -13,9 +13,16 @@ import InvoicePrint from './pages/InvoicePrint';
 // Basic Auth Guard Component
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
-  if (!token) {
+  const loginTime = parseInt(localStorage.getItem('login_time') || '0', 10);
+  const maxAge = 15 * 60 * 1000; // 15 minutes
+
+  // if there's no token or the login has aged past maxAge, force logout
+  if (!token || (loginTime && Date.now() - loginTime > maxAge)) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('login_time');
     return <Navigate to="/login" replace />;
   }
+
   return children;
 };
 

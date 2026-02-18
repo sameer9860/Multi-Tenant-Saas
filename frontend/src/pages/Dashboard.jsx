@@ -19,10 +19,6 @@ const Dashboard = () => {
   const [successPlan, setSuccessPlan] = useState("");
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [dismissedError, setDismissedError] = useState(false);
-  const [subtotal, setSubtotal] = useState("");
-  const [vatPercent, setVatPercent] = useState("13");
-  const [vatAmountDisplay, setVatAmountDisplay] = useState("0.00");
-  const [totalDisplay, setTotalDisplay] = useState("0.00");
 
   // Use custom hooks for data fetching
   const { analytics, error: analyticsError } = useDashboardData();
@@ -102,17 +98,35 @@ const Dashboard = () => {
       console.warn("No token found, redirecting to login");
       navigate("/login");
     }
+
+    // Auto-logout after inactivity or timeout
+    const logoutAfterMs = 15 * 60 * 1000; // 15 minutes
+    let timer = setTimeout(() => {
+      console.info("Session timed out, logging out");
+      localStorage.removeItem("token");
+      navigate("/login");
+    }, logoutAfterMs);
+
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        console.info("Session timed out, logging out");
+        localStorage.removeItem("token");
+        navigate("/login");
+      }, logoutAfterMs);
+    };
+
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("keydown", resetTimer);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+    };
   }, [navigate]);
 
-  // Auto-calculate VAT amount and total when subtotal or VAT% change
-  useEffect(() => {
-    const s = parseFloat(subtotal) || 0;
-    const v = parseFloat(vatPercent) || 0;
-    const vatAmount = +(s * v) / 100;
-    const total = s + vatAmount;
-    setVatAmountDisplay(vatAmount.toFixed(2));
-    setTotalDisplay(total.toFixed(2));
-  }, [subtotal, vatPercent]);
+
 
   const handleViewReceipt = (payment) => {
     setSelectedPayment(payment);
@@ -426,66 +440,6 @@ const Dashboard = () => {
             <Pie data={chartData} />
           </div>
         </div>
-
-          {/* Invoice Quick Create */}
-          <div className="mb-12">
-            <div className="mb-8">
-              <h2 className="text-3xl font-black text-slate-900 mb-2">
-                Invoice Quick Create
-              </h2>
-              <p className="text-slate-500 font-medium">Quickly calculate totals from subtotal and VAT percentage</p>
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div>
-                  <label className="text-sm font-bold text-slate-500">Subtotal</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={subtotal}
-                    onChange={(e) => setSubtotal(e.target.value)}
-                    className="w-full mt-2 p-3 border rounded-lg"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-bold text-slate-500">VAT %</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={vatPercent}
-                    onChange={(e) => setVatPercent(e.target.value)}
-                    className="w-full mt-2 p-3 border rounded-lg"
-                    placeholder="13"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-bold text-slate-500">VAT Amount</label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={vatAmountDisplay}
-                    className="w-full mt-2 p-3 border rounded-lg bg-slate-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-bold text-slate-500">Total</label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={totalDisplay}
-                    className="w-full mt-2 p-3 border rounded-lg bg-slate-50"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
 
 
         <div className="bg-indigo-900 p-8 rounded-3xl shadow-xl text-white flex flex-col justify-center items-start relative overflow-hidden">
