@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import {
@@ -41,6 +41,7 @@ const InvoiceEdit = () => {
     subtotal: 0,
     vat_amount: 0,
     total: 0,
+    status: "DUE",
   });
 
   const [paidAmount, setPaidAmount] = useState(0);
@@ -50,22 +51,39 @@ const InvoiceEdit = () => {
   const [customerNameInput, setCustomerNameInput] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [customerError, setCustomerError] = useState(null);
+  const isInitialized = useRef(false);
 
   // Initialize form with existing invoice data
   useEffect(() => {
-    if (invoice) {
+    if (invoice && !isInitialized.current) {
+      console.log(
+        "[InvoiceEdit] Initializing with server data:",
+        JSON.stringify(invoice, null, 2),
+      );
+
+      const parsedItems = (invoice.items || []).map((item) => ({
+        ...item,
+        quantity: parseFloat(item.quantity) || 0,
+        rate: parseFloat(item.rate) || 0,
+        total: parseFloat(item.total) || 0,
+      }));
+
       setFormData({
         customer: invoice.customer?.id || invoice.customer || "",
         date: invoice.date,
         due_date: invoice.due_date || "",
-        subtotal: invoice.subtotal,
-        vat_amount: invoice.vat_amount,
-        total: invoice.total,
+        subtotal: parseFloat(invoice.subtotal) || 0,
+        vat_amount: parseFloat(invoice.vat_amount) || 0,
+        total: parseFloat(invoice.total) || 0,
+        status: invoice.status || "DUE",
       });
-      setPaidAmount(invoice.paid_amount || 0);
-      setBalanceAmount(invoice.balance || 0);
+
+      setPaidAmount(parseFloat(invoice.paid_amount) || 0);
+      setBalanceAmount(parseFloat(invoice.balance) || 0);
       setItems(
-        invoice.items || [{ description: "", quantity: 1, rate: 0, total: 0 }],
+        parsedItems.length > 0
+          ? parsedItems
+          : [{ description: "", quantity: 1, rate: 0, total: 0 }],
       );
 
       if (invoice.customer) {
@@ -79,11 +97,13 @@ const InvoiceEdit = () => {
         );
       }
 
-      // Calculate VAT percent from subtotal and vat_amount if possible
-      if (invoice.subtotal > 0) {
-        const calculatedVat = (invoice.vat_amount / invoice.subtotal) * 100;
-        setVatPercent(parseFloat(calculatedVat.toFixed(2)));
+      const sub = parseFloat(invoice.subtotal) || 0;
+      const vat = parseFloat(invoice.vat_amount) || 0;
+      if (sub > 0) {
+        setVatPercent(parseFloat(((vat / sub) * 100).toFixed(2)));
       }
+
+      isInitialized.current = true;
     }
   }, [invoice]);
 
@@ -105,6 +125,46 @@ const InvoiceEdit = () => {
     }));
   };
 
+  // Calculate everything whenever items, VAT %, or paid amount changes
+  useEffect(() => {
+    if (!isInitialized.current) return;
+
+    // Use parseFloat to be absolutely sure we are doing math, not string concatenation
+    const subtotal = items.reduce(
+      (sum, item) => sum + (parseFloat(item.total) || 0),
+      0,
+    );
+    const vatAmount = (subtotal * (parseFloat(vatPercent) || 0)) / 100;
+    const total = subtotal + vatAmount;
+    const balance = total - paidAmount;
+
+    console.log("Calculation Hook:", { subtotal, total, paidAmount, balance });
+
+    // Refined status logic:
+    // 1. If total > 0, status is based on payment progress.
+    // 2. If total is 0, status is PAID only if there was some payment, otherwise DUE.
+    // This fixes the "default PAID" issue for invoices with no items yet.
+    let statusValue = "DUE";
+    if (total > 0) {
+      if (paidAmount >= total) statusValue = "PAID";
+      else if (paidAmount > 0) statusValue = "PARTIAL";
+      else statusValue = "DUE";
+    } else {
+      statusValue = paidAmount > 0 ? "PAID" : "DUE";
+    }
+
+    // Fix negative balance: Balance should not be less than 0
+    setBalanceAmount(parseFloat(Math.max(0, balance).toFixed(2)));
+
+    setFormData((prev) => ({
+      ...prev,
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      vat_amount: parseFloat(vatAmount.toFixed(2)),
+      total: parseFloat(total.toFixed(2)),
+      status: statusValue,
+    }));
+  }, [items, vatPercent, paidAmount]);
+
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
     const numValue = value === "" ? 0 : parseFloat(value);
@@ -115,23 +175,6 @@ const InvoiceEdit = () => {
     }
 
     setItems(newItems);
-    calculateTotals(newItems);
-  };
-
-  const calculateTotals = (itemsList) => {
-    const subtotal = itemsList.reduce((sum, item) => sum + item.total, 0);
-    const vatAmount = (subtotal * vatPercent) / 100;
-    const total = subtotal + vatAmount;
-
-    const bal = total - paidAmount;
-    setBalanceAmount(parseFloat(bal.toFixed(2)));
-
-    setFormData((prev) => ({
-      ...prev,
-      subtotal: parseFloat(subtotal.toFixed(2)),
-      vat_amount: parseFloat(vatAmount.toFixed(2)),
-      total: parseFloat(total.toFixed(2)),
-    }));
   };
 
   const addItem = () => {
@@ -141,7 +184,6 @@ const InvoiceEdit = () => {
   const removeItem = (index) => {
     const newItems = items.filter((_, i) => i !== index);
     setItems(newItems);
-    calculateTotals(newItems);
   };
 
   const saveInvoice = async () => {
@@ -164,18 +206,6 @@ const InvoiceEdit = () => {
       return null;
     }
 
-    if (items.every((item) => !item.description)) {
-      alert("Please add at least one invoice item");
-      return null;
-    }
-
-    const statusValue =
-      paidAmount >= formData.total
-        ? "PAID"
-        : paidAmount > 0
-          ? "PARTIAL"
-          : "DUE";
-
     const invoiceData = {
       customer: customerId,
       date: formData.date,
@@ -184,9 +214,14 @@ const InvoiceEdit = () => {
       vat_amount: formData.vat_amount,
       total: formData.total,
       paid_amount: paidAmount,
-      status: statusValue,
+      status: formData.status,
+      items: items, // Include line items
     };
 
+    console.log(
+      "[InvoiceEdit] Saving with payload:",
+      JSON.stringify(invoiceData, null, 2),
+    );
     const result = await updateInvoice(id, invoiceData);
     if (result) {
       // For simplicity in this implementation, we won't handle complex item updates
@@ -218,6 +253,71 @@ const InvoiceEdit = () => {
       <DashboardLayout title="Edit Invoice" subtitle="Loading invoice data...">
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (invoiceLoading) {
+    return (
+      <DashboardLayout title="Edit Invoice" subtitle="Loading invoice data...">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (invoiceError) {
+    return (
+      <DashboardLayout title="Error" subtitle="Failed to load invoice">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-8 rounded-2xl max-w-2xl mx-auto shadow-sm">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-red-100 rounded-full text-red-600">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold">API Loading Error</h3>
+          </div>
+          <p className="mb-6 font-medium leading-relaxed">
+            {invoiceError.message}
+          </p>
+          {invoiceError.details && (
+            <div className="bg-white/50 p-4 rounded-lg mb-6 text-sm font-mono overflow-auto max-h-32 border border-red-100">
+              <p>
+                <strong>Code:</strong> {invoiceError.code}
+              </p>
+              <p>
+                <strong>URL:</strong> {invoiceError.details.url}
+              </p>
+            </div>
+          )}
+          <div className="flex gap-4">
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-red-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-red-700 transition-colors"
+            >
+              Retry Loading
+            </button>
+            <button
+              onClick={() => navigate("/dashboard/invoices")}
+              className="bg-white text-slate-600 px-6 py-2 rounded-xl border border-slate-200 font-bold hover:bg-slate-50 transition-colors"
+            >
+              Back to List
+            </button>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -341,8 +441,7 @@ const InvoiceEdit = () => {
                       min="0"
                       value={vatPercent}
                       onChange={(e) => {
-                        setVatPercent(parseFloat(e.target.value));
-                        calculateTotals(items);
+                        setVatPercent(parseFloat(e.target.value) || 0);
                       }}
                       className="w-32 px-4 py-3 border border-slate-200 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
@@ -399,11 +498,30 @@ const InvoiceEdit = () => {
                       const val =
                         e.target.value === "" ? 0 : parseFloat(e.target.value);
                       setPaidAmount(val);
-                      calculateTotals(items);
                     }}
                     onFocus={(e) => e.target.select()}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
+                </div>
+
+                <div className="bg-white/50 backdrop-blur p-4 rounded-lg">
+                  <p className="text-xs text-indigo-700 font-bold uppercase tracking-wide mb-1">
+                    Status
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        formData.status === "PAID"
+                          ? "bg-green-500"
+                          : formData.status === "PARTIAL"
+                            ? "bg-amber-500"
+                            : "bg-red-500"
+                      }`}
+                    ></span>
+                    <span className="font-bold text-slate-900">
+                      {formData.status}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="bg-white/50 backdrop-blur p-4 rounded-lg">

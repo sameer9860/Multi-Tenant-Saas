@@ -82,8 +82,16 @@ class Invoice(models.Model):
 
     def calculate_totals(self):
         items = self.items.all()
-        self.subtotal = sum(item.total for item in items)
-        self.vat_amount = self.subtotal * Decimal('0.13')  # example 13% VAT
+        new_subtotal = sum(item.total for item in items)
+        
+        # Try to preserve current VAT ratio if subtotal changes
+        if self.subtotal > 0:
+            ratio = self.vat_amount / self.subtotal
+        else:
+            ratio = Decimal('0.13') # fallback to 13%
+            
+        self.subtotal = new_subtotal
+        self.vat_amount = self.subtotal * ratio
         self.total = self.subtotal + self.vat_amount
         self.balance = self.total - self.paid_amount
         self.save()

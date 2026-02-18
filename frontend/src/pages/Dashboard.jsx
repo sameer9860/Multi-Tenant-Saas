@@ -8,10 +8,25 @@ import {
   usePaymentHistory,
   useUserProfile,
 } from "../services/hooks";
-import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from "chart.js";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+} from "chart.js";
 import { Pie, Bar } from "react-chartjs-2";
 
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+ChartJS.register(
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+);
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -129,8 +144,6 @@ const Dashboard = () => {
       window.removeEventListener("keydown", resetTimer);
     };
   }, [navigate]);
-
-
 
   const handleViewReceipt = (payment) => {
     setSelectedPayment(payment);
@@ -437,11 +450,79 @@ const Dashboard = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
-          <h3 className="text-xl font-bold text-slate-900 mb-6 self-start">
-            Lead Status Distribution
-          </h3>
-          <div className="w-48 h-48">
-            <Pie data={chartData} />
+          <div className="flex justify-between items-center w-full mb-6">
+            <h3 className="text-xl font-bold text-slate-900">
+              Lead Status Distribution
+            </h3>
+            <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1 rounded-full">
+              <span className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></span>
+              <span className="text-[10px] font-black text-indigo-700 uppercase tracking-tighter">
+                Live Stats
+              </span>
+            </div>
+          </div>
+
+          {/* Custom Legend Above Chart */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full mb-8">
+            {[
+              {
+                label: "New",
+                count: stats.status_counts.NEW,
+                color: "bg-blue-500",
+                text: "text-blue-700",
+                bg: "bg-blue-50",
+              },
+              {
+                label: "Contacted",
+                count: stats.status_counts.CONTACTED,
+                color: "bg-yellow-400",
+                text: "text-yellow-700",
+                bg: "bg-yellow-50",
+              },
+              {
+                label: "Converted",
+                count: stats.status_counts.CONVERTED,
+                color: "bg-emerald-500",
+                text: "text-emerald-700",
+                bg: "bg-emerald-50",
+              },
+              {
+                label: "Lost",
+                count: stats.status_counts.LOST,
+                color: "bg-rose-500",
+                text: "text-rose-700",
+                bg: "bg-rose-50",
+              },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                className={`${item.bg} px-3 py-2 rounded-2xl border border-white/50 flex flex-col items-center justify-center transition-transform hover:scale-105 cursor-default`}
+              >
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span
+                    className={`w-2.5 h-2.5 ${item.color} rounded-full shadow-sm`}
+                  ></span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    {item.label}
+                  </span>
+                </div>
+                <span className={`text-xl font-black ${item.text}`}>
+                  {item.count}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="w-48 h-48 relative">
+            <Pie
+              data={chartData}
+              options={{
+                plugins: {
+                  legend: { display: false }, // Hide default legend as we made a custom one
+                },
+                maintainAspectRatio: false,
+              }}
+            />
           </div>
         </div>
 
@@ -451,20 +532,28 @@ const Dashboard = () => {
             Resource Counts
           </h3>
           <div className="w-full h-48">
-            <Bar data={{
-              labels: ['Leads','Clients','Invoices'],
-              datasets: [{
-                label: 'Total',
-                data: [stats.leads_count, stats.clients_count, stats.invoices_count],
-                backgroundColor: ['#3B82F6','#FACC15','#22C55E'],
-              }]
-            }} options={{
-              maintainAspectRatio: false,
-              scales: { y: { beginAtZero: true } }
-            }} />
+            <Bar
+              data={{
+                labels: ["Leads", "Clients", "Invoices"],
+                datasets: [
+                  {
+                    label: "Total",
+                    data: [
+                      stats.leads_count,
+                      stats.clients_count,
+                      stats.invoices_count,
+                    ],
+                    backgroundColor: ["#3B82F6", "#FACC15", "#22C55E"],
+                  },
+                ],
+              }}
+              options={{
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+              }}
+            />
           </div>
         </div>
-
       </div>
 
       {/* Payment History Section */}

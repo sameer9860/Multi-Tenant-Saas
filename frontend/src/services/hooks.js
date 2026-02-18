@@ -251,7 +251,13 @@ export const useInvoice = (id) => {
   const [error, setError] = useState(null);
 
   const fetchInvoice = useCallback(async () => {
-    if (!id) return;
+    if (!id || id === 'undefined' || id === 'null') {
+      console.warn('[useInvoice] Invalid ID provided:', id);
+      setError({ message: `Invalid Invoice ID: ${id}` });
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -260,19 +266,23 @@ export const useInvoice = (id) => {
       const invoiceUrl = `${endpoint.primary}${id}/`;
       const fallbackUrl = `${endpoint.fallback}${id}/`;
 
+      console.log(`[useInvoice] Fetching ID: ${id} from: ${invoiceUrl}`);
       try {
         const data = await api.get(invoiceUrl);
+        console.log(`[useInvoice] Fetched data:`, data);
         setInvoice(data);
       } catch (e1) {
-        console.warn(`[useInvoice] Primary failed for ${invoiceUrl}, trying fallback:`, fallbackUrl);
+        console.error(`[useInvoice] Primary fetch failed for ${invoiceUrl}:`, e1);
+        console.warn(`[useInvoice] Trying fallback: ${fallbackUrl}`);
         const data = await api.get(fallbackUrl);
         setInvoice(data);
       }
     } catch (err) {
-      console.error('[useInvoice] Failed to load invoice:', err);
+      console.error('[useInvoice] All fetch attempts failed:', err);
       setError({
-        message: err.message || 'Failed to load invoice',
+        message: err.message || 'Failed to load invoice. Please check your connection or try again.',
         code: err.code,
+        details: err.details,
       });
     } finally {
       setLoading(false);

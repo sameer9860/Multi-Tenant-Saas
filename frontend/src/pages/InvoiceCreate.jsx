@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import {
@@ -36,6 +36,7 @@ const InvoiceCreate = () => {
     subtotal: 0,
     vat_amount: 0,
     total: 0,
+    status: "DUE",
   });
 
   const [paidAmount, setPaidAmount] = useState(0);
@@ -69,6 +70,39 @@ const InvoiceCreate = () => {
     }));
   };
 
+  // Calculate everything whenever items, VAT %, or paid amount changes
+  useEffect(() => {
+    console.log("Re-calculating all totals/status (Create Mode)");
+
+    // Ensure we parse item.total as a number to avoid string concatenation
+    const subtotal = items.reduce(
+      (sum, item) => sum + (parseFloat(item.total) || 0),
+      0,
+    );
+    const vatAmount = (subtotal * (parseFloat(vatPercent) || 0)) / 100;
+    const total = subtotal + vatAmount;
+    const balance = total - paidAmount;
+
+    // Refined status logic: 0 total invoices should be DUE by default unless paid
+    let statusValue = "DUE";
+    if (total > 0) {
+      if (paidAmount >= total) statusValue = "PAID";
+      else if (paidAmount > 0) statusValue = "PARTIAL";
+      else statusValue = "DUE";
+    } else {
+      statusValue = paidAmount > 0 ? "PAID" : "DUE";
+    }
+
+    setBalanceAmount(parseFloat(Math.max(0, balance).toFixed(2)));
+    setFormData((prev) => ({
+      ...prev,
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      vat_amount: parseFloat(vatAmount.toFixed(2)),
+      total: parseFloat(total.toFixed(2)),
+      status: statusValue,
+    }));
+  }, [items, vatPercent, paidAmount]);
+
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
     const numValue = value === "" ? 0 : parseFloat(value);
@@ -79,23 +113,6 @@ const InvoiceCreate = () => {
     }
 
     setItems(newItems);
-    calculateTotals(newItems);
-  };
-
-  const calculateTotals = (itemsList) => {
-    const subtotal = itemsList.reduce((sum, item) => sum + item.total, 0);
-    const vatAmount = (subtotal * vatPercent) / 100;
-    const total = subtotal + vatAmount;
-
-    const bal = total - paidAmount;
-    setBalanceAmount(parseFloat(bal.toFixed(2)));
-
-    setFormData((prev) => ({
-      ...prev,
-      subtotal: parseFloat(subtotal.toFixed(2)),
-      vat_amount: parseFloat(vatAmount.toFixed(2)),
-      total: parseFloat(total.toFixed(2)),
-    }));
   };
 
   const addItem = () => {
@@ -105,7 +122,6 @@ const InvoiceCreate = () => {
   const removeItem = (index) => {
     const newItems = items.filter((_, i) => i !== index);
     setItems(newItems);
-    calculateTotals(newItems);
   };
 
   const handleCreateCustomer = async (name) => {
@@ -165,30 +181,16 @@ const InvoiceCreate = () => {
       return null;
     }
 
-    if (items.every((item) => !item.description)) {
-      alert("Please add at least one invoice item");
-      return null;
-    }
-
-    const statusValue =
-      paidAmount >= formData.total
-        ? "PAID"
-        : paidAmount > 0
-          ? "PARTIAL"
-          : "DUE";
-
     const invoiceData = {
-      // send all commonly-accepted customer keys so backend can decide
       customer: customerId,
-      customer_id: customerId,
-      customer_input: customerId,
       date: formData.date,
       due_date: formData.due_date,
       subtotal: formData.subtotal,
       vat_amount: formData.vat_amount,
       total: formData.total,
       paid_amount: paidAmount,
-      status: statusValue,
+      status: formData.status,
+      items: items, // Include line items
     };
 
     setBalanceAmount(formData.total - paidAmount);
@@ -351,8 +353,7 @@ const InvoiceCreate = () => {
                       min="0"
                       value={vatPercent}
                       onChange={(e) => {
-                        setVatPercent(parseFloat(e.target.value));
-                        calculateTotals(items);
+                        setVatPercent(parseFloat(e.target.value) || 0);
                       }}
                       className="w-32 px-4 py-3 border border-slate-200 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
@@ -408,12 +409,31 @@ const InvoiceCreate = () => {
                       const val =
                         e.target.value === "" ? 0 : parseFloat(e.target.value);
                       setPaidAmount(val);
-                      calculateTotals(items);
                     }}
                     onFocus={(e) => e.target.select()}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
+                <div className="bg-white/50 backdrop-blur p-4 rounded-lg">
+                  <p className="text-xs text-indigo-700 font-bold uppercase tracking-wide mb-1">
+                    Status
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        formData.status === "PAID"
+                          ? "bg-green-500"
+                          : formData.status === "PARTIAL"
+                            ? "bg-amber-500"
+                            : "bg-red-500"
+                      }`}
+                    ></span>
+                    <span className="font-bold text-slate-900">
+                      {formData.status}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="bg-white/50 backdrop-blur p-4 rounded-lg">
                   <p className="text-xs text-indigo-700 font-bold uppercase tracking-wide mb-1">
                     Balance
