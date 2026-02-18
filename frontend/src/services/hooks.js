@@ -62,6 +62,9 @@ export const useDashboardData = () => {
 
       try {
         const data = await api.get(endpoint.primary);
+        if (data?.usage?.invoices && data.usage.invoices.limit < 0) {
+          data.usage.invoices.limit = null;
+        }
         setAnalytics(data);
         setError(null);
       } catch (primaryError) {
@@ -69,6 +72,9 @@ export const useDashboardData = () => {
 
         // Try fallback endpoint
         const fallbackData = await api.get(endpoint.fallback);
+        if (fallbackData?.usage?.invoices && fallbackData.usage.invoices.limit < 0) {
+          fallbackData.usage.invoices.limit = null;
+        }
         setAnalytics(fallbackData);
         setError(null);
       }

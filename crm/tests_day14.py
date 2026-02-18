@@ -129,3 +129,24 @@ class CRMUsageLimitsTests(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['detail'], "Client limit reached. Upgrade your plan.")
+
+    def test_dashboard_invoice_limit_values(self):
+        """Dashboard API should report proper invoice limits (not -1) for all plans."""
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('dashboard')
+
+        # for each plan, ensure limit is correct or null
+        for plan, expected_limit in [('FREE', 10), ('BASIC', 1000), ('PRO', None)]:
+            self.org.plan = plan
+            self.org.save()
+            if hasattr(self.org, 'usage'):
+                # reset or update usage if needed
+                self.org.usage.invoices_created = 0
+                self.org.usage.save()
+
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            data = response.json()
+            limit = data.get('usage', {}).get('invoices', {}).get('limit')
+            # None == unlimited case
+            self.assertEqual(limit, expected_limit)

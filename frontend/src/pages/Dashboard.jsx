@@ -8,10 +8,10 @@ import {
   usePaymentHistory,
   useUserProfile,
 } from "../services/hooks";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import { Pie } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from "chart.js";
+import { Pie, Bar } from "react-chartjs-2";
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -72,6 +72,10 @@ const Dashboard = () => {
     clients: analytics?.usage?.clients || { used: 0, limit: 0 },
     invoices: analytics?.usage?.invoices || { used: 0, limit: 0 },
   };
+  // convert negative limits (from backend) to null (infinite)
+  if (usage.invoices.limit != null && usage.invoices.limit < 0) {
+    usage.invoices.limit = null;
+  }
 
   useEffect(() => {
     // Check for payment success parameter
@@ -169,7 +173,7 @@ const Dashboard = () => {
 
   const StatCard = ({ icon: Icon, label, value, color }) => {
     return (
-      <div className="bg-white p-6 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 hover:shadow-2xl hover:shadow-slate-300/50 transition-all duration-300 flex flex-col max-w-xs">
+      <div className="bg-white p-4 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 hover:shadow-2xl hover:shadow-slate-300/50 transition-all duration-300 transform hover:scale-105 flex flex-col max-w-xs">
         <div
           className={`w-14 h-14 ${color} rounded-2xl flex items-center justify-center mb-6`}
         >
@@ -366,11 +370,11 @@ const Dashboard = () => {
           color="bg-purple-50"
         />
 
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-8 rounded-3xl shadow-xl shadow-indigo-200/50 border border-indigo-400/30 hover:shadow-2xl hover:shadow-indigo-300/50 transition-all duration-300 flex flex-col text-white">
-          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
+        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-6 rounded-3xl shadow-xl shadow-indigo-200/50 border border-indigo-400/30 hover:shadow-2xl hover:shadow-indigo-300/50 transition-all duration-300 transform hover:scale-105 flex flex-col text-white">
+          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-7 w-7"
+              className="h-6 w-6"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -441,39 +445,26 @@ const Dashboard = () => {
           </div>
         </div>
 
-
-        <div className="bg-indigo-900 p-6 rounded-3xl shadow-xl text-white flex flex-col justify-center items-start relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16 pointer-events-none"></div>
-
-          <h3 className="text-2xl font-bold mb-4 relative z-10">
-            Maximize Your Conversion
+        {/* Bar chart showing counts */}
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
+          <h3 className="text-xl font-bold text-slate-900 mb-6 self-start">
+            Resource Counts
           </h3>
-          <p className="text-indigo-200 mb-8 relative z-10">
-            Track your lead statuses to identify bottlenecks in your sales
-            pipeline. Focus on moving "New" leads to "Contacted" and then
-            "Converted".
-          </p>
-          <div className="flex gap-4 relative z-10">
-            <div className="text-center">
-              <div className="text-3xl font-black">
-                {stats.status_counts.NEW}
-              </div>
-              <div className="text-xs uppercase tracking-wider opacity-70">
-                New Leads
-              </div>
-            </div>
-            <div className="w-px bg-white/20"></div>
-            <div className="text-center">
-              <div className="text-3xl font-black">
-                {stats.status_counts.CONVERTED}
-              </div>
-              <div className="text-xs uppercase tracking-wider opacity-70">
-                Converted
-              </div>
-            </div>
+          <div className="w-full h-48">
+            <Bar data={{
+              labels: ['Leads','Clients','Invoices'],
+              datasets: [{
+                label: 'Total',
+                data: [stats.leads_count, stats.clients_count, stats.invoices_count],
+                backgroundColor: ['#3B82F6','#FACC15','#22C55E'],
+              }]
+            }} options={{
+              maintainAspectRatio: false,
+              scales: { y: { beginAtZero: true } }
+            }} />
           </div>
         </div>
+
       </div>
 
       {/* Payment History Section */}

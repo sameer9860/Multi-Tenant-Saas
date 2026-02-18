@@ -142,19 +142,29 @@ class DashboardView(APIView):
         limit_clients = -1
         
         usage_invoices = 0
-        limit_invoices = -1
+        limit_invoices = None
 
         # Try to get limits from PLAN_LIMITS directly if available (imported in views.py)
-        # from apps.subscriptions.limits import PLAN_LIMITS
         current_plan = org.plan
         if current_plan in PLAN_LIMITS:
             limit_leads = PLAN_LIMITS[current_plan].get("leads", -1)
             limit_clients = PLAN_LIMITS[current_plan].get("clients", -1)
+        
+        # default invoice limit comes from billing constants (more authoritative)
+        from apps.billing.constants import PLAN_LIMITS as BILLING_LIMITS
+        plan_invoice_limit = BILLING_LIMITS.get(current_plan, {}).get('invoices', None)
 
-        # Get usage from Usage model for invoices
+        # Get usage from Usage model for invoices (may override constant)
         if hasattr(org, 'usage'):
             usage_invoices = org.usage.invoices_created
             limit_invoices = org.usage.get_plan_limit('invoices')
+            # convert internal -1 sentinel to None
+            if limit_invoices == -1:
+                limit_invoices = None
+
+        # if usage model didn't provide a limit, fall back to billing constants
+        if limit_invoices is None:
+            limit_invoices = plan_invoice_limit
 
         usage_data = {
             "leads": {
