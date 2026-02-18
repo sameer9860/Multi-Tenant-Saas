@@ -11,11 +11,11 @@ export const ENDPOINTS = {
     usageFallback: '/api/analytics/usage/', // Fallback if primary fails
   },
 
-  // Billing/Payments endpoints - Routes to /billing/api/payments/ OR /payments/api/payments/
+  // Billing/Payments endpoints - Routes to /billing/payments/ OR /payments/payments/
   billing: {
-    payments: '/billing/api/payments/',
-    paymentsFallback: '/payments/api/payments/', // Alternative path
-    paymentsList: '/api/billing/payments/', // Payment model endpoint
+    payments: '/billing/payments/',
+    paymentsFallback: '/payments/payments/', // Alternative path when using second include
+    paymentsList: '/api/billing/payments/', // Payment model endpoint (not normally used by frontend)
   },
 
   // Accounts/Profile endpoints - Routes to /api/accounts/profile/
@@ -28,8 +28,8 @@ export const ENDPOINTS = {
   invoices: {
     list: '/api/invoices/',
     listFallback: '/invoices/',
-    items: '/api/invoice-items/',
-    itemsFallback: '/invoice-items/',
+    items: '/api/invoices/invoice-items/',
+    itemsFallback: '/invoices/invoice-items/',
   },
 
   // Customer endpoints - Django router registers customers at /api/customers/

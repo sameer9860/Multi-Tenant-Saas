@@ -159,6 +159,9 @@ const InvoiceList = () => {
                   Amount
                 </th>
                 <th className="text-right py-4 px-6 font-bold text-slate-600 uppercase text-xs tracking-widest">
+                  Balance
+                </th>
+                <th className="text-right py-4 px-6 font-bold text-slate-600 uppercase text-xs tracking-widest">
                   Status
                 </th>
                 <th className="text-center py-4 px-6 font-bold text-slate-600 uppercase text-xs tracking-widest">
@@ -199,6 +202,11 @@ const InvoiceList = () => {
                   <td className="py-4 px-6 text-right">
                     <span className="font-bold text-slate-900">
                       {formatCurrency(invoice.total)}
+                    </span>
+                  </td>
+                  <td className="py-4 px-6 text-right">
+                    <span className="font-bold text-slate-900">
+                      {formatCurrency(invoice.balance || 0)}
                     </span>
                   </td>
                   <td className="py-4 px-6 text-right">

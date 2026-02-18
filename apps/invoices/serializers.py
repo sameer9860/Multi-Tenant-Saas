@@ -41,14 +41,19 @@ class InvoiceSerializer(serializers.ModelSerializer):
             'paid_amount', 'balance', 'status', 'created_at',
             'items', 'payments',
         ]
+        # organization and invoice_number are server-generated;
+        # balance and status will be calculated based on paid_amount/total.
         read_only_fields = (
-            'organization', 'invoice_number', 'paid_amount', 'balance',
-            'status', 'subtotal', 'vat_amount', 'total', 'created_at',
+            'organization', 'invoice_number', 'balance', 'status', 'created_at',
         )
 
     def validate(self, attrs):
-        # ensure total fields are not sent by client (they're read-only)
-        # any other custom validation can go here
+        # validate paid amount does not exceed total if both provided
+        paid = attrs.get('paid_amount', None)
+        total = attrs.get('total', None)
+        if paid is not None and total is not None:
+            if paid > total:
+                raise serializers.ValidationError("Paid amount cannot exceed total")
         return attrs
 
     def to_internal_value(self, data):
@@ -58,5 +63,6 @@ class InvoiceSerializer(serializers.ModelSerializer):
         if 'customer' in data and 'customer_input' not in data and not isinstance(data.get('customer'), dict):
             # if customer passed as raw id
             data['customer_input'] = data.pop('customer')
+        # also accept paid_amount and subtotal/vat/total from client (no renaming needed)
         return super().to_internal_value(data)
 

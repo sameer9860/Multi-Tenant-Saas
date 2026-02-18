@@ -58,6 +58,8 @@ class InvoiceAuthTests(APITestCase):
         invoice = Invoice.objects.get(id=response.data['id'])
         self.assertEqual(invoice.organization, self.org)
         self.assertEqual(invoice.customer, customer)
+        # balance should default to total when no payment exists
+        self.assertEqual(invoice.balance, invoice.total)
         # response should embed customer object
         self.assertIsInstance(response.data.get('customer'), dict)
         self.assertEqual(response.data['customer']['name'], customer.name)
@@ -89,6 +91,10 @@ class InvoiceAuthTests(APITestCase):
         self.assertIn('customer', first)
         self.assertIsInstance(first['customer'], dict)
         self.assertEqual(first['customer']['name'], "FooCo")
+        # list response should include balance field as well
+        self.assertIn('balance', first)
+        # balance equals total when no payment yet
+        self.assertEqual(str(first['balance']), "226.00")
 
     def test_create_invoice_without_credentials_returns_401(self):
         data = {"customer_id": 999, "date": "2023-01-01", "subtotal": "10.00", "vat_amount": "1.30", "total": "11.30"}

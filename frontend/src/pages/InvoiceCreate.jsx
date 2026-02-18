@@ -370,6 +370,14 @@ const InvoiceCreate = () => {
                     {formatCurrency(formData.total)}
                   </p>
                 </div>
+                <div className="bg-white/50 backdrop-blur p-4 rounded-lg">
+                  <p className="text-xs text-indigo-700 font-bold uppercase tracking-wide mb-1">
+                    Balance
+                  </p>
+                  <p className="text-2xl font-black text-slate-900">
+                    {formatCurrency(formData.total)}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

@@ -108,6 +108,7 @@ export const usePaymentHistory = () => {
       // Try primary endpoint first
       const endpoint = getEndpoint('billing', 'payments');
       console.log('[usePaymentHistory] Fetching from:', endpoint.primary);
+      console.log('[usePaymentHistory] fallback will be', endpoint.fallback);
 
       try {
         const data = await api.get(endpoint.primary);
