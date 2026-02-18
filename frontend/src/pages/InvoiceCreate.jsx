@@ -38,6 +38,9 @@ const InvoiceCreate = () => {
     total: 0,
   });
 
+  const [paidAmount, setPaidAmount] = useState(0);
+  const [balanceAmount, setBalanceAmount] = useState(0);
+
   const [items, setItems] = useState([
     { description: "", quantity: 1, rate: 0, total: 0 },
   ]);
@@ -82,6 +85,9 @@ const InvoiceCreate = () => {
     const subtotal = itemsList.reduce((sum, item) => sum + item.total, 0);
     const vatAmount = (subtotal * vatPercent) / 100;
     const total = subtotal + vatAmount;
+
+    const bal = total - paidAmount;
+    setBalanceAmount(parseFloat(bal.toFixed(2)));
 
     setFormData((prev) => ({
       ...prev,
@@ -164,6 +170,13 @@ const InvoiceCreate = () => {
       return;
     }
 
+    const statusValue =
+      paidAmount >= formData.total
+        ? "PAID"
+        : paidAmount > 0
+        ? "PARTIAL"
+        : "DUE";
+
     const invoiceData = {
       // send all commonly-accepted customer keys so backend can decide
       customer: customerId,
@@ -174,8 +187,11 @@ const InvoiceCreate = () => {
       subtotal: formData.subtotal,
       vat_amount: formData.vat_amount,
       total: formData.total,
-      status: "DUE",
+      paid_amount: paidAmount,
+      status: statusValue,
     };
+
+    setBalanceAmount(formData.total - paidAmount);
 
     console.debug("Invoice payload:", invoiceData, JSON.stringify(invoiceData));
 
@@ -372,10 +388,28 @@ const InvoiceCreate = () => {
                 </div>
                 <div className="bg-white/50 backdrop-blur p-4 rounded-lg">
                   <p className="text-xs text-indigo-700 font-bold uppercase tracking-wide mb-1">
+                    Paid Amount
+                  </p>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={paidAmount}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setPaidAmount(val);
+                      // recalc balance
+                      calculateTotals(items);
+                    }}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div className="bg-white/50 backdrop-blur p-4 rounded-lg">
+                  <p className="text-xs text-indigo-700 font-bold uppercase tracking-wide mb-1">
                     Balance
                   </p>
                   <p className="text-2xl font-black text-slate-900">
-                    {formatCurrency(formData.total)}
+                    {formatCurrency(balanceAmount)}
                   </p>
                 </div>
               </div>

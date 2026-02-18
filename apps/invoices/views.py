@@ -44,6 +44,19 @@ class InvoiceViewSet(ModelViewSet):
             organization=self.request.organization
         ).select_related('customer').prefetch_related('items', 'payments')
 
+    def perform_update(self, serializer):
+        # allow updates to paid_amount/total and recompute balance/status
+        invoice = serializer.save()
+        if invoice.paid_amount is not None:
+            invoice.balance = invoice.total - invoice.paid_amount
+            if invoice.paid_amount >= invoice.total:
+                invoice.status = "PAID"
+            elif invoice.paid_amount > 0:
+                invoice.status = "PARTIAL"
+            else:
+                invoice.status = "DUE"
+            invoice.save()
+
     def perform_create(self, serializer):
         org = self.request.organization
         usage = org.usage
@@ -53,8 +66,20 @@ class InvoiceViewSet(ModelViewSet):
         if not can_add:
             raise PermissionDenied(msg)
 
-        # Save invoice
+        # Save invoice initially (paid_amount may or may not be present)
         invoice = serializer.save(organization=org)
+
+        # compute balance and status based on provided paid_amount/total
+        if invoice.paid_amount is not None:
+            # ensure total is available (should be set by client or calculation)
+            invoice.balance = invoice.total - invoice.paid_amount
+            if invoice.paid_amount >= invoice.total:
+                invoice.status = "PAID"
+            elif invoice.paid_amount > 0:
+                invoice.status = "PARTIAL"
+            else:
+                invoice.status = "DUE"
+            invoice.save()
 
         # Increment usage count
         usage.increment_invoice_count()
