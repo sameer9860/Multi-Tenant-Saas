@@ -71,7 +71,8 @@ const InvoiceCreate = () => {
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
-    newItems[index][field] = isNaN(value) ? value : parseFloat(value);
+    const numValue = value === "" ? 0 : parseFloat(value);
+    newItems[index][field] = isNaN(numValue) ? value : numValue;
 
     if (field === "quantity" || field === "rate") {
       newItems[index].total = newItems[index].quantity * newItems[index].rate;
@@ -402,13 +403,14 @@ const InvoiceCreate = () => {
                     type="number"
                     step="0.01"
                     min="0"
-                    value={paidAmount}
+                    value={paidAmount === 0 ? "" : paidAmount}
                     onChange={(e) => {
-                      const val = parseFloat(e.target.value) || 0;
+                      const val =
+                        e.target.value === "" ? 0 : parseFloat(e.target.value);
                       setPaidAmount(val);
-                      // recalc balance
                       calculateTotals(items);
                     }}
+                    onFocus={(e) => e.target.select()}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -478,6 +480,7 @@ const InvoiceCreate = () => {
                       onChange={(e) =>
                         handleItemChange(index, "quantity", e.target.value)
                       }
+                      onFocus={(e) => e.target.select()}
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
@@ -490,10 +493,11 @@ const InvoiceCreate = () => {
                       type="number"
                       step="0.01"
                       min="0"
-                      value={item.rate}
+                      value={item.rate === 0 ? "" : item.rate}
                       onChange={(e) =>
                         handleItemChange(index, "rate", e.target.value)
                       }
+                      onFocus={(e) => e.target.select()}
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
