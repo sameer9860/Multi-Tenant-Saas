@@ -82,7 +82,7 @@ class UpgradePlanView(APIView):
             'fu': failure_url,
         }
 
-        base = getattr(settings, 'ESEWA_BASE_URL', 'https://rc.esewa.com.np/epay/main')
+        base = getattr(settings, 'ESEWA_BASE_URL', 'https://rc-epay.esewa.com.np/epay/main')
         esewa_url = base + '?' + urllib.parse.urlencode(params)
 
         if getattr(settings, 'ESEWA_USE_MOCK', False):

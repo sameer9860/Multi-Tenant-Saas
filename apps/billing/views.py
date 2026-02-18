@@ -78,7 +78,7 @@ class InitiateEsewaPaymentView(APIView):
         }
 
         # Use configured base URL so host can be changed via settings/env
-        base = getattr(settings, 'ESEWA_BASE_URL', 'https://rc.esewa.com.np/epay/main')
+        base = getattr(settings, 'ESEWA_BASE_URL', 'https://rc-epay.esewa.com.np/epay/main')
         esewa_url = base + '?' + urllib.parse.urlencode(params)
 
         # Use local mock eSewa page only when explicitly enabled by setting
