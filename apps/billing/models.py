@@ -78,7 +78,7 @@ class Usage(models.Model):
             return 'FREE'
     
     def get_plan_limit(self, feature):
-        """Get limit for a specific feature"""
+        """Get limit for a specific feature, with fallback to constants"""
         try:
             limit = PlanLimit.objects.get(
                 plan=self.get_plan(),
@@ -86,7 +86,12 @@ class Usage(models.Model):
             )
             return limit.limit_value
         except PlanLimit.DoesNotExist:
-            return -1  # unlimited if not found
+            # Fallback to constants if not in DB
+            from .constants import PLAN_LIMITS
+            plan = self.get_plan()
+            limit = PLAN_LIMITS.get(plan, {}).get(feature, -1)
+            # Normalize None/unlimited to -1 for consistency with other methods
+            return -1 if limit is None else limit
     
     def can_create_invoice(self):
         """Check if organization can create more invoices"""
