@@ -426,3 +426,52 @@ export const useCreateInvoice = () => {
 
   return { createInvoice, loading, error, success };
 };
+
+/**
+ * Hook for updating an existing invoice
+ */
+export const useUpdateInvoice = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+
+  const updateInvoice = useCallback(async (id, invoiceData) => {
+    if (!id || !invoiceData || typeof invoiceData !== 'object') {
+      console.error('[useUpdateInvoice] invalid payload', id, invoiceData);
+      return null;
+    }
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    console.debug('[useUpdateInvoice] sending update for', id, invoiceData);
+
+    try {
+      const endpoint = getEndpoint('invoices', 'list');
+      const invoiceUrl = `${endpoint.primary}${id}/`;
+      const fallbackUrl = `${endpoint.fallback}${id}/`;
+
+      let result;
+      try {
+        result = await api.put(invoiceUrl, invoiceData);
+      } catch (e1) {
+        console.warn('[useUpdateInvoice] primary PUT failed, trying fallback', fallbackUrl, e1);
+        result = await api.put(fallbackUrl, invoiceData);
+      }
+      setSuccess(true);
+      return result;
+    } catch (err) {
+      console.error('[useUpdateInvoice] Failed to update invoice:', err);
+      setError({
+        message: err.message || 'Failed to update invoice',
+        code: err.code,
+        details: err.details,
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { updateInvoice, loading, error, success };
+};
