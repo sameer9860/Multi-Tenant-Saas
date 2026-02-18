@@ -1,8 +1,13 @@
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ParseError, ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import parsers
+import logging
+
 from .models import Invoice, Customer, InvoiceItem, InvoicePayment
 from .serializers import InvoiceSerializer, CustomerSerializer, InvoiceItemSerializer, InvoicePaymentSerializer
+
+logger = logging.getLogger(__name__)
 
 class CustomerViewSet(ModelViewSet):
     serializer_class = CustomerSerializer
@@ -17,6 +22,8 @@ class CustomerViewSet(ModelViewSet):
 class InvoiceViewSet(ModelViewSet):
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated]
+    # allow form-data fallback in case request isn't strict JSON
+    parser_classes = [parsers.JSONParser, parsers.FormParser]
 
     def get_queryset(self):
         # include customer in queryset so serializer can efficiently serialize nested data
@@ -38,6 +45,16 @@ class InvoiceViewSet(ModelViewSet):
 
         # Increment usage count
         usage.increment_invoice_count()
+
+    def create(self, request, *args, **kwargs):
+        # log raw body for easier debugging
+        logger.debug('Invoice create raw body: %s', request.body)
+        try:
+            return super().create(request, *args, **kwargs)
+        except ParseError as exc:
+            # wrap parse error with clearer message
+            logger.error('JSON parsing failed for invoice creation: %s', exc)
+            raise ValidationError({'detail': 'Request body contained invalid JSON'})
 
 class InvoiceItemViewSet(ModelViewSet):
     serializer_class = InvoiceItemSerializer

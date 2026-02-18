@@ -62,6 +62,12 @@ class InvoiceAuthTests(APITestCase):
         self.assertIsInstance(response.data.get('customer'), dict)
         self.assertEqual(response.data['customer']['name'], customer.name)
 
+        # also try sending with "customer" key instead of customer_id
+        resp2 = self.client.post(reverse('invoice-list'), {"customer": customer.id, "date": "2023-01-02", "subtotal": "50.00", "vat_amount": "6.50", "total": "56.50"}, format='json')
+        self.assertEqual(resp2.status_code, status.HTTP_201_CREATED)
+        self.assertIsInstance(resp2.data.get('customer'), dict)
+        self.assertEqual(resp2.data['customer']['id'], customer.id)
+
     def test_invoice_list_includes_customer_object(self):
         # prepare a customer and invoice, then fetch list
         self.authenticate()

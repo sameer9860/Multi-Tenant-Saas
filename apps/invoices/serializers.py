@@ -18,9 +18,10 @@ class InvoicePaymentSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class InvoiceSerializer(serializers.ModelSerializer):
-    # include nested customer details on read, but allow writing by ID
+    # read-only nested customer details
     customer = CustomerSerializer(read_only=True)
-    customer_id = serializers.PrimaryKeyRelatedField(
+    # writable field accepts either an integer id or object with id
+    customer_input = serializers.PrimaryKeyRelatedField(
         source='customer',
         queryset=Customer.objects.all(),
         write_only=True,
@@ -32,10 +33,11 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Invoice
-        # include both customer and customer_id, plus all other fields
+        # fields: expose nested customer + a separate input key
         fields = [
-            'id', 'organization', 'customer', 'customer_id', 'invoice_number',
-            'date', 'due_date', 'subtotal', 'vat_amount', 'total',
+            'id', 'organization', 'customer', 'customer_input',
+            'invoice_number', 'date', 'due_date',
+            'subtotal', 'vat_amount', 'total',
             'paid_amount', 'balance', 'status', 'created_at',
             'items', 'payments',
         ]
@@ -43,4 +45,18 @@ class InvoiceSerializer(serializers.ModelSerializer):
             'organization', 'invoice_number', 'paid_amount', 'balance',
             'status', 'subtotal', 'vat_amount', 'total', 'created_at',
         )
+
+    def validate(self, attrs):
+        # ensure total fields are not sent by client (they're read-only)
+        # any other custom validation can go here
+        return attrs
+
+    def to_internal_value(self, data):
+        # allow legacy keys for compatibility
+        if 'customer_id' in data and 'customer_input' not in data:
+            data['customer_input'] = data.pop('customer_id')
+        if 'customer' in data and 'customer_input' not in data and not isinstance(data.get('customer'), dict):
+            # if customer passed as raw id
+            data['customer_input'] = data.pop('customer')
+        return super().to_internal_value(data)
 

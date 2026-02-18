@@ -143,7 +143,10 @@ const InvoiceCreate = () => {
     }
 
     const invoiceData = {
+      // send all commonly-accepted customer keys so backend can decide
+      customer: customerId,
       customer_id: customerId,
+      customer_input: customerId,
       date: formData.date,
       due_date: formData.due_date,
       subtotal: formData.subtotal,
@@ -152,25 +155,33 @@ const InvoiceCreate = () => {
       status: "DUE",
     };
 
+    console.debug('Invoice payload:', invoiceData, JSON.stringify(invoiceData));
+
     const result = await createInvoice(invoiceData);
     if (result) {
       for (const item of items) {
         if (item.description && item.quantity > 0 && item.rate > 0) {
+          const payload = {
+            invoice: result.id,
+            description: item.description,
+            quantity: item.quantity,
+            rate: item.rate,
+            total: item.total,
+          };
+          console.debug('Creating invoice item with', payload);
           try {
-            await fetch("/api/invoices/invoice-items/", {
+            const r = await fetch("/api/invoices/invoice-items/", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
               },
-              body: JSON.stringify({
-                invoice: result.id,
-                description: item.description,
-                quantity: item.quantity,
-                rate: item.rate,
-                total: item.total,
-              }),
+              body: JSON.stringify(payload),
             });
+            if (!r.ok) {
+              const text = await r.text();
+              console.error('Invoice item request failed', r.status, text);
+            }
           } catch (err) {
             console.error("Error creating invoice item:", err);
           }

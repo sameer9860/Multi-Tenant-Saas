@@ -338,13 +338,25 @@ export const useCreateInvoice = () => {
   const [success, setSuccess] = useState(false);
 
   const createInvoice = useCallback(async (invoiceData) => {
+    if (!invoiceData || typeof invoiceData !== 'object') {
+      console.error('[useCreateInvoice] invalid payload', invoiceData);
+      return null;
+    }
     setLoading(true);
     setError(null);
     setSuccess(false);
 
+    console.debug('[useCreateInvoice] sending', invoiceData);
+
     try {
-      const url = ENDPOINTS.invoices.list;
-      const result = await api.post(url, invoiceData);
+      const endpoint = getEndpoint('invoices', 'list');
+      let result;
+      try {
+        result = await api.post(endpoint.primary, invoiceData);
+      } catch (e1) {
+        console.warn('[useCreateInvoice] primary failed, trying fallback', endpoint.fallback, e1);
+        result = await api.post(endpoint.fallback, invoiceData);
+      }
       setSuccess(true);
       return result;
     } catch (err) {
