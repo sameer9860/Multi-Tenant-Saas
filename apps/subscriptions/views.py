@@ -26,7 +26,20 @@ class UpgradePlanView(APIView):
             )
 
         # ✅ Get organization from middleware
-        organization = request.organization
+        organization = getattr(request, 'organization', None)
+        if not organization and request.user.is_authenticated:
+            organization = request.user.organization
+        subscription, _ = Subscription.objects.get_or_create(organization=organization)
+
+        # Trial Upgrade Logic: Users on active trial can switch to any plan for free
+        # System will auto-downgrade when trial ends if payment not made
+        from django.utils import timezone
+        if subscription.is_trial and subscription.is_active and subscription.trial_end and subscription.trial_end > timezone.now():
+            subscription.plan = plan
+            subscription.save()
+            organization.plan = plan
+            organization.save()
+            return Response({"message": f"Successfully switched to {plan} during trial", "plan": plan})
         
         # If upgrading to FREE (downgrade), we can do it immediately or handle it separately
         # But usually users want to upgrade TO a paid plan.
@@ -38,7 +51,6 @@ class UpgradePlanView(APIView):
         from apps.billing.models import PaymentTransaction, Payment
 
         if plan == "FREE" or PLAN_PRICES.get(plan, 0) == 0:
-            subscription, _ = Subscription.objects.get_or_create(organization=organization)
             subscription.plan = "FREE"
             subscription.save()
             organization.plan = "FREE"
