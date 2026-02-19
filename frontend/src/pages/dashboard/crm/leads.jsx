@@ -40,18 +40,20 @@ const Leads = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (response.status === 403) {
-        setError("Lead limit reached. Upgrade your plan.");
-        setLeads([]);
-      } else if (response.status === 401) {
+      if (response.status === 401) {
         setError("Session expired. Please login again.");
         localStorage.clear();
         navigate("/login");
       } else if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.detail || "Failed to fetch leads from server.",
+        setError(
+          errorData.detail ||
+            errorData.error ||
+            "Failed to fetch leads from server.",
         );
+        if (response.status === 403) {
+          setLeads([]);
+        }
       } else {
         const data = await response.json();
         setLeads(data);
@@ -84,10 +86,13 @@ const Leads = () => {
         body: JSON.stringify(newLead),
       });
 
-      if (response.status === 403) {
-        setError("Lead limit reached. Upgrade your plan.");
-      } else if (!response.ok) {
-        throw new Error(`Failed to ${isEditing ? "update" : "create"} lead`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.detail ||
+            errorData.error ||
+            `Failed to ${isEditing ? "update" : "create"} lead`,
+        );
       } else {
         const savedLead = await response.json();
         setModalOpen(false);

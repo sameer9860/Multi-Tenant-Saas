@@ -1,7 +1,10 @@
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .serializers import UserSerializer
+
+logger = logging.getLogger(__name__)
 
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -59,6 +62,8 @@ class SwitchOrganizationView(APIView):
             user.role = membership.role # Sync role as well
             user.save()
             
+            logger.info(f"User {user.email} switched organization to {membership.organization.name} ({org_id})")
             return Response({"detail": f"Switched to {membership.organization.name}"})
         except OrganizationMember.DoesNotExist:
+            logger.warning(f"User {request.user.email} attempted to switch to organization {org_id} without membership.")
             return Response({"detail": "Not a member of this organization"}, status=403)
