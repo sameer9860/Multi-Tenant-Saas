@@ -181,6 +181,15 @@ class Usage(models.Model):
             self.save()
             return True
         return False
+
+    def increment_team_member_count(self):
+        """Increment team member count"""
+        can_add, msg = self.can_add_team_member()
+        if can_add:
+            self.team_members_added += 1
+            self.save()
+            return True
+        return False
     
     def reset_monthly_limits(self):
         """Reset monthly limits (call this on subscription renewal)"""

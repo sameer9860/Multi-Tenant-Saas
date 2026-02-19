@@ -41,3 +41,57 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class OrganizationMember(models.Model):
+    ROLE_CHOICES = [
+        ("OWNER", "Owner"),
+        ("ADMIN", "Admin"),
+        ("STAFF", "Staff"),
+        ("ACCOUNTANT", "Accountant"),
+    ]
+
+    user = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        related_name="memberships"
+    )
+
+    organization = models.ForeignKey(
+        'core.Organization',
+        on_delete=models.CASCADE,
+        related_name="members"
+    )
+
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        default="STAFF"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "organization")
+
+    def __str__(self):
+        return f"{self.user.email} - {self.organization.name}"
+
+
+# SIGNALS for synchronization (Day 21)
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=User)
+def sync_user_to_member(sender, instance, created, **kwargs):
+    """
+    Keep OrganizationMember in sync with User.organization and User.role.
+    This ensures backward compatibility with existing views.
+    """
+    if instance.organization:
+        # Update or create the membership
+        OrganizationMember.objects.update_or_create(
+            user=instance,
+            organization=instance.organization,
+            defaults={'role': instance.role if instance.role in dict(OrganizationMember.ROLE_CHOICES) else "STAFF"}
+        )
