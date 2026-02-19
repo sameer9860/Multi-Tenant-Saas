@@ -8,6 +8,8 @@ const Team = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userRole, setUserRole] = useState("STAFF");
+  const [userEmail, setUserEmail] = useState("");
 
   const token = localStorage.getItem("token");
 
@@ -34,6 +36,19 @@ const Team = () => {
       navigate("/login");
       return;
     }
+
+    // Fetch profile to get current user's role and email
+    const getProfile = async () => {
+      try {
+        const profile = await api.get("/api/accounts/profile/");
+        setUserRole(profile.role);
+        setUserEmail(profile.email);
+      } catch (err) {
+        console.error("Failed to fetch profile:", err);
+      }
+    };
+
+    getProfile();
     fetchMembers();
   }, [token, navigate, fetchMembers]);
 
@@ -243,36 +258,63 @@ const Team = () => {
                             </svg>
                           </button>
 
-                          {/* Delete Action (Only for STAFF role) */}
-                          <button
-                            onClick={() => handleRemove(member.id)}
-                            disabled={member.role !== "STAFF"}
-                            className={`p-2.5 rounded-xl transition-all ${
-                              member.role === "STAFF"
-                                ? "text-rose-400 hover:text-rose-600 hover:bg-rose-50"
-                                : "text-slate-200 cursor-not-allowed"
-                            }`}
-                            title={
-                              member.role === "STAFF"
-                                ? "Delete Member"
-                                : "Only Staff can be deleted"
+                          {/* Delete Action (Granular Permissions) */}
+                          {(() => {
+                            const isOwner = userRole === "OWNER";
+                            const isAdmin = userRole === "ADMIN";
+                            const isSelf = userEmail === member.email;
+                            const targetIsStaffOrAccountant = [
+                              "STAFF",
+                              "ACCOUNTANT",
+                            ].includes(member.role);
+                            const targetIsAdmin = member.role === "ADMIN";
+
+                            const canDelete =
+                              !isSelf &&
+                              (isOwner ||
+                                (isAdmin && targetIsStaffOrAccountant));
+
+                            let tooltip = "Delete Member";
+                            if (isSelf) {
+                              tooltip = "You cannot delete yourself";
+                            } else if (!canDelete) {
+                              if (isAdmin && targetIsAdmin)
+                                tooltip = "Admins cannot delete other Admins";
+                              else if (isAdmin && member.role === "OWNER")
+                                tooltip = "Admins cannot delete Owners";
+                              else
+                                tooltip =
+                                  "Only Owners or Admins can delete members";
                             }
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </button>
+
+                            return (
+                              <button
+                                onClick={() => handleRemove(member.id)}
+                                disabled={!canDelete}
+                                className={`p-2.5 rounded-xl transition-all ${
+                                  canDelete
+                                    ? "text-rose-400 hover:text-rose-600 hover:bg-rose-50"
+                                    : "text-slate-200 cursor-not-allowed"
+                                }`}
+                                title={tooltip}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-5 w-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              </button>
+                            );
+                          })()}
                         </div>
                       </td>
                     </tr>

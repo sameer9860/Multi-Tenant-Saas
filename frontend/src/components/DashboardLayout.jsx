@@ -9,6 +9,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLeadsMenuOpen, setIsLeadsMenuOpen] = useState(true);
   const [isInvoicesMenuOpen, setIsInvoicesMenuOpen] = useState(true);
+  const [isTeamMenuOpen, setIsTeamMenuOpen] = useState(true);
 
   const logout = () => {
     localStorage.clear();
@@ -18,6 +19,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
   const isActive = (path) => location.pathname === path;
   const isLeadsActive = location.pathname.includes("/dashboard/crm/leads");
   const isInvoicesActive = location.pathname.includes("/dashboard/invoices");
+  const isTeamActive = location.pathname.includes("/dashboard/team");
 
   const sidebarClasses = `${
     isSidebarCollapsed ? "w-20" : "w-80"
@@ -609,59 +611,92 @@ const DashboardLayout = ({ children, title, subtitle }) => {
           </button>
 
           {(profile?.role === "OWNER" || profile?.role === "ADMIN") && (
-            <>
+            <div className="space-y-1">
               <button
-                onClick={() => navigate("/dashboard/team")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
-                  isActive("/dashboard/team")
+                onClick={() => setIsTeamMenuOpen(!isTeamMenuOpen)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
+                  isTeamActive
                     ? "bg-indigo-50 text-indigo-700"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                 } ${isSidebarCollapsed ? "justify-center px-2" : ""}`}
-                title={isSidebarCollapsed ? "Team" : ""}
+                title={isSidebarCollapsed ? "Team Management" : ""}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                  />
-                </svg>
-                {!isSidebarCollapsed && <span>Team Management</span>}
+                <div className="flex items-center gap-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 flex-shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                  {!isSidebarCollapsed && <span>Team Management</span>}
+                </div>
+                {!isSidebarCollapsed && (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={`h-4 w-4 transition-transform duration-200 ${
+                      isTeamMenuOpen ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                )}
               </button>
 
-              <button
-                onClick={() => navigate("/dashboard/team/create")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
-                  isActive("/dashboard/team/create")
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                } ${isSidebarCollapsed ? "justify-center px-2" : ""}`}
-                title={isSidebarCollapsed ? "Add Member" : ""}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                  />
-                </svg>
-                {!isSidebarCollapsed && <span>Add Member</span>}
-              </button>
-            </>
+              {!isSidebarCollapsed && isTeamMenuOpen && (
+                <div className="pl-12 pr-2 space-y-1">
+                  <button
+                    onClick={() => navigate("/dashboard/team/create")}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                      isActive("/dashboard/team/create")
+                        ? "text-indigo-600 bg-indigo-50/50"
+                        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isActive("/dashboard/team/create")
+                          ? "bg-indigo-600"
+                          : "bg-slate-300"
+                      }`}
+                    ></div>
+                    Add Member
+                  </button>
+                  <button
+                    onClick={() => navigate("/dashboard/team")}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                      isActive("/dashboard/team")
+                        ? "text-indigo-600 bg-indigo-50/50"
+                        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isActive("/dashboard/team")
+                          ? "bg-indigo-600"
+                          : "bg-slate-300"
+                      }`}
+                    ></div>
+                    Member List
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </nav>
 

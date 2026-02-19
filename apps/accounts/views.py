@@ -151,8 +151,16 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Only Owners or Admins can remove team members.")
         
         instance = self.get_object()
-        # Only STAFF can be deleted as per user request
-        if instance.role != 'STAFF':
-            raise PermissionDenied(f"Cannot remove a member with role {instance.role}. Only members with the role 'STAFF' can be deleted.")
+        
+        # OWNER can delete anyone
+        if user_role == 'OWNER':
+            return super().destroy(request, *args, **kwargs)
+            
+        # ADMIN can only delete STAFF and ACCOUNTANT
+        if user_role == 'ADMIN':
+            if instance.role in ['STAFF', 'ACCOUNTANT']:
+                return super().destroy(request, *args, **kwargs)
+            else:
+                raise PermissionDenied(f"Admins cannot remove {instance.role} members. Only Owners can do this.")
             
         return super().destroy(request, *args, **kwargs)

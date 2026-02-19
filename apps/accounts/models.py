@@ -28,7 +28,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField(max_length=255)
     role = models.CharField(
         max_length=20,
-        choices=[('OWNER', 'Owner'), ('ADMIN', 'Admin'), ('STAFF', 'Staff')],
+        choices=[('OWNER', 'Owner'), ('ADMIN', 'Admin'), ('STAFF', 'Staff'), ('ACCOUNTANT', 'Accountant')],
         default='STAFF'
     )
     phone = models.CharField(max_length=20, blank=True, null=True)
