@@ -12,6 +12,7 @@ import InvoiceCreate from './pages/InvoiceCreate';
 import InvoiceEdit from './pages/InvoiceEdit';
 import InvoicePrint from './pages/InvoicePrint';
 import Team from './pages/dashboard/accounts/Team';
+import CreateMember from './pages/dashboard/accounts/CreateMember';
 
 // Basic Auth Guard Component
 const ProtectedRoute = ({ children }) => {
@@ -77,6 +78,12 @@ function App() {
         <Route path="/dashboard/team" element={
           <ProtectedRoute>
             <Team />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/team/create" element={
+          <ProtectedRoute>
+            <CreateMember />
           </ProtectedRoute>
         } />
 
