@@ -12,18 +12,23 @@ class ProfileView(APIView):
         memberships = OrganizationMember.objects.filter(user=user)
         
         orgs = []
+        current_role = user.role # Fallback
         for m in memberships:
+            is_primary = user.organization_id == m.organization.id
+            if is_primary:
+                current_role = m.role
+            
             orgs.append({
                 "id": m.organization.id,
                 "name": m.organization.name,
                 "role": m.role,
-                "is_primary": user.organization_id == m.organization.id
+                "is_primary": is_primary
             })
 
         return Response({
             "email": user.email,
             "full_name": user.full_name,
-            "role": getattr(request, 'user_role', user.role), # Use role from middleware
+            "role": current_role,
             "organization": {
                 "id": user.organization.id,
                 "name": user.organization.name,
