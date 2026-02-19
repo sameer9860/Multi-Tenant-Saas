@@ -11,6 +11,8 @@ django.setup()
 from apps.accounts.models import User, OrganizationMember
 from apps.core.models import Organization
 from crm.models import Lead, Client
+from apps.invoices.models import Invoice, Customer
+from apps.billing.models import Subscription, Usage
 
 def seed():
     print("Starting Day 21 data seeding...")
@@ -105,9 +107,58 @@ def seed():
         }
     )
 
+    # 7. Scenario for Role-Based Restriction (STAFF cannot delete invoice)
+    staff_user, _ = User.objects.get_or_create(
+        email='staff@acme.com',
+        defaults={
+            'full_name': 'Acme Staff',
+            'organization': acme,
+            'role': 'STAFF'
+        }
+    )
+    if _: staff_user.set_password('password123'); staff_user.save()
+    
+    # Create invoice for deletion test
+    from apps.invoices.models import Invoice, Customer
+    from django.utils import timezone
+    cust, _ = Customer.objects.get_or_create(organization=acme, name="Test Customer")
+    Invoice.objects.get_or_create(
+        organization=acme,
+        customer=cust,
+        invoice_number="INV-RBAC-TEST",
+        defaults={
+            'total': 100,
+            'date': timezone.now().date()
+        }
+    )
+
+    # 8. Scenario for Plan Limit (FREE plan limit 5)
+    free_org, _ = Organization.objects.get_or_create(
+        name='Free Startup',
+        defaults={'plan': 'FREE'}
+    )
+    Subscription.objects.get_or_create(organization=free_org, defaults={'plan': 'FREE'})
+    usage_free, _ = Usage.objects.get_or_create(organization=free_org)
+    
+    # Add 5 members
+    for i in range(1, 6):
+        u, _ = User.objects.get_or_create(
+            email=f'user{i}@free.com',
+            defaults={
+                'full_name': f'Free User {i}',
+                'organization': free_org,
+                'role': 'STAFF'
+            }
+        )
+        if _: u.set_password('password123'); u.save()
+    
+    usage_free.team_members_added = 5
+    usage_free.save()
+
     print("Success: Day 21 data seeded.")
     print(f"Acme ID: {acme.id}")
     print(f"Globex ID: {globex.id}")
+    print(f"Free Startup ID: {free_org.id}")
 
 if __name__ == "__main__":
     seed()

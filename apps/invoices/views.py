@@ -98,9 +98,14 @@ class InvoiceViewSet(ModelViewSet):
         try:
             return super().create(request, *args, **kwargs)
         except ParseError as exc:
-            # wrap parse error with clearer message
             logger.error('JSON parsing failed for invoice creation: %s', exc)
             raise ValidationError({'detail': 'Request body contained invalid JSON'})
+
+    def destroy(self, request, *args, **kwargs):
+        user_role = getattr(request, 'user_role', 'STAFF')
+        if user_role not in ['OWNER', 'ADMIN']:
+            raise PermissionDenied("Only Owners or Admins can delete invoices.")
+        return super().destroy(request, *args, **kwargs)
 
 class InvoiceItemViewSet(ModelViewSet):
     serializer_class = InvoiceItemSerializer
