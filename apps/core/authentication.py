@@ -16,8 +16,13 @@ class OrganizationJWTAuthentication(JWTAuthentication):
 
         user, token = result
 
-        # Attach organization if available; allow other code to rely on it
+        # Attach organization and role if available; allow other code to rely on it
         org = getattr(user, "organization", None)
         request.organization = org
+        
+        # Determine role
+        from apps.accounts.models import OrganizationMember
+        member = OrganizationMember.objects.filter(user=user, organization=org).first()
+        request.user_role = member.role if member else getattr(user, 'role', 'STAFF')
 
         return (user, token)

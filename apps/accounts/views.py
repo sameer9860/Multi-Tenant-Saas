@@ -85,8 +85,10 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
         
         # 1. Enforce Role (Only Admin/Owner can add members)
         user_role = getattr(self.request, 'user_role', 'STAFF')
+        logger.info(f"Team Creation Attempt: User={self.request.user.email}, request.user_role={user_role}")
+        
         if user_role not in ['OWNER', 'ADMIN']:
-            raise PermissionDenied("Only Owners or Admins can add team members.")
+            raise PermissionDenied(f"Only Owners or Admins can add team members. Your role is: {user_role}")
 
         # 2. Check Plan Limits
         if usage:
@@ -96,23 +98,48 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
 
         # 3. Handle User lookup/creation by email
         email = self.request.data.get('email')
+        full_name = self.request.data.get('full_name')
+        phone = self.request.data.get('phone')
+        password = self.request.data.get('password')
         role = self.request.data.get('role', 'STAFF')
         
         if not email:
             raise PermissionDenied("Email is required for invitation.")
 
+        if not full_name:
+            full_name = email.split('@')[0].capitalize()
+
         # Find or Create User
         user, created = User.objects.get_or_create(
             email=email,
             defaults={
-                'full_name': email.split('@')[0].capitalize(),
+                'full_name': full_name,
                 'organization': org,
-                'role': role
+                'role': role,
+                'phone': phone
             }
         )
         
-        # Link to Membership
-        serializer.save(user=user, organization=org, role=role)
+        if created and password:
+            user.set_password(password)
+            user.save()
+        elif not created:
+            # Update phone if user already exists
+            if phone:
+                user.phone = phone
+                user.save()
+
+        # Link to Membership (Check if already exists)
+        membership, m_created = OrganizationMember.objects.update_or_create(
+            user=user,
+            organization=org,
+            defaults={'role': role}
+        )
+        
+        # We don't call serializer.save() here as we manually handled the creation
+        # But we still want to return the data. DRF expects serializer.save() or something similar info.
+        # Actually, if we don't call save(), we should set the instance on the serializer.
+        serializer.instance = membership
 
         # 4. Increment usage count
         if usage:

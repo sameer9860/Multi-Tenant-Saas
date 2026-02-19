@@ -263,6 +263,9 @@ const Leads = () => {
                 <thead className="bg-slate-50/50">
                   <tr>
                     <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      S.N
+                    </th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Name
                     </th>
                     <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -280,11 +283,14 @@ const Leads = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-50">
-                  {leads.map((lead) => (
+                  {leads.map((lead, index) => (
                     <tr
                       key={lead.id}
                       className="hover:bg-slate-50/50 transition-colors group"
                     >
+                      <td className="px-6 py-5 whitespace-nowrap text-xs font-bold text-slate-400">
+                        {index + 1}
+                      </td>
                       <td className="px-6 py-5 whitespace-nowrap">
                         <div className="font-bold text-slate-900">
                           {lead.name}
