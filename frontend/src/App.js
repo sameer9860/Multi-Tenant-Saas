@@ -3,6 +3,7 @@ import Pricing from './pages/Pricing';
 import Leads from './pages/dashboard/crm/leads';
 import CreateLead from './pages/dashboard/crm/CreateLead';
 import Pipeline from './pages/dashboard/crm/Pipeline';
+import Clients from './pages/dashboard/crm/Clients';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ActivityLog from './pages/dashboard/crm/ActivityLog';
@@ -57,6 +58,12 @@ function App() {
         <Route path="/dashboard/crm/pipeline" element={
           <ProtectedRoute>
             <Pipeline />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/crm/clients" element={
+          <ProtectedRoute>
+            <Clients />
           </ProtectedRoute>
         } />
 

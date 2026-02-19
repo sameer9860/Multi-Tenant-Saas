@@ -131,6 +131,64 @@ const DashboardLayout = ({ children, title, subtitle }) => {
             {!isSidebarCollapsed && <span>Overview</span>}
           </button>
 
+          {/* Business Switcher (Professional Proof - Day 21) */}
+          {!isSidebarCollapsed && profile?.memberships?.length > 1 && (
+            <div className="px-2 pt-4 pb-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">
+                Active Business
+              </label>
+              <div className="relative group">
+                <select
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all group-hover:bg-white"
+                  value={profile?.organization?.id}
+                  onChange={async (e) => {
+                    const orgId = e.target.value;
+                    try {
+                      const response = await fetch(
+                        "/api/accounts/switch-org/",
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${localStorage.getItem("token")}`,
+                          },
+                          body: JSON.stringify({ organization_id: orgId }),
+                        },
+                      );
+                      if (response.ok) {
+                        window.location.reload();
+                      }
+                    } catch (err) {
+                      console.error("Failed to switch business:", err);
+                    }
+                  }}
+                >
+                  {profile.memberships.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Leads Dropdown */}
           <div className="space-y-1">
             <button
@@ -274,6 +332,52 @@ const DashboardLayout = ({ children, title, subtitle }) => {
                     </>
                   )}
                 </button>
+
+                {/* Client List Item (Day 21) */}
+                <button
+                  onClick={() => navigate("/dashboard/crm/clients")}
+                  className={`w-full flex items-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive("/dashboard/crm/clients")
+                      ? "text-indigo-600 bg-indigo-50"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  } ${isSidebarCollapsed ? "justify-center p-2" : "px-3"}`}
+                  title="Client List"
+                >
+                  {isSidebarCollapsed ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                      />
+                    </svg>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 opacity-50"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                        />
+                      </svg>
+                      Client List
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>
@@ -334,7 +438,8 @@ const DashboardLayout = ({ children, title, subtitle }) => {
           <div className="space-y-1">
             <button
               onClick={() =>
-                !isSidebarCollapsed && setIsInvoicesMenuOpen(!isInvoicesMenuOpen)
+                !isSidebarCollapsed &&
+                setIsInvoicesMenuOpen(!isInvoicesMenuOpen)
               }
               className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
                 isInvoicesActive && !isSidebarCollapsed
@@ -510,8 +615,20 @@ const DashboardLayout = ({ children, title, subtitle }) => {
               <div className="text-sm font-black text-slate-900 truncate">
                 {profile?.full_name || "User"}
               </div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                {profile?.role || "Staff"}
+              <div className="mt-1">
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${
+                    profile?.role === "OWNER"
+                      ? "bg-indigo-100 text-indigo-700"
+                      : profile?.role === "ADMIN"
+                        ? "bg-purple-100 text-purple-700"
+                        : profile?.role === "ACCOUNTANT"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {profile?.role || "Staff"}
+                </span>
               </div>
             </div>
           )}
