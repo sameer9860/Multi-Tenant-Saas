@@ -37,7 +37,7 @@ This CRM is designed as a scalable SaaS application. It allows different organiz
 1. **Clone the repository:**
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/sameer9860/Multi-Tenant-Saas.git
    cd Multi-Tenant-SaaS
    ```
 
@@ -45,7 +45,7 @@ This CRM is designed as a scalable SaaS application. It allows different organiz
 
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate(Linux/Mac)  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install dependencies:**
