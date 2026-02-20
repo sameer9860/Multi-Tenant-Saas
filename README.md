@@ -114,7 +114,3 @@ The **Upgrade** feature allows your organization to expand its capabilities by s
 ## 📸 Screenshots
 
 _(Photos will be added here to demonstrate the project interface and upgrade process)_
-
-![Dashboard Placeholder](path/to/dashboard.png)
-![Subscription Page Placeholder](path/to/subscription_page.png)
-![Payment Flow Placeholder](path/to/payment_flow.png)
