@@ -1,5 +1,5 @@
 import logging
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers as drf_serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -108,10 +108,10 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
         full_name = self.request.data.get('full_name')
         phone = self.request.data.get('phone')
         password = self.request.data.get('password')
-        role_name = self.request.data.get('role', 'STAFF')
+        role_name = (self.request.data.get('role') or 'STAFF').upper()
         
         if not email:
-            raise PermissionDenied("Email is required for invitation.")
+            raise drf_serializers.ValidationError({"email": "Email is required for invitation."})
 
         if not full_name:
             full_name = email.split('@')[0].capitalize()
@@ -157,13 +157,13 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         user_role_obj = getattr(request, 'user_role', None) or getattr(request.user, 'role', None)
-        user_role = user_role_obj.name if hasattr(user_role_obj, 'name') else str(user_role_obj)
+        user_role = (user_role_obj.name if hasattr(user_role_obj, 'name') else str(user_role_obj)).upper()
         
         if user_role not in ['OWNER', 'ADMIN']:
             raise PermissionDenied("Only Owners or Admins can remove team members.")
         
         instance = self.get_object()
-        instance_role_name = instance.role.name if hasattr(instance.role, 'name') else str(instance.role)
+        instance_role_name = (instance.role.name if instance.role else "STAFF").upper()
         
         # OWNER can delete anyone
         if user_role == 'OWNER':
