@@ -41,7 +41,7 @@ const Team = () => {
     const getProfile = async () => {
       try {
         const profile = await api.get("/api/accounts/profile/");
-        setUserRole(profile.role);
+        setUserRole(profile.role_name);
         setUserEmail(profile.email);
       } catch (err) {
         console.error("Failed to fetch profile:", err);
@@ -76,28 +76,30 @@ const Team = () => {
               Manage your organization's human capital and access control.
             </p>
           </div>
-          <button
-            onClick={() => navigate("/dashboard/team/create")}
-            className="group relative px-8 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 transition-all active:scale-95"
-          >
-            <div className="flex items-center gap-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={3}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Add Member
-            </div>
-          </button>
+          {(userRole === "OWNER" || userRole === "ADMIN") && (
+            <button
+              onClick={() => navigate("/dashboard/team/create")}
+              className="group relative px-8 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 transition-all active:scale-95"
+            >
+              <div className="flex items-center gap-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={3}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Add Member
+              </div>
+            </button>
+          )}
         </div>
 
         {error && (
@@ -193,24 +195,24 @@ const Team = () => {
                       <td className="px-8 py-7">
                         <div
                           className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl border ${
-                            member.role === "OWNER"
+                            member.role_name === "OWNER"
                               ? "bg-indigo-50 text-indigo-700 border-indigo-100"
-                              : member.role === "ADMIN"
+                              : member.role_name === "ADMIN"
                                 ? "bg-purple-50 text-purple-700 border-purple-100"
                                 : "bg-slate-50 text-slate-600 border-slate-100"
                           }`}
                         >
                           <span
                             className={`w-2 h-2 rounded-full ${
-                              member.role === "OWNER"
+                              member.role_name === "OWNER"
                                 ? "bg-indigo-500"
-                                : member.role === "ADMIN"
+                                : member.role_name === "ADMIN"
                                   ? "bg-purple-500"
                                   : "bg-slate-400"
                             }`}
                           ></span>
                           <span className="text-[11px] font-black uppercase tracking-widest">
-                            {member.role}
+                            {member.role_name}
                           </span>
                         </div>
                       </td>
@@ -266,8 +268,8 @@ const Team = () => {
                             const targetIsStaffOrAccountant = [
                               "STAFF",
                               "ACCOUNTANT",
-                            ].includes(member.role);
-                            const targetIsAdmin = member.role === "ADMIN";
+                            ].includes(member.role_name);
+                            const targetIsAdmin = member.role_name === "ADMIN";
 
                             const canDelete =
                               !isSelf &&
@@ -280,7 +282,7 @@ const Team = () => {
                             } else if (!canDelete) {
                               if (isAdmin && targetIsAdmin)
                                 tooltip = "Admins cannot delete other Admins";
-                              else if (isAdmin && member.role === "OWNER")
+                              else if (isAdmin && member.role_name === "OWNER")
                                 tooltip = "Admins cannot delete Owners";
                               else
                                 tooltip =
