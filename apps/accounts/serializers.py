@@ -7,6 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'email', 'full_name', 'role', 'role_name']
+        read_only_fields = ['role']
 
 class OrganizationMemberSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email', read_only=True)
@@ -18,3 +19,4 @@ class OrganizationMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrganizationMember
         fields = ['id', 'email', 'full_name', 'phone', 'role', 'role_name', 'created_at']
+        read_only_fields = ['role']
