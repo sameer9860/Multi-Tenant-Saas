@@ -68,7 +68,10 @@ class LeadActivityViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = LeadActivity.objects.filter(organization=org)
 
         # Smart Improvement: Staff only see their assigned leads' activities
-        if getattr(user, 'role', None) == 'STAFF':
+        user_role_obj = getattr(user, 'role', None)
+        user_role = user_role_obj.name if hasattr(user_role_obj, 'name') else user_role_obj
+        
+        if user_role == 'STAFF':
             queryset = queryset.filter(lead__assigned_to=user)
 
         return queryset.order_by("-created_at")
