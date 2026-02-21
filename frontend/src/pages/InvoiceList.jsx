@@ -7,6 +7,7 @@ const InvoiceList = () => {
   const navigate = useNavigate();
   const { invoices, loading, error, refetch } = useInvoices();
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const userRole = localStorage.getItem("user_role") || "STAFF";
 
   const handlePrint = (invoice) => {
     navigate(`/dashboard/invoices/${invoice.id}/print`);
@@ -38,7 +39,9 @@ const InvoiceList = () => {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 2,
-    }).format(amount).replace("\u20b9", "Rs. ");
+    })
+      .format(amount)
+      .replace("\u20b9", "Rs. ");
   };
 
   const formatDate = (date) => {
@@ -70,26 +73,28 @@ const InvoiceList = () => {
             Total: {invoices.length} invoices
           </p>
         </div>
-        <button
-          onClick={() => navigate("/dashboard/invoices/create")}
-          className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        {userRole !== "ACCOUNTANT" && (
+          <button
+            onClick={() => navigate("/dashboard/invoices/create")}
+            className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          Create Invoice
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Create Invoice
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -120,26 +125,28 @@ const InvoiceList = () => {
           <p className="text-slate-500 mb-6">
             Start creating invoices to track your payments
           </p>
-          <button
-            onClick={() => navigate("/dashboard/invoices/create")}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors inline-flex items-center gap-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          {userRole !== "ACCOUNTANT" && (
+            <button
+              onClick={() => navigate("/dashboard/invoices/create")}
+              className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors inline-flex items-center gap-2"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Create Your First Invoice
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Create Your First Invoice
+            </button>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -186,7 +193,10 @@ const InvoiceList = () => {
                   <td className="py-4 px-6">
                     <span className="text-slate-700 font-medium">
                       {(() => {
-                        if (invoice.customer && typeof invoice.customer === 'object') {
+                        if (
+                          invoice.customer &&
+                          typeof invoice.customer === "object"
+                        ) {
                           return invoice.customer.name;
                         }
                         if (invoice.customer) {
@@ -252,26 +262,28 @@ const InvoiceList = () => {
                           />
                         </svg>
                       </button>
-                      <button
-                        onClick={() => handleEdit(invoice)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
+                      {userRole !== "ACCOUNTANT" && (
+                        <button
+                          onClick={() => handleEdit(invoice)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                      </button>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                        </button>
+                      )}
                       <button
                         onClick={() => handlePrint(invoice)}
                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
