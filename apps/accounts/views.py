@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from .serializers import UserSerializer, OrganizationMemberSerializer
-from .models import User, OrganizationMember
+from .models import User, OrganizationMember, Role
 from apps.accounts.decorators import require_role
 
 logger = logging.getLogger(__name__)
@@ -19,16 +19,21 @@ class ProfileView(APIView):
         memberships = OrganizationMember.objects.filter(user=user)
         
         orgs = []
-        current_role = user.role # Fallback
+        # Get role name safely
+        current_role_obj = user.role
+        current_role = current_role_obj.name if hasattr(current_role_obj, 'name') else str(current_role_obj)
+        
         for m in memberships:
             is_primary = user.organization_id == m.organization.id
+            role_name = m.role.name if hasattr(m.role, 'name') else str(m.role)
+            
             if is_primary:
-                current_role = m.role
+                current_role = role_name
             
             orgs.append({
                 "id": m.organization.id,
                 "name": m.organization.name,
-                "role": m.role,
+                "role": role_name,
                 "is_primary": is_primary
             })
 
@@ -60,7 +65,7 @@ class SwitchOrganizationView(APIView):
             # Switch primary organization
             user = request.user
             user.organization = membership.organization
-            user.role = membership.role # Sync role as well
+            user.role = membership.role # Sync role object
             user.save()
             
             logger.info(f"User {user.email} switched organization to {membership.organization.name} ({org_id})")
@@ -84,7 +89,9 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
         usage = getattr(org, 'usage', None)
         
         # 1. Enforce Role (Only Admin/Owner can add members)
-        user_role = getattr(self.request, 'user_role', 'STAFF')
+        user_role_obj = getattr(self.request, 'user_role', None) or getattr(self.request.user, 'role', None)
+        user_role = user_role_obj.name if hasattr(user_role_obj, 'name') else str(user_role_obj)
+        
         logger.info(f"Team Creation Attempt: User={self.request.user.email}, request.user_role={user_role}")
         
         if user_role not in ['OWNER', 'ADMIN']:
@@ -101,7 +108,7 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
         full_name = self.request.data.get('full_name')
         phone = self.request.data.get('phone')
         password = self.request.data.get('password')
-        role = self.request.data.get('role', 'STAFF')
+        role_name = self.request.data.get('role', 'STAFF')
         
         if not email:
             raise PermissionDenied("Email is required for invitation.")
@@ -109,13 +116,19 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
         if not full_name:
             full_name = email.split('@')[0].capitalize()
 
+        # Find the Role object for the organization
+        role_obj, _ = Role.objects.get_or_create(
+            name=role_name,
+            organization=org
+        )
+
         # Find or Create User
         user, created = User.objects.get_or_create(
             email=email,
             defaults={
                 'full_name': full_name,
                 'organization': org,
-                'role': role,
+                'role': role_obj,
                 'phone': phone
             }
         )
@@ -133,12 +146,9 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
         membership, m_created = OrganizationMember.objects.update_or_create(
             user=user,
             organization=org,
-            defaults={'role': role}
+            defaults={'role': role_obj}
         )
         
-        # We don't call serializer.save() here as we manually handled the creation
-        # But we still want to return the data. DRF expects serializer.save() or something similar info.
-        # Actually, if we don't call save(), we should set the instance on the serializer.
         serializer.instance = membership
 
         # 4. Increment usage count
@@ -146,11 +156,14 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
             usage.increment_team_member_count()
 
     def destroy(self, request, *args, **kwargs):
-        user_role = getattr(request, 'user_role', 'STAFF')
+        user_role_obj = getattr(request, 'user_role', None) or getattr(request.user, 'role', None)
+        user_role = user_role_obj.name if hasattr(user_role_obj, 'name') else str(user_role_obj)
+        
         if user_role not in ['OWNER', 'ADMIN']:
             raise PermissionDenied("Only Owners or Admins can remove team members.")
         
         instance = self.get_object()
+        instance_role_name = instance.role.name if hasattr(instance.role, 'name') else str(instance.role)
         
         # OWNER can delete anyone
         if user_role == 'OWNER':
@@ -158,9 +171,9 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
             
         # ADMIN can only delete STAFF and ACCOUNTANT
         if user_role == 'ADMIN':
-            if instance.role in ['STAFF', 'ACCOUNTANT']:
+            if instance_role_name in ['STAFF', 'ACCOUNTANT']:
                 return super().destroy(request, *args, **kwargs)
             else:
-                raise PermissionDenied(f"Admins cannot remove {instance.role} members. Only Owners can do this.")
+                raise PermissionDenied(f"Admins cannot remove {instance_role_name} members. Only Owners can do this.")
             
         return super().destroy(request, *args, **kwargs)
