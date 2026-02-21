@@ -113,5 +113,26 @@ The **Upgrade** feature allows your organization to expand its capabilities by s
 
 ## 📸 Screenshots
 
-_(Photos will be added here to demonstrate the project interface and upgrade process)_
-![Dashboard Screenshot](screenshots/Images/Dashboard.png)
+### 🔑 Admin View
+
+Includes full access to dashboards, lead management, and team roster.
+
+| Dashboard                                                 | Lead List                                                | Member List                                                  |
+| :-------------------------------------------------------- | :------------------------------------------------------- | :----------------------------------------------------------- |
+| ![Admin Dashboard](screenshots/Images/adminDashboard.png) | ![Admin Lead List](screenshots/Images/adminLeadList.png) | ![Admin Member List](screenshots/Images/adminMemberList.png) |
+
+### 🛠 Staff View
+
+Focus on lead management and invoicing without administrative overhead.
+
+| Dashboard                                                 | Lead List                                                    | Invoice List                                                   |
+| :-------------------------------------------------------- | :----------------------------------------------------------- | :------------------------------------------------------------- |
+| ![Staff Dashboard](screenshots/Images/staffDashboard.png) | ![Staff Lead List](screenshots/Images/staffLeadListView.png) | ![Staff Invoice List](screenshots/Images/staffInvoiceList.png) |
+
+### 📊 Accountant View
+
+Streamlined access to financial data and reports.
+
+| Dashboard                                                           | Lead List                                                          | Invoice List                                                             |
+| :------------------------------------------------------------------ | :----------------------------------------------------------------- | :----------------------------------------------------------------------- |
+| ![Accountant Dashboard](screenshots/Images/accountantDashboard.png) | ![Accountant Lead List](screenshots/Images/accountantLeadList.png) | ![Accountant Invoice List](screenshots/Images/accountantInvoiceList.png) |
