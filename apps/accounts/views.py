@@ -163,6 +163,10 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Only Owners or Admins can remove team members.")
         
         instance = self.get_object()
+        
+        # Prevent self-deletion
+        if instance.user == request.user:
+            raise PermissionDenied("You cannot remove your own membership.")
         instance_role_name = (instance.role.name if instance.role else "STAFF").upper()
         
         # OWNER can delete anyone
