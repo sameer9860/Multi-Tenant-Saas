@@ -8,7 +8,9 @@ const Team = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [userRole, setUserRole] = useState("STAFF");
+  const [userRole, setUserRole] = useState(
+    localStorage.getItem("user_role")?.toUpperCase() || "STAFF",
+  );
   const [userEmail, setUserEmail] = useState("");
 
   const token = localStorage.getItem("token");
@@ -41,7 +43,9 @@ const Team = () => {
     const getProfile = async () => {
       try {
         const profile = await api.get("/api/accounts/profile/");
-        setUserRole(profile.role_name);
+        const role = (profile.role_name || profile.role)?.toUpperCase();
+        setUserRole(role);
+        if (role) localStorage.setItem("user_role", role);
         setUserEmail(profile.email);
       } catch (err) {
         console.error("Failed to fetch profile:", err);
@@ -261,62 +265,68 @@ const Team = () => {
                           </button>
 
                           {/* Delete Action (Granular Permissions) */}
-                          {(() => {
-                            const isOwner = userRole === "OWNER";
-                            const isAdmin = userRole === "ADMIN";
-                            const isSelf = userEmail === member.email;
-                            const targetIsStaffOrAccountant = [
-                              "STAFF",
-                              "ACCOUNTANT",
-                            ].includes(member.role_name);
-                            const targetIsAdmin = member.role_name === "ADMIN";
+                          {(userRole?.toUpperCase() === "OWNER" ||
+                            userRole?.toUpperCase() === "ADMIN") &&
+                            (() => {
+                              const currentRole = userRole?.toUpperCase();
+                              const targetRole =
+                                member.role_name?.toUpperCase();
 
-                            const canDelete =
-                              !isSelf &&
-                              (isOwner ||
-                                (isAdmin && targetIsStaffOrAccountant));
+                              const isOwner = currentRole === "OWNER";
+                              const isAdmin = currentRole === "ADMIN";
+                              const isSelf = userEmail === member.email;
 
-                            let tooltip = "Delete Member";
-                            if (isSelf) {
-                              tooltip = "You cannot delete yourself";
-                            } else if (!canDelete) {
-                              if (isAdmin && targetIsAdmin)
-                                tooltip = "Admins cannot delete other Admins";
-                              else if (isAdmin && member.role_name === "OWNER")
-                                tooltip = "Admins cannot delete Owners";
-                              else
-                                tooltip =
-                                  "Only Owners or Admins can delete members";
-                            }
+                              const targetIsStaffOrAccountant = [
+                                "STAFF",
+                                "ACCOUNTANT",
+                              ].includes(targetRole);
+                              const targetIsAdmin = targetRole === "ADMIN";
+                              const canDelete =
+                                !isSelf &&
+                                (isOwner ||
+                                  (isAdmin && targetIsStaffOrAccountant));
 
-                            return (
-                              <button
-                                onClick={() => handleRemove(member.id)}
-                                disabled={!canDelete}
-                                className={`p-2.5 rounded-xl transition-all ${
-                                  canDelete
-                                    ? "text-rose-400 hover:text-rose-600 hover:bg-rose-50"
-                                    : "text-slate-200 cursor-not-allowed"
-                                }`}
-                                title={tooltip}
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-5 w-5"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
+                              let tooltip = "Delete Member";
+                              if (isSelf) {
+                                tooltip = "You cannot delete yourself";
+                              } else if (!canDelete) {
+                                if (isAdmin && targetIsAdmin)
+                                  tooltip = "Admins cannot delete other Admins";
+                                else if (isAdmin && targetRole === "OWNER")
+                                  tooltip = "Admins cannot delete Owners";
+                                else
+                                  tooltip =
+                                    "Only Owners or Admins can delete members";
+                              }
+
+                              return (
+                                <button
+                                  onClick={() => handleRemove(member.id)}
+                                  disabled={!canDelete}
+                                  className={`p-2.5 rounded-xl transition-all ${
+                                    canDelete
+                                      ? "text-rose-400 hover:text-rose-600 hover:bg-rose-50"
+                                      : "text-slate-200 cursor-not-allowed"
+                                  }`}
+                                  title={tooltip}
                                 >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                              </button>
-                            );
-                          })()}
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                </button>
+                              );
+                            })()}
                         </div>
                       </td>
                     </tr>
