@@ -13,7 +13,8 @@ class IsAdminOrReadOnly(BasePermission):
 
         # Write permissions are only allowed for ADMIN and OWNER users
         # Use user_role from middleware if available
-        user_role = getattr(request, 'user_role', None) or getattr(request.user, 'role', None)
+        user_role_obj = getattr(request, 'user_role', None) or getattr(request.user, 'role', None)
+        user_role = user_role_obj.name if hasattr(user_role_obj, 'name') else user_role_obj
         return user_role in ["ADMIN", "OWNER", "ACCOUNTANT"]
 
 
@@ -30,7 +31,8 @@ class IsAdminOwnerOrStaffUpdate(BasePermission):
             return True
         
         # Use user_role from middleware if available
-        user_role = getattr(request, 'user_role', None) or getattr(request.user, 'role', None)
+        user_role_obj = getattr(request, 'user_role', None) or getattr(request.user, 'role', None)
+        user_role = user_role_obj.name if hasattr(user_role_obj, 'name') else user_role_obj
 
         # Allow Update (PUT, PATCH) for Admin, Owner, STAFF, and ACCOUNTANT
         if request.method in ["PUT", "PATCH"]:
