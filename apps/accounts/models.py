@@ -1,5 +1,22 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+class Role(models.Model):
+    name = models.CharField(max_length=50)
+    organization = models.ForeignKey(
+        'core.Organization',
+        on_delete=models.CASCADE,
+        related_name="roles"
+    )
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('name', 'organization')
+
+    def __str__(self):
+        return f"{self.name} ({self.organization.name})"
 
 class UserManager(BaseUserManager):
     def create_user(self, email, full_name, organization, password=None, **extra_fields):
@@ -20,16 +37,17 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     organization = models.ForeignKey(
-        'core.Organization',  # <- use string reference instead of direct import
+        'core.Organization',
         on_delete=models.CASCADE,
         related_name="users"
     )
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=255)
-    role = models.CharField(
-        max_length=20,
-        choices=[('OWNER', 'Owner'), ('ADMIN', 'Admin'), ('STAFF', 'Staff'), ('ACCOUNTANT', 'Accountant')],
-        default='STAFF'
+    role = models.ForeignKey(
+        'Role',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="users"
     )
     phone = models.CharField(max_length=20, blank=True, null=True)
     is_active = models.BooleanField(default=True)
@@ -45,13 +63,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class OrganizationMember(models.Model):
-    ROLE_CHOICES = [
-        ("OWNER", "Owner"),
-        ("ADMIN", "Admin"),
-        ("STAFF", "Staff"),
-        ("ACCOUNTANT", "Accountant"),
-    ]
-
     user = models.ForeignKey(
         'User',
         on_delete=models.CASCADE,
@@ -64,10 +75,11 @@ class OrganizationMember(models.Model):
         related_name="members"
     )
 
-    role = models.CharField(
-        max_length=20,
-        choices=ROLE_CHOICES,
-        default="STAFF"
+    role = models.ForeignKey(
+        'Role',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="members"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -94,5 +106,5 @@ def sync_user_to_member(sender, instance, created, **kwargs):
         OrganizationMember.objects.update_or_create(
             user=instance,
             organization=instance.organization,
-            defaults={'role': instance.role if instance.role in dict(OrganizationMember.ROLE_CHOICES) else "STAFF"}
+            defaults={'role': instance.role}
         )
