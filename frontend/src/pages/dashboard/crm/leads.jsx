@@ -183,7 +183,7 @@ const Leads = () => {
             </p>
           </div>
 
-          {userRole === "ADMIN" && (
+          {(userRole === "ADMIN" || userRole === "OWNER") && (
             <button
               onClick={() => setModalOpen(true)}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
