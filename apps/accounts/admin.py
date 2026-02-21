@@ -1,7 +1,12 @@
 from django.contrib import admin
-from .models import User,OrganizationMember
+from .models import User, OrganizationMember, Role
 
-# Register your models here.
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ("name", "organization", "created_at")
+    list_filter = ("organization",)
+    search_fields = ("name", "organization__name")
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = ("email", "full_name", "organization", "role", "is_staff")
