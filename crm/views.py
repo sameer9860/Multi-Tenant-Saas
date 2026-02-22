@@ -118,7 +118,10 @@ class DashboardView(APIView):
             )
 
         total_leads = org.leads.count()
-        total_clients = org.clients.count() # CRM Clients
+        # Unifying CRM Clients and Invoice Customers into one count
+        crm_clients_count = org.clients.count()
+        invoice_customers_count = Customer.objects.filter(organization=org).count()
+        total_clients = crm_clients_count + invoice_customers_count
         
         # Helper to safely get counts
         def safe_count(queryset):
@@ -128,8 +131,8 @@ class DashboardView(APIView):
         # Fetching Total Invoices
         total_invoices = Invoice.objects.filter(organization=org).count()
         
-        # Fetching Total Customers (from Invoice app)
-        total_customers = Customer.objects.filter(organization=org).count()
+        # Keep separate total_customers for now, but total_clients is now unified
+        total_customers = invoice_customers_count
 
         # Fetching Total Revenue (Sum of 'total' for PAID invoices)
         total_revenue_agg = Invoice.objects.filter(
