@@ -348,7 +348,7 @@ const Dashboard = () => {
             </svg>
           }
           label="Total Revenue"
-          value={`$${stats.total_revenue.toLocaleString()}`}
+          value={`Rs. ${stats.total_revenue.toLocaleString()}`}
           color="bg-emerald-50"
         />
 
@@ -370,7 +370,7 @@ const Dashboard = () => {
             </svg>
           }
           label="Total Due"
-          value={`$${stats.total_due.toLocaleString()}`}
+          value={`Rs. ${stats.total_due.toLocaleString()}`}
           color="bg-rose-50"
         />
 
@@ -391,9 +391,31 @@ const Dashboard = () => {
               />
             </svg>
           }
-          label="Total Customers"
-          value={stats.total_customers}
+          label="CRM Clients"
+          value={stats.clients_count}
           color="bg-blue-50"
+        />
+
+        <StatCard
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-7 w-7 text-amber-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+          }
+          label="Invoices Customers"
+          value={stats.total_customers}
+          color="bg-amber-50"
         />
 
         <StatCard
@@ -528,10 +550,12 @@ const Dashboard = () => {
                             label += ": ";
                           }
                           if (context.parsed.y !== null) {
-                            label += new Intl.NumberFormat("en-US", {
+                            label += new Intl.NumberFormat("en-NP", {
                               style: "currency",
-                              currency: "USD",
-                            }).format(context.parsed.y);
+                              currency: "NPR",
+                            })
+                              .format(context.parsed.y)
+                              .replace("NPR", "Rs.");
                           }
                           return label;
                         },
@@ -567,7 +591,7 @@ const Dashboard = () => {
                         },
                         color: "#64748b",
                         callback: function (value, index, values) {
-                          return "$" + value;
+                          return "Rs. " + value.toLocaleString();
                         },
                       },
                     },

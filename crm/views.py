@@ -118,7 +118,7 @@ class DashboardView(APIView):
             )
 
         total_leads = org.leads.count()
-        total_clients = org.clients.count()
+        total_clients = org.clients.count() # CRM Clients
         
         # Helper to safely get counts
         def safe_count(queryset):
@@ -128,19 +128,17 @@ class DashboardView(APIView):
         # Fetching Total Invoices
         total_invoices = Invoice.objects.filter(organization=org).count()
         
-        # Fetching Total Customers
+        # Fetching Total Customers (from Invoice app)
         total_customers = Customer.objects.filter(organization=org).count()
 
-        # Fetching Total Revenue (Sum of 'paid_amount' or 'total' based on logic: we use 'total' for PAID or 'paid_amount' for all)
-        # Using 'paid_amount' of all invoices as revenue collected, or sum of 'total' for exclusively PAID ones.
-        # Following spec: total_revenue = Invoice.objects.filter(..., status="PAID").aggregate(Sum("total_amount"))
+        # Fetching Total Revenue (Sum of 'total' for PAID invoices)
         total_revenue_agg = Invoice.objects.filter(
             organization=org, 
             status="PAID"
         ).aggregate(total=Sum("total"))
         total_revenue = total_revenue_agg["total"] or 0
 
-        # Fetching Total Due Amount
+        # Fetching Total Due Amount (Sum of 'balance' for all invoices)
         total_due_agg = Invoice.objects.filter(
             organization=org
         ).aggregate(due=Sum("balance"))
@@ -174,10 +172,7 @@ class DashboardView(APIView):
         if total_leads > 0:
             conversion_rate = (status_counts["CONVERTED"] / total_leads) * 100
 
-        # Get plan usage details from PLAN_LIMITS in apps.subscriptions.limits
-        # or from Usage model if available. 
-        # Based on previous files, Usage model exists in apps.billing.models
-        
+        # Get plan usage details
         usage_leads = total_leads
         limit_leads = -1
         
@@ -187,25 +182,20 @@ class DashboardView(APIView):
         usage_invoices = 0
         limit_invoices = None
 
-        # Try to get limits from PLAN_LIMITS directly if available (imported in views.py)
         current_plan = org.plan
         if current_plan in PLAN_LIMITS:
             limit_leads = PLAN_LIMITS[current_plan].get("leads", -1)
             limit_clients = PLAN_LIMITS[current_plan].get("clients", -1)
         
-        # default invoice limit comes from billing constants (more authoritative)
         from apps.billing.constants import PLAN_LIMITS as BILLING_LIMITS
         plan_invoice_limit = BILLING_LIMITS.get(current_plan, {}).get('invoices', None)
 
-        # Get usage from Usage model for invoices (may override constant)
         if hasattr(org, 'usage'):
             usage_invoices = org.usage.invoices_created
             limit_invoices = org.usage.get_plan_limit('invoices')
-            # convert internal -1 sentinel to None
             if limit_invoices == -1:
                 limit_invoices = None
 
-        # if usage model didn't provide a limit, fall back to billing constants
         if limit_invoices is None:
             limit_invoices = plan_invoice_limit
 
@@ -229,8 +219,8 @@ class DashboardView(APIView):
             "total_clients": total_clients,
             "total_invoices": total_invoices,
             "total_customers": total_customers,
-            "total_revenue": total_revenue,
-            "total_due": total_due,
+            "total_revenue": float(total_revenue),
+            "total_due": float(total_due),
             "monthly_revenue": monthly_revenue,
             "status_counts": status_counts,
             "conversion_rate": conversion_rate,
