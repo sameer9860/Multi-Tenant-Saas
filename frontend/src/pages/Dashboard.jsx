@@ -391,7 +391,7 @@ const Dashboard = () => {
               />
             </svg>
           }
-          label="CRM Clients"
+          label="Total Clients"
           value={stats.clients_count}
           color="bg-blue-50"
         />
