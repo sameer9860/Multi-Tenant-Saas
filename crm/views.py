@@ -150,7 +150,7 @@ class DashboardView(APIView):
         # Fetching Monthly Revenue
         monthly_revenue_data = (
             Invoice.objects.filter(organization=org, status="PAID")
-            .annotate(month=TruncMonth("created_at"))
+            .annotate(month=TruncMonth("date"))
             .values("month")
             .annotate(total=Sum("total"))
             .order_by("month")

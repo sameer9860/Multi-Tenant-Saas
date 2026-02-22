@@ -369,7 +369,7 @@ const Dashboard = () => {
               />
             </svg>
           }
-          label="Total Due"
+          label="Outstanding Due"
           value={`Rs. ${stats.total_due.toLocaleString()}`}
           color="bg-rose-50"
         />
@@ -391,7 +391,7 @@ const Dashboard = () => {
               />
             </svg>
           }
-          label="Total Clients"
+          label="Total Customers"
           value={stats.clients_count}
           color="bg-blue-50"
         />
@@ -488,7 +488,7 @@ const Dashboard = () => {
           <div className="flex justify-between items-center w-full mb-8">
             <div>
               <h3 className="text-2xl font-black text-slate-900">
-                Monthly Revenue Growth
+                Monthly Revenue Trends
               </h3>
               <p className="text-slate-500 font-medium">
                 Track your business growth over time
@@ -502,111 +502,168 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="w-full h-80">
-            {stats.monthly_revenue && stats.monthly_revenue.length > 0 ? (
-              <Line
-                data={lineChartData}
-                options={{
-                  maintainAspectRatio: false,
-                  responsive: true,
-                  plugins: {
-                    legend: {
-                      display: false,
-                    },
-                    tooltip: {
-                      mode: "index",
-                      intersect: false,
-                      backgroundColor: "rgba(15, 23, 42, 0.9)",
-                      titleColor: "#fff",
-                      bodyColor: "#fff",
-                      padding: 12,
-                      cornerRadius: 8,
-                      callbacks: {
-                        label: function (context) {
-                          let label = context.dataset.label || "";
-                          if (label) {
-                            label += ": ";
-                          }
-                          if (context.parsed.y !== null) {
-                            label += new Intl.NumberFormat("en-NP", {
-                              style: "currency",
-                              currency: "NPR",
-                            })
-                              .format(context.parsed.y)
-                              .replace("NPR", "Rs.");
-                          }
-                          return label;
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+            {/* Chart Area */}
+            <div className="lg:col-span-2">
+              <div className="h-80 w-full">
+                {stats.monthly_revenue && stats.monthly_revenue.length > 0 ? (
+                  <Line
+                    data={lineChartData}
+                    options={{
+                      maintainAspectRatio: false,
+                      responsive: true,
+                      plugins: {
+                        legend: {
+                          display: false,
+                        },
+                        tooltip: {
+                          mode: "index",
+                          intersect: false,
+                          backgroundColor: "rgba(15, 23, 42, 0.9)",
+                          titleColor: "#fff",
+                          bodyColor: "#fff",
+                          padding: 12,
+                          cornerRadius: 8,
+                          callbacks: {
+                            label: function (context) {
+                              let label = context.dataset.label || "";
+                              if (label) {
+                                label += ": ";
+                              }
+                              if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat("en-NP", {
+                                  style: "currency",
+                                  currency: "NPR",
+                                })
+                                  .format(context.parsed.y)
+                                  .replace("NPR", "Rs.");
+                              }
+                              return label;
+                            },
+                          },
                         },
                       },
-                    },
-                  },
-                  scales: {
-                    x: {
-                      grid: {
-                        display: false,
-                        drawBorder: false,
-                      },
-                      ticks: {
-                        font: {
-                          family: "'Inter', sans-serif",
-                          weight: "600",
-                          size: 12,
+                      scales: {
+                        x: {
+                          grid: {
+                            display: false,
+                            drawBorder: false,
+                          },
+                          ticks: {
+                            font: {
+                              family: "'Inter', sans-serif",
+                              weight: "600",
+                              size: 11,
+                            },
+                            color: "#64748b",
+                          },
                         },
-                        color: "#64748b",
-                      },
-                    },
-                    y: {
-                      grid: {
-                        color: "#f1f5f9",
-                        drawBorder: false,
-                        borderDash: [5, 5],
-                      },
-                      ticks: {
-                        font: {
-                          family: "'Inter', sans-serif",
-                          weight: "600",
-                          size: 12,
+                        y: {
+                          grid: {
+                            color: "#f1f5f9",
+                            drawBorder: false,
+                            borderDash: [5, 5],
+                          },
+                          ticks: {
+                            font: {
+                              family: "'Inter', sans-serif",
+                              weight: "600",
+                              size: 11,
+                            },
+                            color: "#64748b",
+                            callback: function (value, index, values) {
+                              return "Rs. " + value.toLocaleString();
+                            },
+                          },
                         },
-                        color: "#64748b",
-                        callback: function (value, index, values) {
-                          return "Rs. " + value.toLocaleString();
-                        },
                       },
-                    },
-                  },
-                  interaction: {
-                    mode: "nearest",
-                    axis: "x",
-                    intersect: false,
-                  },
-                }}
-              />
-            ) : (
-              <div className="h-full w-full flex items-center justify-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                <div className="text-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 text-slate-300 mx-auto mb-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                    />
-                  </svg>
-                  <p className="text-slate-500 font-bold">
-                    No revenue data available yet
-                  </p>
-                  <p className="text-slate-400 text-sm mt-1">
-                    Start collecting payments to see your growth chart.
-                  </p>
-                </div>
+                      interaction: {
+                        mode: "nearest",
+                        axis: "x",
+                        intersect: false,
+                      },
+                    }}
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                    <div className="text-center">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-10 w-10 text-slate-300 mx-auto mb-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                        />
+                      </svg>
+                      <p className="text-slate-500 font-bold text-sm">
+                        No revenue data available
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Data Table Area */}
+            <div className="lg:col-span-1 bg-slate-50/50 rounded-2xl p-4 border border-slate-100 h-full overflow-hidden flex flex-col">
+              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+                Monthly Breakdown
+              </h4>
+              <div className="flex-1 overflow-y-auto">
+                <table className="w-full text-left">
+                  <thead className="sticky top-0 bg-slate-50/90 backdrop-blur-sm">
+                    <tr className="border-b border-slate-200">
+                      <th className="py-2 text-[10px] font-bold text-slate-500 uppercase">
+                        Month
+                      </th>
+                      <th className="py-2 text-[10px] font-bold text-slate-500 uppercase text-right">
+                        Revenue
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {stats.monthly_revenue &&
+                    stats.monthly_revenue.length > 0 ? (
+                      [...stats.monthly_revenue].reverse().map((item, idx) => {
+                        const date = new Date(item.month + "-01");
+                        const monthName = date.toLocaleDateString("en-US", {
+                          month: "short",
+                          year: "numeric",
+                        });
+                        return (
+                          <tr
+                            key={idx}
+                            className="hover:bg-white/50 transition-colors"
+                          >
+                            <td className="py-3 text-sm font-semibold text-slate-700">
+                              {monthName}
+                            </td>
+                            <td className="py-3 text-sm font-black text-slate-900 text-right">
+                              Rs. {item.total.toLocaleString()}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="2"
+                          className="py-8 text-center text-xs text-slate-400 font-medium italic"
+                        >
+                          No records found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
