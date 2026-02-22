@@ -16,14 +16,18 @@ import {
   LinearScale,
   Tooltip,
   Legend,
+  PointElement,
+  LineElement,
 } from "chart.js";
-import { Pie, Bar } from "react-chartjs-2";
+import { Pie, Bar, Line } from "react-chartjs-2";
 
 ChartJS.register(
   ArcElement,
   BarElement,
   CategoryScale,
   LinearScale,
+  PointElement,
+  LineElement,
   Tooltip,
   Legend,
 );
@@ -55,6 +59,10 @@ const Dashboard = () => {
     leads_count: analytics?.total_leads || 0,
     clients_count: analytics?.total_clients || 0,
     invoices_count: analytics?.total_invoices || 0,
+    total_customers: analytics?.total_customers || 0,
+    total_revenue: analytics?.total_revenue || 0,
+    total_due: analytics?.total_due || 0,
+    monthly_revenue: analytics?.monthly_revenue || [],
     subscription_plan: analytics?.plan || "Loading...",
     organization_name: analytics?.organization_name || "Loading...",
     conversion_rate: analytics?.conversion_rate || 0,
@@ -78,6 +86,33 @@ const Dashboard = () => {
         ],
         backgroundColor: ["#3B82F6", "#FACC15", "#22C55E", "#EF4444"],
         borderWidth: 1,
+      },
+    ],
+  };
+
+  const lineChartData = {
+    labels: stats.monthly_revenue.map((item) => {
+      // Create a nice month label, e.g., "Jan", "Feb"
+      if (!item.month) return "";
+      const date = new Date(item.month + "-01");
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      });
+    }),
+    datasets: [
+      {
+        label: "Monthly Revenue",
+        data: stats.monthly_revenue.map((item) => item.total),
+        borderColor: "#10B981", // Emerald 500
+        backgroundColor: "rgba(16, 185, 129, 0.1)",
+        borderWidth: 3,
+        pointBackgroundColor: "#10B981",
+        pointBorderColor: "#fff",
+        pointHoverBackgroundColor: "#fff",
+        pointHoverBorderColor: "#10B981",
+        fill: true,
+        tension: 0.4, // Smooth curve
       },
     ],
   };
@@ -299,6 +334,50 @@ const Dashboard = () => {
           icon={
             <svg
               xmlns="http://www.w3.org/2000/svg"
+              className="h-7 w-7 text-emerald-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          }
+          label="Total Revenue"
+          value={`$${stats.total_revenue.toLocaleString()}`}
+          color="bg-emerald-50"
+        />
+
+        <StatCard
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-7 w-7 text-rose-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          }
+          label="Total Due"
+          value={`$${stats.total_due.toLocaleString()}`}
+          color="bg-rose-50"
+        />
+
+        <StatCard
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
               className="h-7 w-7 text-blue-600"
               fill="none"
               viewBox="0 0 24 24"
@@ -312,31 +391,9 @@ const Dashboard = () => {
               />
             </svg>
           }
-          label="Total Leads"
-          value={stats.leads_count}
+          label="Total Customers"
+          value={stats.total_customers}
           color="bg-blue-50"
-        />
-
-        <StatCard
-          icon={
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-7 w-7 text-amber-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-            </svg>
-          }
-          label="Active Clients"
-          value={stats.clients_count}
-          color="bg-amber-50"
         />
 
         <StatCard
@@ -359,28 +416,6 @@ const Dashboard = () => {
           label="Total Invoices"
           value={stats.invoices_count}
           color="bg-green-50"
-        />
-
-        <StatCard
-          icon={
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-7 w-7 text-purple-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-              />
-            </svg>
-          }
-          label="Conversion Rate"
-          value={`${stats.conversion_rate.toFixed(1)}%`}
-          color="bg-purple-50"
         />
 
         <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-6 rounded-3xl shadow-xl shadow-indigo-200/50 border border-indigo-400/30 hover:shadow-2xl hover:shadow-indigo-300/50 transition-all duration-300 transform hover:scale-105 flex flex-col text-white">
@@ -448,6 +483,132 @@ const Dashboard = () => {
       </div>
 
       {/* Charts Section */}
+      <div className="mb-8">
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center w-full">
+          <div className="flex justify-between items-center w-full mb-8">
+            <div>
+              <h3 className="text-2xl font-black text-slate-900">
+                Monthly Revenue Growth
+              </h3>
+              <p className="text-slate-500 font-medium">
+                Track your business growth over time
+              </p>
+            </div>
+            <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100/50">
+              <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-sm shadow-emerald-500/50"></span>
+              <span className="text-xs font-black text-emerald-700 uppercase tracking-widest">
+                Live Data
+              </span>
+            </div>
+          </div>
+
+          <div className="w-full h-80">
+            {stats.monthly_revenue && stats.monthly_revenue.length > 0 ? (
+              <Line
+                data={lineChartData}
+                options={{
+                  maintainAspectRatio: false,
+                  responsive: true,
+                  plugins: {
+                    legend: {
+                      display: false,
+                    },
+                    tooltip: {
+                      mode: "index",
+                      intersect: false,
+                      backgroundColor: "rgba(15, 23, 42, 0.9)",
+                      titleColor: "#fff",
+                      bodyColor: "#fff",
+                      padding: 12,
+                      cornerRadius: 8,
+                      callbacks: {
+                        label: function (context) {
+                          let label = context.dataset.label || "";
+                          if (label) {
+                            label += ": ";
+                          }
+                          if (context.parsed.y !== null) {
+                            label += new Intl.NumberFormat("en-US", {
+                              style: "currency",
+                              currency: "USD",
+                            }).format(context.parsed.y);
+                          }
+                          return label;
+                        },
+                      },
+                    },
+                  },
+                  scales: {
+                    x: {
+                      grid: {
+                        display: false,
+                        drawBorder: false,
+                      },
+                      ticks: {
+                        font: {
+                          family: "'Inter', sans-serif",
+                          weight: "600",
+                          size: 12,
+                        },
+                        color: "#64748b",
+                      },
+                    },
+                    y: {
+                      grid: {
+                        color: "#f1f5f9",
+                        drawBorder: false,
+                        borderDash: [5, 5],
+                      },
+                      ticks: {
+                        font: {
+                          family: "'Inter', sans-serif",
+                          weight: "600",
+                          size: 12,
+                        },
+                        color: "#64748b",
+                        callback: function (value, index, values) {
+                          return "$" + value;
+                        },
+                      },
+                    },
+                  },
+                  interaction: {
+                    mode: "nearest",
+                    axis: "x",
+                    intersect: false,
+                  },
+                }}
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                <div className="text-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-12 w-12 text-slate-300 mx-auto mb-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                  <p className="text-slate-500 font-bold">
+                    No revenue data available yet
+                  </p>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Start collecting payments to see your growth chart.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
           <div className="flex justify-between items-center w-full mb-6">

@@ -3,7 +3,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
+from django.db.models import Sum, Count
+from django.db.models.functions import TruncMonth
 from .models import Lead, Client, LeadActivity
+from apps.invoices.models import Invoice, Customer
 from .serializers import LeadSerializer, ClientSerializer, LeadActivitySerializer
 from .permissions import IsAdminOrReadOnly, IsAdminOwnerOrStaffUpdate
 from apps.subscriptions.limits import PLAN_LIMITS
@@ -121,7 +124,44 @@ class DashboardView(APIView):
         def safe_count(queryset):
             return queryset.count() if queryset is not None else 0
 
-        total_invoices = safe_count(getattr(org, 'invoices', None))
+        # Analytics specific aggregations for Dashboard
+        # Fetching Total Invoices
+        total_invoices = Invoice.objects.filter(organization=org).count()
+        
+        # Fetching Total Customers
+        total_customers = Customer.objects.filter(organization=org).count()
+
+        # Fetching Total Revenue (Sum of 'paid_amount' or 'total' based on logic: we use 'total' for PAID or 'paid_amount' for all)
+        # Using 'paid_amount' of all invoices as revenue collected, or sum of 'total' for exclusively PAID ones.
+        # Following spec: total_revenue = Invoice.objects.filter(..., status="PAID").aggregate(Sum("total_amount"))
+        total_revenue_agg = Invoice.objects.filter(
+            organization=org, 
+            status="PAID"
+        ).aggregate(total=Sum("total"))
+        total_revenue = total_revenue_agg["total"] or 0
+
+        # Fetching Total Due Amount
+        total_due_agg = Invoice.objects.filter(
+            organization=org
+        ).aggregate(due=Sum("balance"))
+        total_due = total_due_agg["due"] or 0
+
+        # Fetching Monthly Revenue
+        monthly_revenue_data = (
+            Invoice.objects.filter(organization=org, status="PAID")
+            .annotate(month=TruncMonth("created_at"))
+            .values("month")
+            .annotate(total=Sum("total"))
+            .order_by("month")
+        )
+        # Convert month dates to string format for JSON serialization
+        monthly_revenue = [
+            {
+                "month": item["month"].strftime("%Y-%m") if item["month"] else None,
+                "total": item["total"] or 0
+            }
+            for item in monthly_revenue_data
+        ]
 
         status_counts = {
             "NEW": org.leads.filter(status="NEW").count(),
@@ -188,6 +228,10 @@ class DashboardView(APIView):
             "total_leads": total_leads,
             "total_clients": total_clients,
             "total_invoices": total_invoices,
+            "total_customers": total_customers,
+            "total_revenue": total_revenue,
+            "total_due": total_due,
+            "monthly_revenue": monthly_revenue,
             "status_counts": status_counts,
             "conversion_rate": conversion_rate,
             "plan": current_plan,
