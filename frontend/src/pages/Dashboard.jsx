@@ -329,7 +329,7 @@ const Dashboard = () => {
       </header>
 
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <StatCard
           icon={
             <svg
@@ -394,28 +394,6 @@ const Dashboard = () => {
           label="Total Clients"
           value={stats.clients_count}
           color="bg-blue-50"
-        />
-
-        <StatCard
-          icon={
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-7 w-7 text-amber-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-          }
-          label="Invoices Customers"
-          value={stats.total_customers}
-          color="bg-amber-50"
         />
 
         <StatCard
