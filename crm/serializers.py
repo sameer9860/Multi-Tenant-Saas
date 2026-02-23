@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Lead, Client, LeadActivity
+from .models import Lead, Client, LeadActivity, Expense
 
 class LeadActivitySerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField()
@@ -18,5 +18,12 @@ class LeadSerializer(serializers.ModelSerializer):
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
+        fields = "__all__"
+        read_only_fields = ["organization"]
+
+
+class ExpenseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Expense
         fields = "__all__"
         read_only_fields = ["organization"]
