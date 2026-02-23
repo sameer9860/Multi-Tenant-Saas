@@ -5,9 +5,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth
-from .models import Lead, Client, LeadActivity
+from .models import Lead, Client, LeadActivity, Expense
 from apps.invoices.models import Invoice, Customer
-from .serializers import LeadSerializer, ClientSerializer, LeadActivitySerializer
+from .serializers import LeadSerializer, ClientSerializer, LeadActivitySerializer, ExpenseSerializer
 from .permissions import IsAdminOrReadOnly, IsAdminOwnerOrStaffUpdate
 from apps.subscriptions.limits import PLAN_LIMITS
 
@@ -104,6 +104,21 @@ class ClientViewSet(viewsets.ModelViewSet):
         serializer.save(organization=org)
 
 
+class ExpenseViewSet(viewsets.ModelViewSet):
+    serializer_class = ExpenseSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        return Expense.objects.filter(organization=org)
+
+    def perform_create(self, serializer):
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+        serializer.save(organization=org)
+
+
 class DashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -171,6 +186,15 @@ class DashboardView(APIView):
             "LOST": org.leads.filter(status="LOST").count(),
         }
 
+        # Fetching Total Expenses
+        total_expense_agg = Expense.objects.filter(
+            organization=org
+        ).aggregate(total=Sum("amount"))
+        total_expenses = total_expense_agg["total"] or 0
+
+        # Calculating Profit
+        total_profit = float(total_revenue) - float(total_expenses)
+
         conversion_rate = 0
         if total_leads > 0:
             conversion_rate = (status_counts["CONVERTED"] / total_leads) * 100
@@ -223,6 +247,8 @@ class DashboardView(APIView):
             "total_invoices": total_invoices,
             "total_customers": total_customers,
             "total_revenue": float(total_revenue),
+            "total_expenses": float(total_expenses),
+            "total_profit": total_profit,
             "total_due": float(total_due),
             "monthly_revenue": monthly_revenue,
             "status_counts": status_counts,
