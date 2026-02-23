@@ -13,6 +13,7 @@ import InvoiceEdit from './pages/InvoiceEdit';
 import InvoicePrint from './pages/InvoicePrint';
 import Team from './pages/dashboard/accounts/Team';
 import CreateMember from './pages/dashboard/accounts/CreateMember';
+import Expenses from './pages/dashboard/crm/Expenses';
 
 // Basic Auth Guard Component
 const ProtectedRoute = ({ children }) => {
@@ -72,6 +73,12 @@ function App() {
         <Route path="/dashboard/crm/activity" element={
           <ProtectedRoute>
             <ActivityLog />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/crm/expenses" element={
+          <ProtectedRoute>
+            <Expenses />
           </ProtectedRoute>
         } />
 

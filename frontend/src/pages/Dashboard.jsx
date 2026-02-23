@@ -61,6 +61,8 @@ const Dashboard = () => {
     invoices_count: analytics?.total_invoices || 0,
     total_customers: analytics?.total_customers || 0,
     total_revenue: analytics?.total_revenue || 0,
+    total_expenses: analytics?.total_expenses || 0,
+    total_profit: analytics?.total_profit || 0,
     total_due: analytics?.total_due || 0,
     monthly_revenue: analytics?.monthly_revenue || [],
     subscription_plan: analytics?.plan || "Loading...",
@@ -372,6 +374,50 @@ const Dashboard = () => {
           label="Outstanding Due"
           value={`Rs. ${stats.total_due.toLocaleString()}`}
           color="bg-rose-50"
+        />
+
+        <StatCard
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-7 w-7 text-orange-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          }
+          label="Total Expenses"
+          value={`Rs. ${stats.total_expenses.toLocaleString()}`}
+          color="bg-orange-50"
+        />
+
+        <StatCard
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`h-7 w-7 ${stats.total_profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+              />
+            </svg>
+          }
+          label="Net Profit"
+          value={`Rs. ${stats.total_profit.toLocaleString()}`}
+          color={stats.total_profit >= 0 ? "bg-emerald-50" : "bg-rose-50"}
         />
 
         <StatCard
