@@ -11,6 +11,7 @@ import InvoiceList from './pages/InvoiceList';
 import InvoiceCreate from './pages/InvoiceCreate';
 import InvoiceEdit from './pages/InvoiceEdit';
 import InvoicePrint from './pages/InvoicePrint';
+import InvoiceDetail from './pages/InvoiceDetail';
 import Team from './pages/dashboard/accounts/Team';
 import CreateMember from './pages/dashboard/accounts/CreateMember';
 import Expenses from './pages/dashboard/crm/Expenses';
@@ -121,7 +122,7 @@ function App() {
 
         <Route path="/dashboard/invoices/:id" element={
           <ProtectedRoute>
-            <InvoicePrint />
+            <InvoiceDetail />
           </ProtectedRoute>
         } />
 
