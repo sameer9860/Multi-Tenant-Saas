@@ -45,13 +45,7 @@ class InvoiceViewSet(ModelViewSet):
         ).select_related('customer').prefetch_related('items', 'payments')
 
     def perform_update(self, serializer):
-        # allow updates to paid_amount/total and recompute balance/status
-        invoice = serializer.save()
-        if invoice.paid_amount is not None:
-            invoice.balance = invoice.total - invoice.paid_amount
-            # Status is now updated in Payment.save() or calculate_totals()
-            # but we can trigger a recalculation here if needed.
-            invoice.calculate_totals() 
+        serializer.save()
 
     def perform_create(self, serializer):
         org = self.request.organization
@@ -62,19 +56,8 @@ class InvoiceViewSet(ModelViewSet):
         if not can_add:
             raise PermissionDenied(msg)
 
-        # Save invoice initially (paid_amount may or may not be present)
-        invoice = serializer.save(organization=org)
-
-        if invoice.paid_amount is not None and invoice.paid_amount > 0:
-            # If initial payment is provided during creation, create a Payment object
-            Payment.objects.create(
-                invoice=invoice,
-                organization=org,
-                amount=invoice.paid_amount,
-                date=invoice.date,
-                payment_method="cash", # Default to cash for initial paid_amount
-                reference="Initial Payment"
-            )
+        # Save invoice (model handles initial payment if provided)
+        serializer.save(organization=org)
 
         # Increment usage count
         usage.increment_invoice_count()
