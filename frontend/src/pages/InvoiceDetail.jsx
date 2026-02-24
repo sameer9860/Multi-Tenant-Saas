@@ -7,7 +7,11 @@ const InvoiceDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { invoice, loading, error, refetch } = useInvoice(id);
-  const { createPayment, loading: submitting } = useCreatePayment();
+  const {
+    createPayment,
+    loading: submitting,
+    error: paymentError,
+  } = useCreatePayment();
 
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -35,13 +39,10 @@ const InvoiceDetail = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case "PAID":
-      case "Paid":
         return "bg-green-500/10 text-green-500 border-green-500/20";
       case "PARTIAL":
-      case "Partially Paid":
         return "bg-amber-500/10 text-amber-500 border-amber-500/20";
       case "DUE":
-      case "Unpaid":
         return "bg-rose-500/10 text-rose-500 border-rose-500/20";
       default:
         return "bg-slate-500/10 text-slate-500 border-slate-500/20";
@@ -75,9 +76,14 @@ const InvoiceDetail = () => {
       setReference("");
       refetch();
     } else {
-      setErrorMessage("Failed to add payment. Please try again.");
+      // The paymentError from useCreatePayment will now handle API errors
+      // setErrorMessage("Failed to add payment. Please try again."); // This line is now redundant if paymentError is used
     }
   };
+
+  const displayError =
+    errorMessage ||
+    (paymentError ? paymentError.message || "Server error occurred." : null);
 
   if (loading) {
     return (
@@ -121,7 +127,13 @@ const InvoiceDetail = () => {
               <span
                 className={`px-4 py-1.5 rounded-full text-sm font-black border ${getStatusColor(invoice.payment_status_display)}`}
               >
-                {invoice.payment_status_display}
+                {invoice.payment_status_display === "PAID"
+                  ? "Paid"
+                  : invoice.payment_status_display === "PARTIAL"
+                    ? "Partially Paid"
+                    : invoice.payment_status_display === "DUE"
+                      ? "Due"
+                      : invoice.payment_status_display}
               </span>
             </div>
 
@@ -252,9 +264,9 @@ const InvoiceDetail = () => {
 
             {invoice.remaining_due > 0 ? (
               <form onSubmit={handleAddPayment} className="space-y-6">
-                {errorMessage && (
+                {displayError && (
                   <div className="p-4 bg-rose-50 text-rose-600 rounded-xl text-sm font-bold border border-rose-100">
-                    {errorMessage}
+                    {displayError}
                   </div>
                 )}
 
