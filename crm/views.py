@@ -6,7 +6,7 @@ from rest_framework.exceptions import PermissionDenied
 from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth
 from .models import Lead, Client, LeadActivity, Expense
-from apps.invoices.models import Invoice, Customer
+from apps.invoices.models import Invoice, Customer, Payment
 from .serializers import LeadSerializer, ClientSerializer, LeadActivitySerializer, ExpenseSerializer
 from .permissions import IsAdminOrReadOnly, IsAdminOwnerOrStaffUpdate
 from apps.subscriptions.limits import PLAN_LIMITS
@@ -149,11 +149,10 @@ class DashboardView(APIView):
         # Keep separate total_customers for now, but total_clients is now unified
         total_customers = invoice_customers_count
 
-        # Fetching Total Revenue (Sum of 'total' for PAID invoices)
-        total_revenue_agg = Invoice.objects.filter(
-            organization=org, 
-            status="PAID"
-        ).aggregate(total=Sum("total"))
+        # Fetching Total Revenue (Sum of all Payment amounts)
+        total_revenue_agg = Payment.objects.filter(
+            organization=org
+        ).aggregate(total=Sum("amount"))
         total_revenue = total_revenue_agg["total"] or 0
 
         # Fetching Total Due Amount (Sum of 'balance' for all invoices)
@@ -162,12 +161,12 @@ class DashboardView(APIView):
         ).aggregate(due=Sum("balance"))
         total_due = total_due_agg["due"] or 0
 
-        # Fetching Monthly Revenue
+        # Fetching Monthly Revenue (Sum of all Payment amounts grouped by month)
         monthly_revenue_data = (
-            Invoice.objects.filter(organization=org, status="PAID")
+            Payment.objects.filter(organization=org)
             .annotate(month=TruncMonth("date"))
             .values("month")
-            .annotate(total=Sum("total"))
+            .annotate(total=Sum("amount"))
             .order_by("month")
         )
         # Convert month dates to string format for JSON serialization
