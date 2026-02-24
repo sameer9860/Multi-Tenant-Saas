@@ -485,3 +485,39 @@ export const useUpdateInvoice = () => {
 
   return { updateInvoice, loading, error, success };
 };
+
+/**
+ * Hook for creating a payment
+ */
+export const useCreatePayment = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+
+  const createPayment = useCallback(async (paymentData) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const endpoint = getEndpoint('invoices', 'list'); // base /api/invoices/
+      // The endpoint for payments is actually registered as /api/invoices/payments/ in urls.py
+      const paymentUrl = `${endpoint.primary}payments/`;
+      const result = await api.post(paymentUrl, paymentData);
+      setSuccess(true);
+      return result;
+    } catch (err) {
+      console.error('[useCreatePayment] Failed to create payment:', err);
+      setError({
+        message: err.message || 'Failed to create payment',
+        code: err.code,
+        details: err.details,
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { createPayment, loading, error, success };
+};
