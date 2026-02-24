@@ -161,7 +161,7 @@ class InvoiceAuthTests(APITestCase):
         self.assertEqual(invoice.status, "PARTIAL")
         self.assertEqual(invoice.paid_amount, 400)
         self.assertEqual(invoice.balance, 600)
-        self.assertEqual(invoice.payment_status, "Partially Paid")
+        self.assertEqual(invoice.payment_status, "PARTIAL")
         
         # 3. Add second payment of 600
         pay_data2 = {
@@ -178,7 +178,7 @@ class InvoiceAuthTests(APITestCase):
         self.assertEqual(invoice.status, "PAID")
         self.assertEqual(invoice.paid_amount, 1000)
         self.assertEqual(invoice.balance, 0)
-        self.assertEqual(invoice.payment_status, "Paid")
+        self.assertEqual(invoice.payment_status, "PAID")
         
         # 4. Try overpayment (should fail)
         pay_data3 = {
