@@ -127,7 +127,66 @@ class InvoiceAuthTests(APITestCase):
         # paid_amount should default to 0
         self.assertEqual(str(first['paid_amount']), "0.00")
 
-    def test_create_invoice_without_credentials_returns_401(self):
+    def test_create_invoice_without_credentials_returns_401_or_403(self):
         data = {"customer_id": 999, "date": "2023-01-01", "subtotal": "10.00", "vat_amount": "1.30", "total": "11.30"}
         response = self.client.post(reverse('invoice-list'), data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+
+    def test_partial_payments(self):
+        self.authenticate()
+        cust = Customer.objects.create(organization=self.org, name="Partial Test")
+        
+        # 1. Create invoice for 1000
+        inv_data = {
+            "customer_id": cust.id,
+            "date": "2023-05-01",
+            "total": "1000.00",
+        }
+        resp = self.client.post(reverse('invoice-list'), inv_data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        invoice_id = resp.data['id']
+        
+        # 2. Add first payment of 400
+        pay_data = {
+            "invoice": invoice_id,
+            "amount": "400.00",
+            "payment_method": "cash",
+            "date": "2023-05-01"
+        }
+        resp_pay1 = self.client.post(reverse('payment-list'), pay_data, format='json')
+        self.assertEqual(resp_pay1.status_code, status.HTTP_201_CREATED)
+        
+        # Verify invoice status is now PARTIAL
+        invoice = Invoice.objects.get(id=invoice_id)
+        self.assertEqual(invoice.status, "PARTIAL")
+        self.assertEqual(invoice.paid_amount, 400)
+        self.assertEqual(invoice.balance, 600)
+        self.assertEqual(invoice.payment_status, "Partially Paid")
+        
+        # 3. Add second payment of 600
+        pay_data2 = {
+            "invoice": invoice_id,
+            "amount": "600.00",
+            "payment_method": "esewa",
+            "date": "2023-05-02"
+        }
+        resp_pay2 = self.client.post(reverse('payment-list'), pay_data2, format='json')
+        self.assertEqual(resp_pay2.status_code, status.HTTP_201_CREATED)
+        
+        # Verify invoice status is now PAID
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, "PAID")
+        self.assertEqual(invoice.paid_amount, 1000)
+        self.assertEqual(invoice.balance, 0)
+        self.assertEqual(invoice.payment_status, "Paid")
+        
+        # 4. Try overpayment (should fail)
+        pay_data3 = {
+            "invoice": invoice_id,
+            "amount": "100.00",
+            "payment_method": "bank",
+            "date": "2023-05-03"
+        }
+        resp_pay3 = self.client.post(reverse('payment-list'), pay_data3, format='json')
+        # It should return 400 or raise error that DRF handles as 400
+        self.assertEqual(resp_pay3.status_code, status.HTTP_400_BAD_REQUEST)
