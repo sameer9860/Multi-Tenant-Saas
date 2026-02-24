@@ -231,7 +231,13 @@ const InvoiceList = () => {
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(invoice.status)}`}
                     >
-                      {invoice.status}
+                      {invoice.status === "PAID"
+                        ? "Paid"
+                        : invoice.status === "PARTIAL"
+                          ? "Partially Paid"
+                          : invoice.status === "DUE"
+                            ? "Due"
+                            : invoice.status}
                     </span>
                   </td>
                   <td className="py-4 px-6 text-center">
