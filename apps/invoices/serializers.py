@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Customer, Invoice, InvoiceItem, InvoicePayment
+from .models import Customer, Invoice, InvoiceItem, Payment
 
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -13,10 +13,21 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'description', 'quantity', 'rate', 'total']
         read_only_fields = ['id', 'total'] # total is calculated on model save
 
-class InvoicePaymentSerializer(serializers.ModelSerializer):
+class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
-        model = InvoicePayment
+        model = Payment
         fields = '__all__'
+        read_only_fields = ('organization',)
+
+    def validate(self, attrs):
+        invoice = attrs.get('invoice')
+        amount = attrs.get('amount')
+        if invoice and amount:
+            # For new payments (no id), check against current remaining due
+            if not self.instance:
+                if amount > invoice.remaining_due:
+                    raise serializers.ValidationError(f"Payment amount {amount} exceeds remaining due {invoice.remaining_due}")
+        return attrs
 
 class InvoiceSerializer(serializers.ModelSerializer):
     # read-only nested customer details
@@ -30,7 +41,12 @@ class InvoiceSerializer(serializers.ModelSerializer):
     )
 
     items = InvoiceItemSerializer(many=True, required=False)
-    payments = InvoicePaymentSerializer(many=True, read_only=True)
+    payments = PaymentSerializer(many=True, read_only=True)
+    
+    # Computed fields for the detail view
+    payment_status_display = serializers.CharField(source='payment_status', read_only=True)
+    remaining_due = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    total_paid = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
 
     class Meta:
         model = Invoice
@@ -40,6 +56,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
             'subtotal', 'vat_amount', 'total',
             'paid_amount', 'balance', 'status', 'created_at',
             'items', 'payments',
+            'payment_status_display', 'remaining_due', 'total_paid',
         ]
         read_only_fields = (
             'organization', 'invoice_number', 'balance', 'status', 'created_at',
@@ -55,19 +72,15 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
-        print(f"DEBUG: InvoiceSerializer.create items_data: {items_data}")
         invoice = Invoice.objects.create(**validated_data)
         for item_data in items_data:
-            ii = InvoiceItem.objects.create(invoice=invoice, **item_data)
-            print(f"DEBUG: Created InvoiceItem: {ii.id} {ii.description} total={ii.total}")
+            InvoiceItem.objects.create(invoice=invoice, **item_data)
         # Ensure totals are calculated correctly after items are added
         invoice.calculate_totals()
-        print(f"DEBUG: Invoice totals after create: sub={invoice.subtotal} total={invoice.total}")
         return invoice
 
     def update(self, instance, validated_data):
         items_data = validated_data.pop('items', None)
-        print(f"DEBUG: InvoiceSerializer.update items_data: {items_data}")
         
         # Update invoice fields
         for attr, value in validated_data.items():
@@ -78,14 +91,12 @@ class InvoiceSerializer(serializers.ModelSerializer):
         if items_data is not None:
             instance.items.all().delete()
             for item_data in items_data:
-                ii = InvoiceItem.objects.create(invoice=instance, **item_data)
-                print(f"DEBUG: Created/Updated InvoiceItem: {ii.description} total={ii.total}")
+                InvoiceItem.objects.create(invoice=instance, **item_data)
             
             # Recalculate totals after updating items
             instance.calculate_totals()
             instance.refresh_from_db()
 
-        print(f"DEBUG: Invoice totals after update: sub={instance.subtotal} total={instance.total}")
         return instance
 
     def to_internal_value(self, data):
