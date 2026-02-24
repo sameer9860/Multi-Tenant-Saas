@@ -4,8 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import parsers
 import logging
 
-from .models import Invoice, Customer, InvoiceItem, InvoicePayment
-from .serializers import InvoiceSerializer, CustomerSerializer, InvoiceItemSerializer, InvoicePaymentSerializer
+from .models import Invoice, Customer, InvoiceItem, Payment
+from .serializers import InvoiceSerializer, CustomerSerializer, InvoiceItemSerializer, PaymentSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -49,18 +49,9 @@ class InvoiceViewSet(ModelViewSet):
         invoice = serializer.save()
         if invoice.paid_amount is not None:
             invoice.balance = invoice.total - invoice.paid_amount
-            # Refined status logic
-            if invoice.total > 0:
-                if invoice.paid_amount >= invoice.total:
-                    invoice.status = "PAID"
-                elif invoice.paid_amount > 0:
-                    invoice.status = "PARTIAL"
-                else:
-                    invoice.status = "DUE"
-            else:
-                # For 0 total, it's PAID if paid_amount > 0, else DUE
-                invoice.status = "PAID" if invoice.paid_amount > 0 else "DUE"
-            invoice.save()
+            # Status is now updated in Payment.save() or calculate_totals()
+            # but we can trigger a recalculation here if needed.
+            invoice.calculate_totals() 
 
     def perform_create(self, serializer):
         org = self.request.organization
@@ -74,20 +65,16 @@ class InvoiceViewSet(ModelViewSet):
         # Save invoice initially (paid_amount may or may not be present)
         invoice = serializer.save(organization=org)
 
-        if invoice.paid_amount is not None:
-            invoice.balance = invoice.total - invoice.paid_amount
-            # Refined status logic
-            if invoice.total > 0:
-                if invoice.paid_amount >= invoice.total:
-                    invoice.status = "PAID"
-                elif invoice.paid_amount > 0:
-                    invoice.status = "PARTIAL"
-                else:
-                    invoice.status = "DUE"
-            else:
-                # For 0 total, it's PAID if paid_amount > 0, else DUE
-                invoice.status = "PAID" if invoice.paid_amount > 0 else "DUE"
-            invoice.save()
+        if invoice.paid_amount is not None and invoice.paid_amount > 0:
+            # If initial payment is provided during creation, create a Payment object
+            Payment.objects.create(
+                invoice=invoice,
+                organization=org,
+                amount=invoice.paid_amount,
+                date=invoice.date,
+                payment_method="cash", # Default to cash for initial paid_amount
+                reference="Initial Payment"
+            )
 
         # Increment usage count
         usage.increment_invoice_count()
@@ -114,9 +101,12 @@ class InvoiceItemViewSet(ModelViewSet):
     def get_queryset(self):
         return InvoiceItem.objects.filter(invoice__organization=self.request.organization)
 
-class InvoicePaymentViewSet(ModelViewSet):
-    serializer_class = InvoicePaymentSerializer
+class PaymentViewSet(ModelViewSet):
+    serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return InvoicePayment.objects.filter(invoice__organization=self.request.organization)
+        return Payment.objects.filter(organization=self.request.organization)
+
+    def perform_create(self, serializer):
+        serializer.save(organization=self.request.organization)
