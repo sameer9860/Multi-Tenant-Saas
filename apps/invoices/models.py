@@ -72,11 +72,11 @@ class Invoice(models.Model):
     def payment_status(self):
         paid = self.total_paid
         if paid == 0:
-            return "Unpaid"
+            return "DUE"
         elif paid < self.total:
-            return "Partially Paid"
+            return "PARTIAL"
         else:
-            return "Paid"
+            return "PAID"
 
     @transaction.atomic
     def save(self, *args, **kwargs):
@@ -98,10 +98,40 @@ class Invoice(models.Model):
 
             self.invoice_number = f"INV-{new_number:05d}"
         
-        # Always update balance from total and paid_amount
+        # 1. Update fields for consistency based on paid_amount/total
         from decimal import Decimal
-        self.balance = Decimal(str(self.total)) - Decimal(str(self.paid_amount))
+        self.paid_amount = Decimal(str(self.paid_amount or 0))
+        self.total = Decimal(str(self.total or 0))
+        self.balance = self.total - self.paid_amount
+        
+        if self.paid_amount == 0:
+            self.status = "DUE"
+        elif self.paid_amount < self.total:
+            self.status = "PARTIAL"
+        else:
+            self.status = "PAID"
+            
         super().save(*args, **kwargs)
+
+        # 2. Sync with Payment objects if needed (e.g. after manual edit of paid_amount)
+        # Avoid recursion by checking if sync is actually needed
+        current_payments_sum = self.payments.aggregate(models.Sum('amount'))['amount__sum'] or Decimal('0.00')
+        if self.paid_amount != current_payments_sum:
+            # Use a specialized save logic here
+            initial_payment = self.payments.filter(reference="Initial Payment").first()
+            if initial_payment:
+                initial_payment.amount = self.paid_amount
+                # We update the payment but skip the invoice update recursion in Payment.save
+                super(Payment, initial_payment).save()
+            elif self.paid_amount > 0:
+                Payment.objects.create(
+                    invoice=self,
+                    organization=self.organization,
+                    amount=self.paid_amount,
+                    date=self.date,
+                    payment_method="cash",
+                    reference="Initial Payment"
+                )
 
     def calculate_totals(self):
         items = self.items.all()
@@ -163,18 +193,10 @@ class Payment(models.Model):
 
         # Update invoice after payment
         invoice = self.invoice
-        paid_sum = invoice.total_paid
-        invoice.paid_amount = paid_sum
-        invoice.balance = invoice.total - invoice.paid_amount
-
-        # Map property to field for backward compatibility or keep it separate?
-        # User said "No need to store status manually", but they kept STATUS_CHOICES in their draft.
-        # Let's update the field so existing queries still work.
-        status_map = {
-            "Unpaid": "DUE",
-            "Partially Paid": "PARTIAL",
-            "Paid": "PAID"
-        }
-        invoice.status = status_map.get(invoice.payment_status, "DUE")
-        invoice.save()
+        # Use simple update to avoid triggering Invoice.save sync logic again
+        Invoice.objects.filter(id=invoice.id).update(
+            paid_amount=invoice.total_paid,
+            balance=invoice.total - invoice.total_paid,
+            status=invoice.payment_status
+        )
 
