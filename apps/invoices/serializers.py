@@ -110,7 +110,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
 
 class LedgerEntrySerializer(serializers.Serializer):
-    date = serializers.DateTimeField()
+    date = serializers.DateField()
     type = serializers.CharField()
     description = serializers.CharField()
     debit = serializers.DecimalField(max_digits=12, decimal_places=2, default=0)
