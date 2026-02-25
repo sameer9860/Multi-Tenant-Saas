@@ -108,3 +108,15 @@ class InvoiceSerializer(serializers.ModelSerializer):
             data['customer_input'] = data.pop('customer')
         return super().to_internal_value(data)
 
+
+class LedgerEntrySerializer(serializers.Serializer):
+    date = serializers.DateTimeField()
+    type = serializers.CharField()
+    description = serializers.CharField()
+    debit = serializers.DecimalField(max_digits=12, decimal_places=2, default=0)
+    credit = serializers.DecimalField(max_digits=12, decimal_places=2, default=0)
+    balance = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+class CustomerLedgerSerializer(serializers.Serializer):
+    summary = serializers.DictField()
+    entries = LedgerEntrySerializer(many=True)
