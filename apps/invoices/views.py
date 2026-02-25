@@ -3,6 +3,7 @@ from rest_framework.exceptions import PermissionDenied, ParseError, ValidationEr
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import parsers
 import logging
+from decimal import Decimal
 
 from .models import Invoice, Customer, InvoiceItem, Payment
 from rest_framework.decorators import action
@@ -39,53 +40,57 @@ class CustomerViewSet(ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def ledger(self, request, pk=None):
-        customer = self.get_object()
-        invoices = customer.invoices.all().order_by('date')
-        
-        ledger_entries = []
-        total_invoiced = 0
-        total_paid = 0
-        
-        for invoice in invoices:
-            ledger_entries.append({
-                "date": invoice.date,
-                "type": "Invoice",
-                "description": f"Invoice {invoice.invoice_number}",
-                "debit": invoice.total,
-                "credit": 0,
-            })
-            total_invoiced += invoice.total
+        try:
+            customer = self.get_object()
+            invoices = customer.invoices.all().order_by('date')
             
-            for payment in invoice.payments.all():
+            ledger_entries = []
+            total_invoiced = Decimal('0.00')
+            total_paid = Decimal('0.00')
+            
+            for invoice in invoices:
                 ledger_entries.append({
-                    "date": payment.date,
-                    "type": "Payment",
-                    "description": f"Payment for {invoice.invoice_number} ({payment.reference or 'N/A'})",
-                    "debit": 0,
-                    "credit": payment.amount,
+                    "date": invoice.date,
+                    "type": "Invoice",
+                    "description": f"Invoice {invoice.invoice_number}",
+                    "debit": invoice.total,
+                    "credit": Decimal('0.00'),
                 })
-                total_paid += payment.amount
-        
-        # Sort by date
-        ledger_entries.sort(key=lambda x: x["date"])
-        
-        # Calculate running balance
-        running_balance = 0
-        for entry in ledger_entries:
-            running_balance += (entry["debit"] - entry["credit"])
-            entry["balance"] = running_balance
+                total_invoiced += invoice.total
+                
+                for payment in invoice.payments.all():
+                    ledger_entries.append({
+                        "date": payment.date,
+                        "type": "Payment",
+                        "description": f"Payment for {invoice.invoice_number} ({payment.reference or 'N/A'})",
+                        "debit": Decimal('0.00'),
+                        "credit": payment.amount,
+                    })
+                    total_paid += payment.amount
             
-        summary = {
-            "total_invoiced": total_invoiced,
-            "total_paid": total_paid,
-            "current_balance": running_balance,
-        }
-        
-        serializer = CustomerLedgerSerializer({
-            "summary": summary,
-            "entries": ledger_entries
-        })
-        return Response(serializer.data)
+            # Sort by date, then by type (Invoices before Payments on same day)
+            ledger_entries.sort(key=lambda x: (x["date"], 0 if x["type"] == "Invoice" else 1))
+            
+            # Calculate running balance
+            running_balance = Decimal('0.00')
+            for entry in ledger_entries:
+                running_balance += (entry["debit"] - entry["credit"])
+                entry["balance"] = running_balance
+                
+            summary = {
+                "total_invoiced": float(total_invoiced),
+                "total_paid": float(total_paid),
+                "current_balance": float(running_balance),
+            }
+            
+            serializer = CustomerLedgerSerializer({
+                "summary": summary,
+                "entries": ledger_entries
+            })
+            return Response(serializer.data)
+        except Exception as e:
+            logger.exception("Error generating ledger for customer %s", pk)
+            return Response({"error": str(e)}, status=500)
 
 class InvoiceViewSet(ModelViewSet):
     serializer_class = InvoiceSerializer
