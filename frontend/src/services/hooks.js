@@ -348,6 +348,41 @@ export const useCustomers = () => {
 };
 
 /**
+ * Hook for fetching a single customer
+ */
+export const useCustomer = (id) => {
+  const [customer, setCustomer] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchCustomer = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await api.get(`/api/invoices/customers/${id}/`);
+      setCustomer(data);
+    } catch (err) {
+      console.error('[useCustomer] Failed to load customer:', err);
+      setError({
+        message: err.message || 'Failed to load customer',
+        code: err.code,
+        details: err.details,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchCustomer();
+  }, [fetchCustomer]);
+
+  return { customer, loading, error, refetch: fetchCustomer };
+};
+
+/**
  * Hook for creating customer
  */
 export const useCreateCustomer = () => {
