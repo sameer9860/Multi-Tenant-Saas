@@ -5,7 +5,12 @@ from rest_framework import parsers
 import logging
 
 from .models import Invoice, Customer, InvoiceItem, Payment
-from .serializers import InvoiceSerializer, CustomerSerializer, InvoiceItemSerializer, PaymentSerializer
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from .serializers import (
+    InvoiceSerializer, CustomerSerializer, InvoiceItemSerializer, 
+    PaymentSerializer, CustomerLedgerSerializer
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +36,56 @@ class CustomerViewSet(ModelViewSet):
 
         # Increment usage count
         usage.increment_customer_count()
+
+    @action(detail=True, methods=['get'])
+    def ledger(self, request, pk=None):
+        customer = self.get_object()
+        invoices = customer.invoices.all().order_by('date')
+        
+        ledger_entries = []
+        total_invoiced = 0
+        total_paid = 0
+        
+        for invoice in invoices:
+            ledger_entries.append({
+                "date": invoice.date,
+                "type": "Invoice",
+                "description": f"Invoice {invoice.invoice_number}",
+                "debit": invoice.total,
+                "credit": 0,
+            })
+            total_invoiced += invoice.total
+            
+            for payment in invoice.payments.all():
+                ledger_entries.append({
+                    "date": payment.date,
+                    "type": "Payment",
+                    "description": f"Payment for {invoice.invoice_number} ({payment.reference or 'N/A'})",
+                    "debit": 0,
+                    "credit": payment.amount,
+                })
+                total_paid += payment.amount
+        
+        # Sort by date
+        ledger_entries.sort(key=lambda x: x["date"])
+        
+        # Calculate running balance
+        running_balance = 0
+        for entry in ledger_entries:
+            running_balance += (entry["debit"] - entry["credit"])
+            entry["balance"] = running_balance
+            
+        summary = {
+            "total_invoiced": total_invoiced,
+            "total_paid": total_paid,
+            "current_balance": running_balance,
+        }
+        
+        serializer = CustomerLedgerSerializer({
+            "summary": summary,
+            "entries": ledger_entries
+        })
+        return Response(serializer.data)
 
 class InvoiceViewSet(ModelViewSet):
     serializer_class = InvoiceSerializer
