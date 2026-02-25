@@ -361,7 +361,7 @@ export const useCustomer = (id) => {
     setError(null);
 
     try {
-      const data = await api.get(`/api/invoices/customers/${id}/`);
+      const data = await api.get(`/api/customers/${id}/`);
       setCustomer(data);
     } catch (err) {
       console.error('[useCustomer] Failed to load customer:', err);

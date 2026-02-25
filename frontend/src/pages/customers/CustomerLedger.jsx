@@ -10,9 +10,7 @@ const CustomerLedger = ({ customerId }) => {
     const fetchLedger = async () => {
       setLoading(true);
       try {
-        const data = await api.get(
-          `/api/invoices/customers/${customerId}/ledger/`,
-        );
+        const data = await api.get(`/api/customers/${customerId}/ledger/`);
         setLedger(data);
       } catch (err) {
         setError(err.message);
