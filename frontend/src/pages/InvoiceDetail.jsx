@@ -17,6 +17,7 @@ const InvoiceDetail = () => {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [reference, setReference] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
@@ -78,6 +79,42 @@ const InvoiceDetail = () => {
     } else {
       // The paymentError from useCreatePayment will now handle API errors
       // setErrorMessage("Failed to add payment. Please try again."); // This line is now redundant if paymentError is used
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      setDownloading(true);
+      const token = localStorage.getItem("token");
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+
+      const response = await fetch(
+        `${API_URL}/api/invoices/${id}/download_pdf/`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to download PDF");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Invoice_${invoice.invoice_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF download error:", err);
+      setErrorMessage("Failed to download PDF. Please try again.");
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -371,6 +408,31 @@ const InvoiceDetail = () => {
                 />
               </svg>
               Print Invoice
+            </button>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+              className="w-full py-4 px-6 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {downloading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+              )}
+              {downloading ? "Generating..." : "Download PDF"}
             </button>
             <button
               onClick={() => navigate("/dashboard/invoices")}
