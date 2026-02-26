@@ -190,3 +190,20 @@ class InvoiceAuthTests(APITestCase):
         resp_pay3 = self.client.post(reverse('payment-list'), pay_data3, format='json')
         # It should return 400 or raise error that DRF handles as 400
         self.assertEqual(resp_pay3.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_download_pdf(self):
+        self.authenticate()
+        cust = Customer.objects.create(organization=self.org, name="PDF Test")
+        invoice = Invoice.objects.create(
+            organization=self.org,
+            customer=cust,
+            date="2023-05-01",
+            total="1000.00",
+            subtotal="884.96",
+            vat_amount="115.04"
+        )
+        url = reverse('invoice-detail', kwargs={'pk': invoice.pk}) + 'download_pdf/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(len(response.content) > 0)
