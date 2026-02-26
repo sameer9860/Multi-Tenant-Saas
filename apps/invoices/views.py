@@ -4,6 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import parsers
 import logging
 from decimal import Decimal
+from django.http import HttpResponse
+from .utils import generate_invoice_pdf
 
 from .models import Invoice, Customer, InvoiceItem, Payment
 from rest_framework.decorators import action
@@ -136,6 +138,17 @@ class InvoiceViewSet(ModelViewSet):
         if user_role not in ['OWNER', 'ADMIN']:
             raise PermissionDenied("Only Owners or Admins can delete invoices.")
         return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None):
+        invoice = self.get_object()
+        pdf_content = generate_invoice_pdf(invoice)
+        
+        response = HttpResponse(content_type='application/pdf')
+        filename = f"Invoice_{invoice.invoice_number}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response.write(pdf_content)
+        return response
 
 class InvoiceItemViewSet(ModelViewSet):
     serializer_class = InvoiceItemSerializer
