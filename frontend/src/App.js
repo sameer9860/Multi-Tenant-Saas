@@ -15,8 +15,9 @@ import InvoiceDetail from './pages/InvoiceDetail';
 import Team from './pages/dashboard/accounts/Team';
 import CreateMember from './pages/dashboard/accounts/CreateMember';
 import Expenses from './pages/dashboard/crm/Expenses';
-import CustomerDetail from './pages/customers/CustomerDetail';
 import CustomerList from './pages/customers/CustomerList';
+import Reports from './pages/Reports';
+import VATSummary from './pages/VATSummary';
 
 // Basic Auth Guard Component
 const ProtectedRoute = ({ children }) => {
@@ -137,6 +138,18 @@ function App() {
         <Route path="/dashboard/customers" element={
           <ProtectedRoute>
             <CustomerList />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/reports" element={
+          <ProtectedRoute>
+            <Reports />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/reports/vat" element={
+          <ProtectedRoute>
+            <VATSummary />
           </ProtectedRoute>
         } />
 
