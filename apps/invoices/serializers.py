@@ -29,7 +29,16 @@ class PaymentSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(f"Payment amount {amount} exceeds remaining due {invoice.remaining_due}")
         return attrs
 
+from apps.core.models import Organization
+
+class OrganizationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organization
+        fields = ['id', 'name', 'email', 'phone', 'vat_number', 'logo']
+
 class InvoiceSerializer(serializers.ModelSerializer):
+    # read-only nested organization details
+    organization = OrganizationSerializer(read_only=True)
     # read-only nested customer details
     customer = CustomerSerializer(read_only=True)
     # writable field accepts either an integer id or object with id
