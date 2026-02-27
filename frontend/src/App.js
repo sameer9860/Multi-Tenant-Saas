@@ -15,6 +15,7 @@ import InvoiceDetail from './pages/InvoiceDetail';
 import Team from './pages/dashboard/accounts/Team';
 import CreateMember from './pages/dashboard/accounts/CreateMember';
 import Expenses from './pages/dashboard/crm/Expenses';
+import CustomerDetail from './pages/customers/CustomerDetail';
 import CustomerList from './pages/customers/CustomerList';
 import Reports from './pages/Reports';
 import VATSummary from './pages/VATSummary';
