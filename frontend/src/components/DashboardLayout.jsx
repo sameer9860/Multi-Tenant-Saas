@@ -10,6 +10,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
   const [isLeadsMenuOpen, setIsLeadsMenuOpen] = useState(true);
   const [isInvoicesMenuOpen, setIsInvoicesMenuOpen] = useState(true);
   const [isTeamMenuOpen, setIsTeamMenuOpen] = useState(true);
+  const [isReportsMenuOpen, setIsReportsMenuOpen] = useState(true);
 
   const logout = () => {
     localStorage.clear();
@@ -20,6 +21,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
   const isLeadsActive = location.pathname.includes("/dashboard/crm/leads");
   const isInvoicesActive = location.pathname.includes("/dashboard/invoices");
   const isTeamActive = location.pathname.includes("/dashboard/team");
+  const isReportsActive = location.pathname.includes("/dashboard/reports");
 
   const sidebarClasses = `${
     isSidebarCollapsed ? "w-20" : "w-80"
