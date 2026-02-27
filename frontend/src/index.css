@@ -68,34 +68,71 @@ code {
   animation: slide-in-right 0.4s ease-out;
 }
 
-/* Print Styles */
+/* Day 28: Professional Print Styles */
 @media print {
-  body * {
-    visibility: hidden;
+  @page {
+    size: A4;
+    margin: 0;
   }
 
-  .print\:shadow-none,
-  .print\:shadow-none * {
-    visibility: visible;
+  body {
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  .print\:shadow-none {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-  }
-
-  .print\:hidden {
+  .no-print {
     display: none !important;
   }
 
-  .print\:p-12 {
-    padding: 3rem !important;
+  #invoice-print-area {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 15mm 20mm;
+    margin: 0 auto;
+    font-size: 11pt;
+    line-height: 1.4;
+    color: #1e293b;
+    background: white;
   }
 
-  .print\:max-w-full {
-    max-width: 100% !important;
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    page-break-inside: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  .watermark {
+    position: fixed;
+    top: 45%;
+    left: 15%;
+    width: 70%;
+    font-size: 80pt;
+    font-weight: 900;
+    color: #f1f5f9;
+    text-align: center;
+    transform: rotate(-35deg);
+    z-index: -1;
+    pointer-events: none;
+    text-transform: uppercase;
+    opacity: 0.8;
+    letter-spacing: 5px;
+  }
+
+  /* Force borders to show in print */
+  .border-print {
+    border: 1px solid #e2e8f0 !important;
   }
 }
 
