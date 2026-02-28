@@ -658,6 +658,153 @@ const DashboardLayout = ({ children, title, subtitle }) => {
             )}
           </div>
 
+          {/* Reports Dropdown */}
+          <div className="space-y-1">
+            <button
+              onClick={() =>
+                !isSidebarCollapsed && setIsReportsMenuOpen(!isReportsMenuOpen)
+              }
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
+                isReportsActive && !isSidebarCollapsed
+                  ? "text-indigo-700"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              } ${isSidebarCollapsed ? "justify-center px-2 cursor-default" : "cursor-pointer"}`}
+              title={isSidebarCollapsed ? "Reports" : ""}
+            >
+              <div className="flex items-center gap-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-5 w-5 flex-shrink-0 ${isReportsActive && isSidebarCollapsed ? "text-indigo-600" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+                {!isSidebarCollapsed && <span>Reports</span>}
+              </div>
+              {!isSidebarCollapsed && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-4 w-4 transition-transform duration-200 ${isReportsMenuOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              )}
+            </button>
+
+            {(isReportsMenuOpen || isSidebarCollapsed) && (
+              <div
+                className={`${isSidebarCollapsed ? "space-y-2" : "pl-11 space-y-1"}`}
+              >
+                {/* Financial Overview Item */}
+                <button
+                  onClick={() => navigate("/dashboard/reports")}
+                  className={`w-full flex items-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive("/dashboard/reports")
+                      ? "text-indigo-600 bg-indigo-50"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  } ${isSidebarCollapsed ? "justify-center p-2" : "px-3"}`}
+                  title="Financial Overview"
+                >
+                  {isSidebarCollapsed ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"
+                      />
+                    </svg>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 opacity-50"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      Financial Overview
+                    </>
+                  )}
+                </button>
+
+                {/* VAT Summary Item */}
+                <button
+                  onClick={() => navigate("/dashboard/reports/vat")}
+                  className={`w-full flex items-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive("/dashboard/reports/vat")
+                      ? "text-indigo-600 bg-indigo-50"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  } ${isSidebarCollapsed ? "justify-center p-2" : "px-3"}`}
+                  title="VAT Summary"
+                >
+                  {isSidebarCollapsed ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"
+                      />
+                    </svg>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 opacity-50"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"
+                        />
+                      </svg>
+                      VAT Summary
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => navigate("/pricing")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
