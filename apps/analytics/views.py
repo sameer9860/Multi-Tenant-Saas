@@ -68,29 +68,80 @@ class VATSummaryView(APIView):
         now = timezone.now()
         
         # Monthly VAT Summary
-        month = request.query_params.get('month', now.month)
-        year = request.query_params.get('year', now.year)
+        month = int(request.query_params.get('month', now.month))
+        year = int(request.query_params.get('year', now.year))
+        export = request.query_params.get('export')
         
         invoices = Invoice.objects.filter(
             organization=org,
             date__month=month,
             date__year=year
-        )
+        ).order_by('date', 'invoice_number')
         
         totals = invoices.aggregate(
             total_sales=Sum('subtotal'),
             total_vat=Sum('vat_amount'),
             grand_total=Sum('total')
         )
+
+        data = {
+            "month": month,
+            "year": year,
+            "total_sales": float(totals['total_sales'] or 0),
+            "total_vat_collected": float(totals['total_vat'] or 0),
+            "grand_total": float(totals['grand_total'] or 0),
+            "invoice_count": invoices.count(),
+            "invoices": [
+                {
+                    "invoice_number": inv.invoice_number,
+                    "date": inv.date,
+                    "customer_name": inv.customer.name,
+                    "subtotal": float(inv.subtotal),
+                    "vat_amount": float(inv.vat_amount),
+                    "total": float(inv.total),
+                } for inv in invoices
+            ]
+        }
+
+        if export == 'csv':
+            return self.export_csv(data)
         
-        return Response({
-            "month": int(month),
-            "year": int(year),
-            "total_sales": totals['total_sales'] or 0,
-            "total_vat_collected": totals['total_vat'] or 0,
-            "grand_total": totals['grand_total'] or 0,
-            "invoice_count": invoices.count()
-        })
+        return Response(data)
+
+    def export_csv(self, data):
+        import csv
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='text/csv')
+        filename = f"VAT_Report_{data['month']}_{data['year']}.csv"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        writer = csv.writer(response)
+        # Header for the summary
+        writer.writerow(['VAT Summary Report', f"{data['month']}/{data['year']}"])
+        writer.writerow([])
+        writer.writerow(['Summary Metrics'])
+        writer.writerow(['Total Taxable Sales', f"Rs. {data['total_sales']:.2f}"])
+        writer.writerow(['Total VAT Collected', f"Rs. {data['total_vat_collected']:.2f}"])
+        writer.writerow(['Grand Total', f"Rs. {data['grand_total']:.2f}"])
+        writer.writerow(['Total Invoices', data['invoice_count']])
+        writer.writerow([])
+        
+        # Invoice Breakdown
+        writer.writerow(['Invoice Breakdown'])
+        writer.writerow(['Invoice #', 'Date', 'Customer', 'Subtotal', 'VAT', 'Total'])
+        
+        for inv in data['invoices']:
+            writer.writerow([
+                inv['invoice_number'],
+                inv['date'],
+                inv['customer_name'],
+                f"{inv['subtotal']:.2f}",
+                f"{inv['vat_amount']:.2f}",
+                f"{inv['total']:.2f}"
+            ])
+            
+        return response
 
 class MonthlyReportView(APIView):
     permission_classes = [IsAuthenticated]
