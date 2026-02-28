@@ -7,10 +7,45 @@ const DashboardLayout = ({ children, title, subtitle }) => {
   const location = useLocation();
   const { profile } = useUserProfile();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isLeadsMenuOpen, setIsLeadsMenuOpen] = useState(true);
-  const [isInvoicesMenuOpen, setIsInvoicesMenuOpen] = useState(true);
-  const [isTeamMenuOpen, setIsTeamMenuOpen] = useState(true);
-  const [isReportsMenuOpen, setIsReportsMenuOpen] = useState(true);
+
+  // Accordion state: only one menu open at a time
+  const [isLeadsMenuOpen, setIsLeadsMenuOpen] = useState(
+    location.pathname.includes("/dashboard/crm/leads"),
+  );
+  const [isInvoicesMenuOpen, setIsInvoicesMenuOpen] = useState(
+    location.pathname.includes("/dashboard/invoices") ||
+      location.pathname.includes("/dashboard/customers"),
+  );
+  const [isTeamMenuOpen, setIsTeamMenuOpen] = useState(
+    location.pathname.includes("/dashboard/team"),
+  );
+  const [isReportsMenuOpen, setIsReportsMenuOpen] = useState(
+    location.pathname.includes("/dashboard/reports"),
+  );
+
+  // Sync open section with route changes
+  React.useEffect(() => {
+    if (location.pathname.includes("/dashboard/crm/leads"))
+      setIsLeadsMenuOpen(true);
+    if (
+      location.pathname.includes("/dashboard/invoices") ||
+      location.pathname.includes("/dashboard/customers")
+    )
+      setIsInvoicesMenuOpen(true);
+    if (location.pathname.includes("/dashboard/team")) setIsTeamMenuOpen(true);
+    if (location.pathname.includes("/dashboard/reports"))
+      setIsReportsMenuOpen(true);
+  }, [location.pathname]);
+
+  // Toggle function for accordion behavior
+  const toggleMenu = (menu) => {
+    if (isSidebarCollapsed) return;
+
+    setIsLeadsMenuOpen(menu === "leads" ? !isLeadsMenuOpen : false);
+    setIsInvoicesMenuOpen(menu === "invoices" ? !isInvoicesMenuOpen : false);
+    setIsTeamMenuOpen(menu === "team" ? !isTeamMenuOpen : false);
+    setIsReportsMenuOpen(menu === "reports" ? !isReportsMenuOpen : false);
+  };
 
   const logout = () => {
     localStorage.clear();
@@ -196,9 +231,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
           {/* Leads Dropdown */}
           <div className="space-y-1">
             <button
-              onClick={() =>
-                !isSidebarCollapsed && setIsLeadsMenuOpen(!isLeadsMenuOpen)
-              }
+              onClick={() => toggleMenu("leads")}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
                 isLeadsActive && !isSidebarCollapsed
                   ? "text-indigo-700"
@@ -467,10 +500,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
           {/* Invoices Dropdown */}
           <div className="space-y-1">
             <button
-              onClick={() =>
-                !isSidebarCollapsed &&
-                setIsInvoicesMenuOpen(!isInvoicesMenuOpen)
-              }
+              onClick={() => toggleMenu("invoices")}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
                 isInvoicesActive && !isSidebarCollapsed
                   ? "text-indigo-700"
@@ -661,9 +691,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
           {/* Reports Dropdown */}
           <div className="space-y-1">
             <button
-              onClick={() =>
-                !isSidebarCollapsed && setIsReportsMenuOpen(!isReportsMenuOpen)
-              }
+              onClick={() => toggleMenu("reports")}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
                 isReportsActive && !isSidebarCollapsed
                   ? "text-indigo-700"
@@ -834,7 +862,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
           {(profile?.role === "OWNER" || profile?.role === "ADMIN") && (
             <div className="space-y-1">
               <button
-                onClick={() => setIsTeamMenuOpen(!isTeamMenuOpen)}
+                onClick={() => toggleMenu("team")}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
                   isTeamActive
                     ? "bg-indigo-50 text-indigo-700"
