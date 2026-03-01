@@ -5,7 +5,7 @@ from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.http import HttpResponse
-from apps.invoices.models import Invoice
+from apps.invoices.models import Invoice, Payment
 from crm.models import Expense
 from apps.invoices.utils import generate_invoice_pdf # Reuse base PDF logic or create new one
 from django.contrib.auth.decorators import login_required
@@ -153,26 +153,31 @@ class MonthlyReportView(APIView):
         year = int(request.query_params.get('year', now.year))
         export = request.query_params.get('export')
 
-        # Calculate Revenue (Paid/Total from Invoices)
+        # 1. Total Invoiced (Sum of all invoices generated this month)
         invoices = Invoice.objects.filter(organization=org, date__month=month, date__year=year)
-        total_revenue = invoices.aggregate(Sum('total'))['total__sum'] or 0
-        total_paid = invoices.aggregate(Sum('paid_amount'))['paid_amount__sum'] or 0
+        total_invoiced = invoices.aggregate(Sum('total'))['total__sum'] or 0
         total_vat = invoices.aggregate(Sum('vat_amount'))['vat_amount__sum'] or 0
         
-        # Calculate Expenses
+        # 2. Revenue (Sum of actual payments collected this month)
+        payments = Payment.objects.filter(organization=org, date__month=month, date__year=year)
+        revenue = payments.aggregate(Sum('amount'))['amount__sum'] or 0
+        
+        # 3. Expenses (Sum of expenses for the month)
         expenses = Expense.objects.filter(organization=org, created_at__month=month, created_at__year=year)
         total_expenses = expenses.aggregate(Sum('amount'))['amount__sum'] or 0
         
-        # Profit
-        net_profit = total_revenue - total_expenses
+        # 4. Profit & Due Amount
+        net_profit = float(revenue) - float(total_expenses)
+        due_amount = float(total_invoiced) - float(revenue) # This is a simplified monthly view
         
         report_data = {
             "month": month,
             "year": year,
-            "revenue": float(total_revenue),
-            "paid_revenue": float(total_paid),
+            "total_invoiced": float(total_invoiced),
+            "revenue": float(revenue),
             "expenses": float(total_expenses),
-            "net_profit": float(net_profit),
+            "net_profit": net_profit,
+            "due_amount": due_amount if due_amount > 0 else 0,
             "vat_collected": float(total_vat),
             "invoice_count": invoices.count(),
             "customer_count": org.customers.count(),
@@ -180,8 +185,31 @@ class MonthlyReportView(APIView):
 
         if export == "pdf":
             return self.export_pdf(org, report_data)
+        if export == "csv":
+            return self.export_csv(report_data)
         
         return Response(report_data)
+
+    def export_csv(self, data):
+        import csv
+        response = HttpResponse(content_type='text/csv')
+        filename = f"Financial_Report_{data['month']}_{data['year']}.csv"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Monthly Financial Report', f"{data['month']}/{data['year']}"])
+        writer.writerow([])
+        writer.writerow(['Metric', 'Amount (Rs.)'])
+        writer.writerow(['Total Invoiced', f"{data['total_invoiced']:.2f}"])
+        writer.writerow(['Revenue (Collected)', f"{data['revenue']:.2f}"])
+        writer.writerow(['Total Expenses', f"{data['expenses']:.2f}"])
+        writer.writerow(['Net Profit', f"{data['net_profit']:.2f}"])
+        writer.writerow(['Outstanding Due (Monthly)', f"{data['due_amount']:.2f}"])
+        writer.writerow(['VAT Collected', f"{data['vat_collected']:.2f}"])
+        writer.writerow(['Total Invoices', data['invoice_count']])
+        writer.writerow(['Total Customers', data['customer_count']])
+        
+        return response
 
     def export_pdf(self, org, data):
         # Using reportlab directly for specialized report
@@ -203,10 +231,11 @@ class MonthlyReportView(APIView):
         
         table_data = [
             ['Metric', 'Value'],
-            ['Total Revenue', f"Rs. {data['revenue']:,.2f}"],
-            ['Paid Revenue', f"Rs. {data['paid_revenue']:,.2f}"],
+            ['Total Invoiced', f"Rs. {data['total_invoiced']:,.2f}"],
+            ['Revenue (Collected)', f"Rs. {data['revenue']:,.2f}"],
             ['Total Expenses', f"Rs. {data['expenses']:,.2f}"],
             ['Net Profit', f"Rs. {data['net_profit']:,.2f}"],
+            ['Outstanding Due', f"Rs. {data['due_amount']:,.2f}"],
             ['VAT Collected', f"Rs. {data['vat_collected']:,.2f}"],
             ['Invoices Generated', str(data['invoice_count'])],
             ['Total Customers', str(data['customer_count'])],
