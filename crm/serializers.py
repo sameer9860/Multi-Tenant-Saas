@@ -17,8 +17,9 @@ class InteractionSerializer(serializers.ModelSerializer):
 
 class ReminderSerializer(serializers.ModelSerializer):
     user_name = serializers.StringRelatedField(source="user", read_only=True)
-    lead_name = serializers.CharField(source="lead.name", read_only=True)
-    client_name = serializers.CharField(source="client.name", read_only=True)
+    # Using StringRelatedField is safer for null foreign keys
+    lead_name = serializers.StringRelatedField(source="lead", read_only=True)
+    client_name = serializers.StringRelatedField(source="client", read_only=True)
     class Meta:
         model = Reminder
         fields = "__all__"
@@ -26,7 +27,7 @@ class ReminderSerializer(serializers.ModelSerializer):
 
 class LeadActivitySerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField()
-    lead_name = serializers.CharField(source="lead.name", read_only=True)
+    lead_name = serializers.StringRelatedField(source="lead", read_only=True)
     class Meta:
         model = LeadActivity
         fields = ["id", "organization", "lead", "lead_name", "user", "action", "old_value", "new_value", "created_at"]
