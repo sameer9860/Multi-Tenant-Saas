@@ -101,6 +101,7 @@ const Pipeline = () => {
   const groupedLeads = {
     NEW: leads.filter((l) => l.status === "NEW"),
     CONTACTED: leads.filter((l) => l.status === "CONTACTED"),
+    INTERESTED: leads.filter((l) => l.status === "INTERESTED"),
     CONVERTED: leads.filter((l) => l.status === "CONVERTED"),
     LOST: leads.filter((l) => l.status === "LOST"),
   };
@@ -135,19 +136,32 @@ const Pipeline = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100vh-250px)] overflow-x-auto pb-4">
-            <Column status="NEW" title="New Leads" leads={groupedLeads.NEW} />
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 h-[calc(100vh-250px)] overflow-x-auto pb-4 min-w-[1200px]">
+            <Column
+              status="NEW"
+              title="New Leads"
+              leads={groupedLeads.NEW || []}
+            />
             <Column
               status="CONTACTED"
               title="Contacted"
-              leads={groupedLeads.CONTACTED}
+              leads={groupedLeads.CONTACTED || []}
+            />
+            <Column
+              status="INTERESTED"
+              title="Interested"
+              leads={groupedLeads.INTERESTED || []}
             />
             <Column
               status="CONVERTED"
               title="Converted"
-              leads={groupedLeads.CONVERTED}
+              leads={groupedLeads.CONVERTED || []}
             />
-            <Column status="LOST" title="Lost" leads={groupedLeads.LOST} />
+            <Column
+              status="LOST"
+              title="Lost"
+              leads={groupedLeads.LOST || []}
+            />
           </div>
 
           <DragOverlay>
