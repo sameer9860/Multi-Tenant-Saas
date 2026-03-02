@@ -15,6 +15,7 @@ import InvoiceDetail from './pages/InvoiceDetail';
 import Team from './pages/dashboard/accounts/Team';
 import CreateMember from './pages/dashboard/accounts/CreateMember';
 import Expenses from './pages/dashboard/crm/Expenses';
+import Reminders from './pages/dashboard/crm/Reminders';
 import CustomerDetail from './pages/customers/CustomerDetail';
 import CustomerList from './pages/customers/CustomerList';
 import Reports from './pages/Reports';
@@ -78,6 +79,12 @@ function App() {
         <Route path="/dashboard/crm/activity" element={
           <ProtectedRoute>
             <ActivityLog />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/crm/reminders" element={
+          <ProtectedRoute>
+            <Reminders />
           </ProtectedRoute>
         } />
 
