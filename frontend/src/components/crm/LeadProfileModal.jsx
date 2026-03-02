@@ -55,16 +55,21 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
       });
       setNoteContent("");
       fetchData();
+      if (onUpdate) onUpdate();
     } catch (err) {
       console.error(err);
+      alert("Failed to save note: " + (err.message || "Unknown error"));
     }
   };
 
   const handleLogInteraction = async (e) => {
     e.preventDefault();
     try {
+      // Normalize date to ISO string
+      const isoDate = new Date(interactionData.date).toISOString();
       await api.post("/api/crm/interactions/", {
         ...interactionData,
+        date: isoDate,
         lead: lead.id,
       });
       setInteractionData({
@@ -73,19 +78,29 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
         date: new Date().toISOString().slice(0, 16),
       });
       fetchData();
+      if (onUpdate) onUpdate();
     } catch (err) {
       console.error(err);
+      alert("Failed to log interaction: " + (err.message || "Unknown error"));
     }
   };
 
   const handleSetReminder = async (e) => {
     e.preventDefault();
     try {
-      await api.post("/api/crm/reminders/", { ...reminderData, lead: lead.id });
+      // Normalize date to ISO string
+      const isoDate = new Date(reminderData.remind_at).toISOString();
+      await api.post("/api/crm/reminders/", {
+        ...reminderData,
+        remind_at: isoDate,
+        lead: lead.id,
+      });
       setReminderData({ title: "", description: "", remind_at: "" });
       fetchData();
+      if (onUpdate) onUpdate();
     } catch (err) {
       console.error(err);
+      alert("Failed to set reminder: " + (err.message || "Unknown error"));
     }
   };
 
@@ -95,8 +110,10 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
         is_completed: !currentStatus,
       });
       fetchData();
+      if (onUpdate) onUpdate();
     } catch (err) {
       console.error(err);
+      alert("Failed to update reminder: " + (err.message || "Unknown error"));
     }
   };
 
