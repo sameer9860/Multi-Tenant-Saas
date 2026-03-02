@@ -3,11 +3,16 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
-from django.db.models import Sum, Count
+from django.db import transaction
+from rest_framework.decorators import action
+from django.db.models import Sum
 from django.db.models.functions import TruncMonth
-from .models import Lead, Client, LeadActivity, Expense
+from .models import Lead, Client, LeadActivity, Expense, Note, Interaction, Reminder
 from apps.invoices.models import Invoice, Customer, Payment
-from .serializers import LeadSerializer, ClientSerializer, LeadActivitySerializer, ExpenseSerializer
+from .serializers import (
+    LeadSerializer, ClientSerializer, LeadActivitySerializer, 
+    ExpenseSerializer, NoteSerializer, InteractionSerializer, ReminderSerializer
+)
 from .permissions import IsAdminOrReadOnly, IsAdminOwnerOrStaffUpdate
 from apps.subscriptions.limits import PLAN_LIMITS
 
@@ -59,6 +64,43 @@ class LeadViewSet(viewsets.ModelViewSet):
                 new_value=updated_lead.status
             )
 
+    @action(detail=True, methods=['post'])
+    @transaction.atomic
+    def convert_to_customer(self, request, pk=None):
+        lead = self.get_object()
+        org = lead.organization
+        
+        if lead.status == "CONVERTED":
+            return Response({"error": "Lead is already converted"}, status=400)
+            
+        # Create Customer in invoices app
+        customer = Customer.objects.create(
+            organization=org,
+            name=lead.name,
+            email=lead.email,
+            phone=lead.phone
+        )
+        
+        # Update Lead status
+        old_status = lead.status
+        lead.status = "CONVERTED"
+        lead.save()
+        
+        # Log Activity
+        LeadActivity.objects.create(
+            organization=org,
+            lead=lead,
+            user=request.user,
+            action="CONVERTED_TO_CUSTOMER",
+            old_value=old_status,
+            new_value="CONVERTED"
+        )
+        
+        return Response({
+            "status": "Lead converted successfully",
+            "customer_id": customer.id
+        })
+
 
 
 class LeadActivityViewSet(viewsets.ReadOnlyModelViewSet):
@@ -76,6 +118,10 @@ class LeadActivityViewSet(viewsets.ReadOnlyModelViewSet):
         
         if user_role == 'STAFF':
             queryset = queryset.filter(lead__assigned_to=user)
+
+        lead_id = self.request.query_params.get('lead')
+        if lead_id:
+            queryset = queryset.filter(lead_id=lead_id)
 
         return queryset.order_by("-created_at")
 
@@ -117,6 +163,72 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
         serializer.save(organization=org)
+
+class NoteViewSet(viewsets.ModelViewSet):
+    serializer_class = NoteSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        queryset = Note.objects.filter(organization=org)
+        lead_id = self.request.query_params.get('lead')
+        client_id = self.request.query_params.get('client')
+        customer_id = self.request.query_params.get('customer')
+        
+        if lead_id: queryset = queryset.filter(lead_id=lead_id)
+        if client_id: queryset = queryset.filter(client_id=client_id)
+        if customer_id: queryset = queryset.filter(customer_id=customer_id)
+        
+        return queryset
+
+    def perform_create(self, serializer):
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        serializer.save(organization=org, user=self.request.user)
+
+class InteractionViewSet(viewsets.ModelViewSet):
+    serializer_class = InteractionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        queryset = Interaction.objects.filter(organization=org)
+        
+        lead_id = self.request.query_params.get('lead')
+        client_id = self.request.query_params.get('client')
+        customer_id = self.request.query_params.get('customer')
+        
+        if lead_id: queryset = queryset.filter(lead_id=lead_id)
+        if client_id: queryset = queryset.filter(client_id=client_id)
+        if customer_id: queryset = queryset.filter(customer_id=customer_id)
+        
+        return queryset.order_by('-date')
+
+    def perform_create(self, serializer):
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        serializer.save(organization=org, user=self.request.user)
+
+class ReminderViewSet(viewsets.ModelViewSet):
+    serializer_class = ReminderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        queryset = Reminder.objects.filter(organization=org)
+        
+        if self.request.query_params.get('completed') == 'true':
+            queryset = queryset.filter(is_completed=True)
+        elif self.request.query_params.get('completed') == 'false':
+            queryset = queryset.filter(is_completed=False)
+            
+        lead_id = self.request.query_params.get('lead')
+        if lead_id:
+            queryset = queryset.filter(lead_id=lead_id)
+
+        return queryset.order_by('remind_at')
+
+    def perform_create(self, serializer):
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        serializer.save(organization=org, user=self.request.user)
 
 
 class DashboardView(APIView):
@@ -181,6 +293,7 @@ class DashboardView(APIView):
         status_counts = {
             "NEW": org.leads.filter(status="NEW").count(),
             "CONTACTED": org.leads.filter(status="CONTACTED").count(),
+            "INTERESTED": org.leads.filter(status="INTERESTED").count(),
             "CONVERTED": org.leads.filter(status="CONVERTED").count(),
             "LOST": org.leads.filter(status="LOST").count(),
         }
