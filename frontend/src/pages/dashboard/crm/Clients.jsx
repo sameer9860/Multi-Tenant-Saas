@@ -2,12 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../../components/DashboardLayout";
 import api from "../../../services/api";
+import LeadProfileModal from "../../../components/crm/LeadProfileModal";
 
 const Clients = () => {
   const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -18,16 +21,20 @@ const Clients = () => {
       const data = await api.get("/api/crm/leads/?status=CONVERTED");
       setClients(data.filter((l) => l.status === "CONVERTED"));
     } catch (err) {
-      if (err.code === 401) {
+      if (err.status === 401) {
         localStorage.clear();
         navigate("/login");
       } else {
-        setError(err.message);
+        setError(err.message || "Failed to fetch clients.");
       }
     } finally {
       setLoading(false);
     }
   }, [navigate]);
+  const handleViewProfile = (client) => {
+    setSelectedClient(client);
+    setProfileModalOpen(true);
+  };
 
   useEffect(() => {
     if (!token) {
@@ -135,7 +142,8 @@ const Clients = () => {
                   {clients.map((client) => (
                     <tr
                       key={client.id}
-                      className="hover:bg-indigo-50/20 transition-all duration-300 group"
+                      onClick={() => handleViewProfile(client)}
+                      className="hover:bg-indigo-50/20 transition-all duration-300 group cursor-pointer"
                     >
                       <td className="px-8 py-7">
                         <div className="flex items-center gap-4">
@@ -190,6 +198,12 @@ const Clients = () => {
           )}
         </div>
       </div>
+      <LeadProfileModal
+        lead={selectedClient}
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        onUpdate={fetchClients}
+      />
     </DashboardLayout>
   );
 };
