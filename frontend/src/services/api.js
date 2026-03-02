@@ -144,6 +144,13 @@ class APIService {
   }
 
   /**
+   * PATCH request
+   */
+  async patch(endpoint, body) {
+    return this.request(endpoint, { method: 'PATCH', body });
+  }
+
+  /**
    * DELETE request
    */
   async delete(endpoint) {
