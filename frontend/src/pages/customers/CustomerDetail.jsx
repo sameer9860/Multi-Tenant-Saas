@@ -12,7 +12,7 @@ const CustomerDetail = () => {
     loading: customerLoading,
     error: customerError,
   } = useCustomer(id);
-  const { invoices, loading: invoicesLoading } = useInvoices();
+  const { invoices } = useInvoices();
   const [activeTab, setActiveTab] = useState("overview");
 
   const customerInvoices = invoices.filter((inv) => {
