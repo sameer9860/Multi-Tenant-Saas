@@ -183,6 +183,8 @@ class NoteViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
         serializer.save(organization=org, user=self.request.user)
 
 class InteractionViewSet(viewsets.ModelViewSet):
@@ -205,6 +207,8 @@ class InteractionViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
         serializer.save(organization=org, user=self.request.user)
 
 class ReminderViewSet(viewsets.ModelViewSet):
@@ -228,6 +232,8 @@ class ReminderViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
         serializer.save(organization=org, user=self.request.user)
 
 
