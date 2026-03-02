@@ -5,6 +5,8 @@
  */
 
 export const ENDPOINTS = {
+
+
   // Analytics endpoints - Routes to /analytics/usage/
   analytics: {
     usage: '/analytics/usage/',
