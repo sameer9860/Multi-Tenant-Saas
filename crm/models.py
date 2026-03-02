@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from apps.core.models import Organization   
+from apps.core.models import Organization
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -8,6 +9,7 @@ class Lead(models.Model):
 
     STATUS_CHOICES = [
         ("NEW", "New"),
+        ("INTERESTED", "Interested"),
         ("CONTACTED", "Contacted"),
         ("CONVERTED", "Converted"),
         ("LOST", "Lost"),
@@ -105,3 +107,56 @@ class Expense(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.amount}"
+
+class Note(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="all_notes"
+    )
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="crm_notes", null=True, blank=True)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="crm_notes", null=True, blank=True)
+    customer = models.ForeignKey("invoices.Customer", on_delete=models.CASCADE, related_name="crm_notes", null=True, blank=True)
+    
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Interaction(models.Model):
+    TYPE_CHOICES = [
+        ("CALL", "Call"),
+        ("EMAIL", "Email"),
+        ("MEETING", "Meeting"),
+        ("NOTE", "Other"),
+    ]
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="all_interactions"
+    )
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="crm_interactions", null=True, blank=True)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="crm_interactions", null=True, blank=True)
+    customer = models.ForeignKey("invoices.Customer", on_delete=models.CASCADE, related_name="crm_interactions", null=True, blank=True)
+    
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    summary = models.TextField()
+    date = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Reminder(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="all_reminders"
+    )
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="crm_reminders", null=True, blank=True)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="crm_reminders", null=True, blank=True)
+    customer = models.ForeignKey("invoices.Customer", on_delete=models.CASCADE, related_name="crm_reminders", null=True, blank=True)
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    remind_at = models.DateTimeField()
+    is_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
