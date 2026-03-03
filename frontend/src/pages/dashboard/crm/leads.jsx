@@ -19,6 +19,11 @@ const Leads = () => {
     status: "NEW",
     assigned_to: "",
   });
+  const [members, setMembers] = useState([]);
+
+  // Advanced Search & Filter States
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   // Get user from localStorage
   const token = localStorage.getItem("token");
@@ -56,6 +61,22 @@ const Leads = () => {
       return;
     }
     fetchLeads();
+
+    // Fetch members for assignment dropdown
+    const fetchMembers = async () => {
+      try {
+        const response = await fetch("/api/accounts/members/", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setMembers(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch members:", err);
+      }
+    };
+    fetchMembers();
   }, [token, navigate, fetchLeads]);
 
   const handleSaveLead = async (e) => {
@@ -134,6 +155,64 @@ const Leads = () => {
     );
   };
 
+  const filteredLeads = leads.filter((lead) => {
+    const matchesSearch =
+      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (lead.email &&
+        lead.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.phone && lead.phone.includes(searchTerm));
+
+    const matchesStatus =
+      statusFilter === "ALL" || lead.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const handleExportCSV = () => {
+    if (filteredLeads.length === 0) return;
+
+    const headers = [
+      "ID",
+      "Name",
+      "Email",
+      "Phone",
+      "Status",
+      "Source",
+      "Assigned To",
+      "Created At",
+    ];
+    const csvRows = [
+      headers.join(","),
+      ...filteredLeads.map((lead) =>
+        [
+          lead.id,
+          `"${lead.name.replace(/"/g, '""')}"`,
+          `"${(lead.email || "").replace(/"/g, '""')}"`,
+          `"${(lead.phone || "").replace(/"/g, '""')}"`,
+          lead.status,
+          `"${(lead.source || "Direct").replace(/"/g, '""')}"`,
+          `"${(lead.assigned_to_name || lead.assigned_to || "")
+            .toString()
+            .replace(/"/g, '""')}"`,
+          new Date(lead.created_at).toLocaleDateString(),
+        ].join(","),
+      ),
+    ];
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `leads_export_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
@@ -148,24 +227,101 @@ const Leads = () => {
             </p>
           </div>
 
-          {(userRole === "ADMIN" || userRole === "OWNER") && (
+          <div className="flex gap-4">
             <button
-              onClick={() => setModalOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
+              onClick={handleExportCSV}
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-6 py-3 rounded-xl font-bold transition-all active:scale-95 flex items-center gap-2 shadow-sm"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+                className="h-5 w-5 text-slate-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
                 <path
-                  fillRule="evenodd"
-                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                  clipRule="evenodd"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                 />
               </svg>
-              Add New Lead
+              Export CSV
+            </button>
+            {(userRole === "ADMIN" || userRole === "OWNER") && (
+              <button
+                onClick={() => setModalOpen(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Add New Lead
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row gap-4 items-center">
+          <div className="relative flex-1 group">
+            <svg
+              className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search by name, email, or phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-slate-800"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest hidden md:block">
+              Status:
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all appearance-none min-w-[150px]"
+            >
+              <option value="ALL">All Stages</option>
+              <option value="NEW">New</option>
+              <option value="CONTACTED">Contacted</option>
+              <option value="INTERESTED">Interested</option>
+              <option value="CONVERTED">Converted</option>
+              <option value="LOST">Lost</option>
+            </select>
+          </div>
+          {(searchTerm || statusFilter !== "ALL") && (
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setStatusFilter("ALL");
+              }}
+              className="text-xs font-black text-rose-500 uppercase tracking-widest hover:text-rose-600 transition-colors px-2"
+            >
+              Clear
             </button>
           )}
         </div>
@@ -248,7 +404,7 @@ const Leads = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-50">
-                  {leads.map((lead, index) => (
+                  {filteredLeads.map((lead, index) => (
                     <tr
                       key={lead.id}
                       className="hover:bg-slate-50/50 transition-colors group"
@@ -276,7 +432,7 @@ const Leads = () => {
                         {renderStatus(lead.status)}
                       </td>
                       <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500 font-medium">
-                        {lead.assigned_to || "Unassigned"}
+                        {lead.assigned_to_name || "Unassigned"}
                       </td>
                       <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -455,15 +611,20 @@ const Leads = () => {
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">
                     Assigned To
                   </label>
-                  <input
-                    type="text"
-                    value={newLead.assigned_to}
+                  <select
+                    value={newLead.assigned_to || ""}
                     onChange={(e) =>
                       setNewLead({ ...newLead, assigned_to: e.target.value })
                     }
-                    className="w-full px-5 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-slate-800"
-                    placeholder="Staff member name"
-                  />
+                    className="w-full px-5 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-slate-800 appearance-none bg-white"
+                  >
+                    <option value="">Unassigned</option>
+                    {members.map((member) => (
+                      <option key={member.id} value={member.user_id}>
+                        {member.full_name} ({member.role_name})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
