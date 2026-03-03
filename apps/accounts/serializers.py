@@ -10,13 +10,13 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['role']
 
 class OrganizationMemberSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     full_name = serializers.CharField(source='user.full_name', read_only=True)
     phone = serializers.CharField(source='user.phone', read_only=True)
-    
     role_name = serializers.CharField(source='role.name', read_only=True)
     
     class Meta:
         model = OrganizationMember
-        fields = ['id', 'email', 'full_name', 'phone', 'role', 'role_name', 'created_at']
+        fields = ['id', 'user_id', 'email', 'full_name', 'phone', 'role', 'role_name', 'created_at']
         read_only_fields = ['role']
