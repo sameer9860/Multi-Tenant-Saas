@@ -15,6 +15,7 @@ const Pipeline = () => {
   const [activeId, setActiveId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -98,12 +99,20 @@ const Pipeline = () => {
     }
   };
 
+  const filteredLeads = leads.filter((lead) => {
+    return (
+      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (lead.email &&
+        lead.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  });
+
   const groupedLeads = {
-    NEW: leads.filter((l) => l.status === "NEW"),
-    CONTACTED: leads.filter((l) => l.status === "CONTACTED"),
-    INTERESTED: leads.filter((l) => l.status === "INTERESTED"),
-    CONVERTED: leads.filter((l) => l.status === "CONVERTED"),
-    LOST: leads.filter((l) => l.status === "LOST"),
+    NEW: filteredLeads.filter((l) => l.status === "NEW"),
+    CONTACTED: filteredLeads.filter((l) => l.status === "CONTACTED"),
+    INTERESTED: filteredLeads.filter((l) => l.status === "INTERESTED"),
+    CONVERTED: filteredLeads.filter((l) => l.status === "CONVERTED"),
+    LOST: filteredLeads.filter((l) => l.status === "LOST"),
   };
 
   const activeLead = activeId
@@ -131,6 +140,33 @@ const Pipeline = () => {
       subtitle="Drag and drop leads to update their status"
     >
       <div className="h-full">
+        {/* Search Bar */}
+        <div className="mb-6 max-w-md">
+          <div className="relative group">
+            <svg
+              className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search leads in pipeline..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-slate-800 bg-white"
+            />
+          </div>
+        </div>
+
         <DndContext
           sensors={sensors}
           onDragStart={handleDragStart}
