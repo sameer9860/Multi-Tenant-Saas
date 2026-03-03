@@ -12,6 +12,7 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
   const [notes, setNotes] = useState([]);
   const [interactions, setInteractions] = useState([]);
   const [reminders, setReminders] = useState([]);
+  const [activities, setActivities] = useState([]);
 
   // Form states
   const [newNote, setNewNote] = useState({ content: "" });
@@ -37,14 +38,17 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
   const fetchRelatedData = async () => {
     if (!lead) return;
     try {
-      const [notesData, interactionsData, remindersData] = await Promise.all([
-        api.get(`/api/crm/notes/?lead=${lead.id}`),
-        api.get(`/api/crm/interactions/?lead=${lead.id}`),
-        api.get(`/api/crm/reminders/?lead=${lead.id}`),
-      ]);
+      const [notesData, interactionsData, remindersData, activitiesData] =
+        await Promise.all([
+          api.get(`/api/crm/notes/?lead=${lead.id}`),
+          api.get(`/api/crm/interactions/?lead=${lead.id}`),
+          api.get(`/api/crm/reminders/?lead=${lead.id}`),
+          api.get(`/api/crm/activities/?lead=${lead.id}`),
+        ]);
       setNotes(notesData);
       setInteractions(interactionsData);
       setReminders(remindersData);
+      setActivities(activitiesData);
     } catch (err) {
       console.error("Failed to fetch related data:", err);
     }
@@ -134,6 +138,19 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
     });
   };
 
+  const getTimelineData = () => {
+    const combined = [
+      ...notes.map((n) => ({ ...n, timelineType: "NOTE", date: n.created_at })),
+      ...interactions.map((i) => ({ ...i, timelineType: "INTERACTION" })),
+      ...activities.map((a) => ({
+        ...a,
+        timelineType: "ACTIVITY",
+        date: a.created_at,
+      })),
+    ];
+    return combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-white rounded-[2.5rem] w-full max-w-5xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-white/20">
@@ -196,6 +213,7 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
         <div className="px-8 mt-8 border-b border-slate-100 flex gap-8">
           {[
             { id: "overview", label: "Overview" },
+            { id: "timeline", label: "Timeline" },
             { id: "notes", label: "Notes" },
             { id: "interactions", label: "Interactions" },
             { id: "reminders", label: "Follow-up Reminders" },
@@ -373,6 +391,119 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "timeline" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="relative pl-8 space-y-8 pt-4">
+                {/* Vertical Line */}
+                <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-slate-100 rounded-full"></div>
+
+                {getTimelineData().length === 0 ? (
+                  <div className="py-20 text-center bg-white rounded-[2rem] border border-slate-100 border-dashed">
+                    <p className="text-slate-400 font-bold italic">
+                      No activity recorded yet.
+                    </p>
+                  </div>
+                ) : (
+                  getTimelineData().map((item, idx) => (
+                    <div
+                      key={`${item.timelineType}-${item.id}`}
+                      className="relative group"
+                    >
+                      {/* Timeline Dot */}
+                      <div
+                        className={`absolute -left-8 top-1.5 w-4 h-4 rounded-full border-4 border-white shadow-sm z-10 transition-transform group-hover:scale-125 ${
+                          item.timelineType === "ACTIVITY"
+                            ? "bg-emerald-500"
+                            : item.timelineType === "INTERACTION"
+                              ? "bg-indigo-500"
+                              : "bg-amber-500"
+                        }`}
+                      ></div>
+
+                      <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                                item.timelineType === "ACTIVITY"
+                                  ? "bg-emerald-50 text-emerald-600"
+                                  : item.timelineType === "INTERACTION"
+                                    ? "bg-indigo-50 text-indigo-600"
+                                    : "bg-amber-50 text-amber-600"
+                              }`}
+                            >
+                              {item.timelineType}
+                            </span>
+                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                              {formatDate(item.date)}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-bold text-slate-400">
+                            By {item.user_name || item.user || "System"}
+                          </span>
+                        </div>
+
+                        {item.timelineType === "ACTIVITY" && (
+                          <div className="text-sm font-bold text-slate-700">
+                            {item.action === "CREATED" ? (
+                              <span>Lead was created</span>
+                            ) : item.action === "STATUS_CHANGED" ? (
+                              <span className="flex items-center gap-2">
+                                Status changed from
+                                <span className="px-1.5 py-0.5 bg-slate-50 border rounded text-[10px] uppercase font-medium">
+                                  {item.old_value}
+                                </span>
+                                <svg
+                                  className="w-3 h-3 text-slate-300"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="3"
+                                    d="M13 7l5 5m0 0l-5 5m5-5H6"
+                                  />
+                                </svg>
+                                <span className="px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded text-[10px] uppercase font-black">
+                                  {item.new_value}
+                                </span>
+                              </span>
+                            ) : item.action === "CONVERTED_TO_CUSTOMER" ? (
+                              <span className="text-emerald-600">
+                                Lead converted to Customer
+                              </span>
+                            ) : (
+                              <span>{item.action.replace(/_/g, " ")}</span>
+                            )}
+                          </div>
+                        )}
+
+                        {item.timelineType === "INTERACTION" && (
+                          <div>
+                            <p className="text-sm font-black text-slate-800 uppercase tracking-tight mb-1">
+                              {item.type}
+                            </p>
+                            <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                              {item.summary}
+                            </p>
+                          </div>
+                        )}
+
+                        {item.timelineType === "NOTE" && (
+                          <p className="text-sm text-slate-700 font-medium leading-relaxed whitespace-pre-wrap">
+                            {item.content}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
