@@ -50,11 +50,13 @@ class LeadViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         lead = self.get_object()
         old_status = lead.status
+        old_assignee = lead.assigned_to
 
         updated_lead = serializer.save()
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
 
+        # Log Status Change
         if old_status != updated_lead.status:
-            org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
             LeadActivity.objects.create(
                 organization=org,
                 lead=updated_lead,
@@ -62,6 +64,17 @@ class LeadViewSet(viewsets.ModelViewSet):
                 action="STATUS_CHANGED",
                 old_value=old_status,
                 new_value=updated_lead.status
+            )
+        
+        # Log Assignee Change
+        if old_assignee != updated_lead.assigned_to:
+            LeadActivity.objects.create(
+                organization=org,
+                lead=updated_lead,
+                user=self.request.user,
+                action="REASSIGNED",
+                old_value=str(old_assignee) if old_assignee else "None",
+                new_value=str(updated_lead.assigned_to) if updated_lead.assigned_to else "None"
             )
 
     @action(detail=True, methods=['post'])
