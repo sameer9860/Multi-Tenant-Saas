@@ -15,16 +15,32 @@ const CreateLead = () => {
     status: "NEW",
     assigned_to: "",
   });
+  const [members, setMembers] = useState([]);
 
   // Get user from localStorage
   const userRole = localStorage.getItem("user_role") || "STAFF";
 
-  // Redirect to login if no token, or leads list if unauthorized
   React.useEffect(() => {
     if (!token) {
       navigate("/login");
     } else if (userRole !== "ADMIN" && userRole !== "OWNER") {
       navigate("/dashboard/crm/leads");
+    } else {
+      // Fetch organization members for Assignment dropdown
+      const fetchMembers = async () => {
+        try {
+          const response = await fetch("/api/accounts/members/", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setMembers(data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch members:", err);
+        }
+      };
+      fetchMembers();
     }
   }, [token, userRole, navigate]);
 
@@ -186,6 +202,7 @@ const CreateLead = () => {
               >
                 <option value="NEW">New</option>
                 <option value="CONTACTED">Contacted</option>
+                <option value="INTERESTED">Interested</option>
                 <option value="CONVERTED">Converted</option>
                 <option value="LOST">Lost</option>
               </select>
@@ -194,16 +211,21 @@ const CreateLead = () => {
             {/* Assigned To Field */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">
-                Assigned To (User ID)
+                Assigned To
               </label>
-              <input
-                type="number"
+              <select
                 name="assigned_to"
                 value={formData.assigned_to}
                 onChange={handleInputChange}
-                placeholder="Leave empty for unassigned"
                 className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-              />
+              >
+                <option value="">Unassigned</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.user_id}>
+                    {member.full_name} ({member.role_name})
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Form Actions */}
