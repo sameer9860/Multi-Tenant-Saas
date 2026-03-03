@@ -33,6 +33,8 @@ class LeadActivitySerializer(serializers.ModelSerializer):
         fields = ["id", "organization", "lead", "lead_name", "user", "action", "old_value", "new_value", "created_at"]
 
 class LeadSerializer(serializers.ModelSerializer):
+    assigned_to_name = serializers.StringRelatedField(source="assigned_to", read_only=True)
+    
     class Meta:
         model = Lead
         fields = "__all__"
