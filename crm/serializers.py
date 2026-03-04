@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Lead, Client, LeadActivity, Expense, Note, Interaction, Reminder
+from .models import Lead, Client, LeadActivity, Expense, Note, Interaction, Reminder, Tag
+
 
 class NoteSerializer(serializers.ModelSerializer):
     user_name = serializers.StringRelatedField(source="user", read_only=True)
@@ -25,7 +26,14 @@ class ReminderSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["organization", "user"]
 
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = "__all__"
+        read_only_fields = ["organization"]
+
 class LeadActivitySerializer(serializers.ModelSerializer):
+
     user = serializers.StringRelatedField()
     lead_name = serializers.StringRelatedField(source="lead", read_only=True)
     class Meta:
@@ -34,11 +42,13 @@ class LeadActivitySerializer(serializers.ModelSerializer):
 
 class LeadSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.StringRelatedField(source="assigned_to", read_only=True)
+    tags_detail = TagSerializer(source="tags", many=True, read_only=True)
     
     class Meta:
         model = Lead
         fields = "__all__"
         read_only_fields = ["organization"]
+
 
 
 class ClientSerializer(serializers.ModelSerializer):
