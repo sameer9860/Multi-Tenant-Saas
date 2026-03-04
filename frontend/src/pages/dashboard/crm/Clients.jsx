@@ -18,8 +18,9 @@ const Clients = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.get("/api/crm/leads/?status=CONVERTED");
-      setClients(data.filter((l) => l.status === "CONVERTED"));
+      const response = await api.get("/api/crm/leads/?status=CONVERTED");
+      const data = response.results || response;
+      setClients(data);
     } catch (err) {
       if (err.status === 401) {
         localStorage.clear();
