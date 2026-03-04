@@ -5,6 +5,22 @@ from django.utils import timezone
 
 User = get_user_model()
 
+class Tag(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="tags"
+    )
+    name = models.CharField(max_length=50)
+    color = models.CharField(max_length=20, default="#3b82f6") # Default blue
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        unique_together = ('organization', 'name')
+
+
 class Lead(models.Model):
 
     STATUS_CHOICES = [
@@ -39,7 +55,10 @@ class Lead(models.Model):
         blank=True
     )
 
+    tags = models.ManyToManyField(Tag, blank=True, related_name="leads")
+
     created_at = models.DateTimeField(auto_now_add=True)
+
 
     def __str__(self):
         return self.name
