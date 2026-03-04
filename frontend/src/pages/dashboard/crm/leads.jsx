@@ -20,6 +20,13 @@ const Leads = () => {
     assigned_to: "",
   });
   const [members, setMembers] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  // Pagination States
+  const [page, setPage] = useState(1);
+  const [totalLeads, setTotalLeads] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPrevPage, setHasPrevPage] = useState(false);
 
   // Advanced Search & Filter States
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,9 +40,14 @@ const Leads = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/crm/leads/", {
+      let url = `/api/crm/leads/?page=${page}`;
+      if (searchTerm) url += `&search=${searchTerm}`;
+      if (statusFilter !== "ALL") url += `&status=${statusFilter}`;
+
+      const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (response.status === 401) {
         localStorage.clear();
         navigate("/login");
@@ -46,14 +58,22 @@ const Leads = () => {
         );
       } else {
         const data = await response.json();
-        setLeads(data);
+        // Handle pagination response (DRF returns { count, next, previous, results })
+        if (data.results) {
+          setLeads(data.results);
+          setTotalLeads(data.count);
+          setHasNextPage(!!data.next);
+          setHasPrevPage(!!data.previous);
+        } else {
+          setLeads(data); // Fallback for non-paginated and simple arrays
+        }
       }
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [token, navigate]);
+  }, [token, navigate, page, searchTerm, statusFilter]);
 
   useEffect(() => {
     if (!token) {
@@ -137,6 +157,20 @@ const Leads = () => {
     setProfileModalOpen(true);
   };
 
+  const renderTag = (tag) => (
+    <span
+      key={tag.id}
+      className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight mr-1 mb-1 border"
+      style={{
+        backgroundColor: `${tag.color}15`,
+        color: tag.color,
+        borderColor: `${tag.color}30`,
+      }}
+    >
+      {tag.name}
+    </span>
+  );
+
   const renderStatus = (status) => {
     const colors = {
       NEW: "bg-blue-100/80 text-blue-700 border border-blue-200",
@@ -155,21 +189,10 @@ const Leads = () => {
     );
   };
 
-  const filteredLeads = leads.filter((lead) => {
-    const matchesSearch =
-      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (lead.email &&
-        lead.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (lead.phone && lead.phone.includes(searchTerm));
-
-    const matchesStatus =
-      statusFilter === "ALL" || lead.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
+  const displayLeads = leads;
 
   const handleExportCSV = () => {
-    if (filteredLeads.length === 0) return;
+    if (displayLeads.length === 0) return;
 
     const headers = [
       "ID",
@@ -183,7 +206,7 @@ const Leads = () => {
     ];
     const csvRows = [
       headers.join(","),
-      ...filteredLeads.map((lead) =>
+      ...displayLeads.map((lead) =>
         [
           lead.id,
           `"${lead.name.replace(/"/g, '""')}"`,
@@ -211,6 +234,46 @@ const Leads = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(displayLeads.map((l) => l.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkUpdate = async (updateData) => {
+    try {
+      const response = await fetch("/api/crm/leads/bulk_update/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ids: selectedIds,
+          ...updateData,
+        }),
+      });
+
+      if (response.ok) {
+        setSelectedIds([]);
+        fetchLeads();
+      } else {
+        const err = await response.json();
+        setError(err.error || "Bulk update failed");
+      }
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -292,7 +355,10 @@ const Leads = () => {
               type="text"
               placeholder="Search by name, email, or phone..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
               className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-slate-800"
             />
           </div>
@@ -302,7 +368,10 @@ const Leads = () => {
             </label>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
               className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all appearance-none min-w-[150px]"
             >
               <option value="ALL">All Stages</option>
@@ -383,12 +452,21 @@ const Leads = () => {
               <table className="min-w-full divide-y divide-slate-100">
                 <thead className="bg-slate-50/50">
                   <tr>
-                    <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      S.N
+                    <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-10">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        onChange={handleSelectAll}
+                        checked={
+                          selectedIds.length === displayLeads.length &&
+                          displayLeads.length > 0
+                        }
+                      />
                     </th>
                     <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Name
+                      Name & Tags
                     </th>
+
                     <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Contact Info
                     </th>
@@ -404,22 +482,30 @@ const Leads = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-50">
-                  {filteredLeads.map((lead, index) => (
+                  {displayLeads.map((lead, index) => (
                     <tr
                       key={lead.id}
                       className="hover:bg-slate-50/50 transition-colors group"
                     >
-                      <td className="px-6 py-5 whitespace-nowrap text-xs font-bold text-slate-400">
-                        {index + 1}
+                      <td className="px-6 py-5 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          checked={selectedIds.includes(lead.id)}
+                          onChange={() => handleSelectOne(lead.id)}
+                        />
                       </td>
                       <td className="px-6 py-5 whitespace-nowrap">
-                        <div className="font-bold text-slate-900">
-                          {lead.name}
-                        </div>
-                        <div className="text-xs text-slate-400 font-medium">
-                          Lead #{lead.id}
+                        <div className="flex flex-col">
+                          <div className="font-bold text-slate-900">
+                            {lead.name}
+                          </div>
+                          <div className="flex flex-wrap mt-1">
+                            {lead.tags_detail?.map(renderTag)}
+                          </div>
                         </div>
                       </td>
+
                       <td className="px-6 py-5 whitespace-nowrap">
                         <div className="text-sm font-medium text-slate-600">
                           {lead.email}
@@ -507,6 +593,97 @@ const Leads = () => {
             </div>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {!loading && totalLeads > 25 && (
+          <div className="mt-6 flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <span className="text-sm font-medium text-slate-500">
+              Showing page{" "}
+              <span className="text-slate-900 font-bold">{page}</span>
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={!hasPrevPage}
+                onClick={() => setPage(page - 1)}
+                className={`px-4 py-2 rounded-xl text-sm font-bold border ${
+                  !hasPrevPage
+                    ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 active:scale-95 transition-all"
+                }`}
+              >
+                Previous
+              </button>
+              <button
+                disabled={!hasNextPage}
+                onClick={() => setPage(page + 1)}
+                className={`px-4 py-2 rounded-xl text-sm font-bold border ${
+                  !hasNextPage
+                    ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 active:scale-95 transition-all"
+                }`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk Action Bar */}
+        {selectedIds.length > 0 && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-8 z-50 animate-in slide-in-from-bottom duration-300">
+            <div className="flex items-center gap-4">
+              <span className="bg-indigo-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
+                {selectedIds.length}
+              </span>
+              <span className="font-bold text-sm tracking-wide">
+                Leads Selected
+              </span>
+            </div>
+
+            <div className="h-4 w-[1px] bg-slate-700" />
+
+            <div className="flex items-center gap-4">
+              <select
+                onChange={(e) => handleBulkUpdate({ status: e.target.value })}
+                value=""
+                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+              >
+                <option value="" disabled>
+                  Update Status
+                </option>
+                <option value="NEW">New</option>
+                <option value="CONTACTED">Contacted</option>
+                <option value="INTERESTED">Interested</option>
+                <option value="CONVERTED">Converted</option>
+                <option value="LOST">Lost</option>
+              </select>
+
+              <select
+                onChange={(e) =>
+                  handleBulkUpdate({ assigned_to: e.target.value })
+                }
+                value=""
+                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+              >
+                <option value="" disabled>
+                  Assign To
+                </option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.user_id}>
+                    {m.full_name}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => setSelectedIds([])}
+                className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest px-2 transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create Lead Modal */}
