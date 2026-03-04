@@ -1,4 +1,7 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, pagination
+from django.db import models
+
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -7,23 +10,53 @@ from django.db import transaction
 from rest_framework.decorators import action
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
-from .models import Lead, Client, LeadActivity, Expense, Note, Interaction, Reminder
+from .models import Lead, Client, LeadActivity, Expense, Note, Interaction, Reminder, Tag
+
 from apps.invoices.models import Invoice, Customer, Payment
 from .serializers import (
     LeadSerializer, ClientSerializer, LeadActivitySerializer, 
-    ExpenseSerializer, NoteSerializer, InteractionSerializer, ReminderSerializer
+    ExpenseSerializer, NoteSerializer, InteractionSerializer, ReminderSerializer,
+    TagSerializer
 )
+
 from .permissions import IsAdminOrReadOnly, IsAdminOwnerOrStaffUpdate
 from apps.subscriptions.limits import PLAN_LIMITS
 
 
+class LeadPagination(pagination.PageNumberPagination):
+    page_size = 25
+
+    def paginate_queryset(self, queryset, request, view=None):
+        if request.query_params.get('no_pagination') == 'true':
+            return None
+        return super().paginate_queryset(queryset, request, view)
+
 class LeadViewSet(viewsets.ModelViewSet):
     serializer_class = LeadSerializer
+    pagination_class = LeadPagination
     permission_classes = [IsAuthenticated, IsAdminOwnerOrStaffUpdate]
+
+
 
     def get_queryset(self):
         org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-        return Lead.objects.filter(organization=org)
+        queryset = Lead.objects.filter(organization=org)
+
+        status = self.request.query_params.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                models.Q(name__icontains=search) |
+                models.Q(email__icontains=search) |
+                models.Q(phone__icontains=search)
+            )
+
+        return queryset.order_by('-created_at')
+
+
 
     def perform_create(self, serializer):
         org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
@@ -113,6 +146,70 @@ class LeadViewSet(viewsets.ModelViewSet):
             "status": "Lead converted successfully",
             "customer_id": customer.id
         })
+
+    @action(detail=False, methods=['post'])
+    @transaction.atomic
+    def bulk_update(self, request):
+        ids = request.data.get('ids', [])
+        status = request.data.get('status')
+        assigned_to_id = request.data.get('assigned_to')
+        
+        if not ids:
+            return Response({"error": "No lead IDs provided"}, status=400)
+            
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        leads = Lead.objects.filter(id__in=ids, organization=org)
+        
+        updated_count = 0
+        for lead in leads:
+            old_status = lead.status
+            old_assignee = lead.assigned_to
+            
+            changed = False
+            if status and old_status != status:
+                lead.status = status
+                changed = True
+                LeadActivity.objects.create(
+                    organization=org,
+                    lead=lead,
+                    user=self.request.user,
+                    action="STATUS_CHANGED_BULK",
+                    old_value=old_status,
+                    new_value=status
+                )
+                
+            if assigned_to_id is not None:
+                new_assignee = User.objects.filter(id=assigned_to_id).first()
+                if old_assignee != new_assignee:
+                    lead.assigned_to = new_assignee
+                    changed = True
+                    LeadActivity.objects.create(
+                        organization=org,
+                        lead=lead,
+                        user=self.request.user,
+                        action="REASSIGNED_BULK",
+                        old_value=str(old_assignee) if old_assignee else "None",
+                        new_value=str(new_assignee) if new_assignee else "None"
+                    )
+            
+            if changed:
+                lead.save()
+                updated_count += 1
+                
+        return Response({"status": f"Successfully updated {updated_count} leads"})
+
+class TagViewSet(viewsets.ModelViewSet):
+    serializer_class = TagSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        return Tag.objects.filter(organization=org)
+
+    def perform_create(self, serializer):
+        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        serializer.save(organization=org)
+
 
 
 
