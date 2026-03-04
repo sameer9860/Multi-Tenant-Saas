@@ -125,9 +125,13 @@ const Clients = () => {
               <table className="min-w-full divide-y divide-slate-100">
                 <thead>
                   <tr className="bg-slate-50/50">
+                    <th className="px-8 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] w-12">
+                      S.N.
+                    </th>
                     <th className="px-8 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
                       Customer Entity
                     </th>
+
                     <th className="px-8 py-6 text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
                       Communication
                     </th>
@@ -140,12 +144,15 @@ const Clients = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {clients.map((client) => (
+                  {clients.map((client, index) => (
                     <tr
                       key={client.id}
                       onClick={() => handleViewProfile(client)}
                       className="hover:bg-indigo-50/20 transition-all duration-300 group cursor-pointer"
                     >
+                      <td className="px-8 py-7 text-sm font-black text-slate-300">
+                        {index + 1}
+                      </td>
                       <td className="px-8 py-7">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-indigo-100/50 rounded-xl flex items-center justify-center text-indigo-600 font-black text-lg group-hover:scale-110 transition-transform">
