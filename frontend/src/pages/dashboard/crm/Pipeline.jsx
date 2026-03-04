@@ -28,14 +28,15 @@ const Pipeline = () => {
   const fetchLeads = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("/api/crm/leads/", {
+      const response = await fetch("/api/crm/leads/?no_pagination=true", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) throw new Error("Failed to fetch leads");
 
       const data = await response.json();
-      setLeads(data);
+      setLeads(data.results || data);
+
       setLoading(false);
     } catch (err) {
       setError(err.message);
@@ -103,7 +104,8 @@ const Pipeline = () => {
     return (
       lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (lead.email &&
-        lead.email.toLowerCase().includes(searchTerm.toLowerCase()))
+        lead.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.phone && lead.phone.includes(searchTerm))
     );
   });
 
