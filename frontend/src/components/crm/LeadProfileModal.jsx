@@ -13,6 +13,10 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
   const [interactions, setInteractions] = useState([]);
   const [reminders, setReminders] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState("#3b82f6");
 
   // Form states
   const [newNote, setNewNote] = useState({ content: "" });
@@ -49,6 +53,8 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
       setInteractions(interactionsData);
       setReminders(remindersData);
       setActivities(activitiesData);
+      const tagsData = await api.get("/api/crm/tags/");
+      setAvailableTags(tagsData);
     } catch (err) {
       console.error("Failed to fetch related data:", err);
     }
@@ -118,6 +124,49 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditedLead((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddTag = async (tagId) => {
+    try {
+      const currentTags = lead.tags || [];
+      if (currentTags.includes(tagId)) return;
+      await api.patch(`/api/crm/leads/${lead.id}/`, {
+        tags: [...currentTags, tagId],
+      });
+      if (onUpdate) onUpdate();
+      fetchRelatedData();
+    } catch (err) {
+      setError("Failed to add tag");
+    }
+  };
+
+  const handleRemoveTag = async (tagId) => {
+    try {
+      const currentTags = lead.tags || [];
+      await api.patch(`/api/crm/leads/${lead.id}/`, {
+        tags: currentTags.filter((id) => id !== tagId),
+      });
+      if (onUpdate) onUpdate();
+      fetchRelatedData();
+    } catch (err) {
+      setError("Failed to remove tag");
+    }
+  };
+
+  const handleCreateTag = async () => {
+    if (!newTagName) return;
+    try {
+      const tag = await api.post("/api/crm/tags/", {
+        name: newTagName,
+        color: newTagColor,
+      });
+      setAvailableTags([...availableTags, tag]);
+      setNewTagName("");
+      setShowTagInput(false);
+      handleAddTag(tag.id);
+    } catch (err) {
+      setError("Failed to create tag");
+    }
   };
 
   const statusColors = {
@@ -390,6 +439,106 @@ const LeadProfileModal = ({ lead, isOpen, onClose, onUpdate }) => {
                       </span>
                     </div>
                   </div>
+                </div>
+
+                <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+                      Tags
+                    </h3>
+                    <button
+                      onClick={() => setShowTagInput(!showTagInput)}
+                      className="text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:underline"
+                    >
+                      {showTagInput ? "Cancel" : "Manage Tags"}
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {lead.tags_detail?.map((tag) => (
+                      <span
+                        key={tag.id}
+                        className="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all"
+                        style={{
+                          backgroundColor: `${tag.color}10`,
+                          color: tag.color,
+                          borderColor: `${tag.color}30`,
+                        }}
+                      >
+                        {tag.name}
+                        <button
+                          onClick={() => handleRemoveTag(tag.id)}
+                          className="hover:scale-125 transition-transform"
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="3"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+
+                  {showTagInput && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-100 max-h-40 overflow-y-auto">
+                        {availableTags
+                          .filter((tag) => !lead.tags?.includes(tag.id))
+                          .map((tag) => (
+                            <button
+                              key={tag.id}
+                              onClick={() => handleAddTag(tag.id)}
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold border hover:scale-105 transition-all"
+                              style={{
+                                backgroundColor: "white",
+                                color: tag.color,
+                                borderColor: `${tag.color}30`,
+                              }}
+                            >
+                              + {tag.name}
+                            </button>
+                          ))}
+                        {availableTags.filter(
+                          (tag) => !lead.tags?.includes(tag.id),
+                        ).length === 0 && (
+                          <p className="text-[10px] text-slate-400 font-bold italic w-full text-center py-2">
+                            No other tags available
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="New tag name..."
+                          value={newTagName}
+                          onChange={(e) => setNewTagName(e.target.value)}
+                          className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-indigo-500"
+                        />
+                        <input
+                          type="color"
+                          value={newTagColor}
+                          onChange={(e) => setNewTagColor(e.target.value)}
+                          className="w-10 h-10 p-1 bg-white border border-slate-200 rounded-xl cursor-pointer"
+                        />
+                        <button
+                          onClick={handleCreateTag}
+                          className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all"
+                        >
+                          Create
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
