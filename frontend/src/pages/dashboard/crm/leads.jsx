@@ -463,6 +463,9 @@ const Leads = () => {
                         }
                       />
                     </th>
+                    <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-10">
+                      S.N.
+                    </th>
                     <th className="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Name & Tags
                     </th>
@@ -494,6 +497,9 @@ const Leads = () => {
                           checked={selectedIds.includes(lead.id)}
                           onChange={() => handleSelectOne(lead.id)}
                         />
+                      </td>
+                      <td className="px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-400">
+                        {(page - 1) * 25 + index + 1}
                       </td>
                       <td className="px-6 py-5 whitespace-nowrap">
                         <div className="flex flex-col">
