@@ -361,7 +361,7 @@ const Employees = () => {
                 <thead className="bg-slate-50/50">
                   <tr>
                     {[
-                      "#",
+                      "S.N",
                       "Employee",
                       "Contact",
                       "Department / Position",
