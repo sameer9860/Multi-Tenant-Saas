@@ -20,6 +20,7 @@ import CustomerDetail from './pages/customers/CustomerDetail';
 import CustomerList from './pages/customers/CustomerList';
 import Reports from './pages/Reports';
 import VATSummary from './pages/VATSummary';
+import Employees from './pages/dashboard/hr/Employees';
 
 // Basic Auth Guard Component
 const ProtectedRoute = ({ children }) => {
@@ -158,6 +159,13 @@ function App() {
         <Route path="/dashboard/reports/vat" element={
           <ProtectedRoute>
             <VATSummary />
+          </ProtectedRoute>
+        } />
+
+        {/* HR Routes */}
+        <Route path="/dashboard/hr/employees" element={
+          <ProtectedRoute>
+            <Employees />
           </ProtectedRoute>
         } />
 
