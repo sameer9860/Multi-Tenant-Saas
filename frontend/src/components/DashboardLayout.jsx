@@ -22,6 +22,9 @@ const DashboardLayout = ({ children, title, subtitle }) => {
   const [isReportsMenuOpen, setIsReportsMenuOpen] = useState(
     location.pathname.includes("/dashboard/reports"),
   );
+  const [isHrMenuOpen, setIsHrMenuOpen] = useState(
+    location.pathname.includes("/dashboard/hr"),
+  );
 
   // Sync open section with route changes
   React.useEffect(() => {
@@ -35,6 +38,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
     if (location.pathname.includes("/dashboard/team")) setIsTeamMenuOpen(true);
     if (location.pathname.includes("/dashboard/reports"))
       setIsReportsMenuOpen(true);
+    if (location.pathname.includes("/dashboard/hr")) setIsHrMenuOpen(true);
   }, [location.pathname]);
 
   // Toggle function for accordion behavior
@@ -45,6 +49,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
     setIsInvoicesMenuOpen(menu === "invoices" ? !isInvoicesMenuOpen : false);
     setIsTeamMenuOpen(menu === "team" ? !isTeamMenuOpen : false);
     setIsReportsMenuOpen(menu === "reports" ? !isReportsMenuOpen : false);
+    setIsHrMenuOpen(menu === "hr" ? !isHrMenuOpen : false);
   };
 
   const logout = () => {
@@ -872,6 +877,105 @@ const DashboardLayout = ({ children, title, subtitle }) => {
                         />
                       </svg>
                       VAT Summary
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* HR & Payroll Dropdown */}
+          <div className="space-y-1">
+            <button
+              onClick={() => toggleMenu("hr")}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
+                location.pathname.includes("/dashboard/hr") &&
+                !isSidebarCollapsed
+                  ? "text-violet-700"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              } ${isSidebarCollapsed ? "justify-center px-2 cursor-default" : "cursor-pointer"}`}
+              title={isSidebarCollapsed ? "HR & Payroll" : ""}
+            >
+              <div className="flex items-center gap-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-5 w-5 flex-shrink-0 ${location.pathname.includes("/dashboard/hr") && isSidebarCollapsed ? "text-violet-600" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                {!isSidebarCollapsed && <span>HR & Payroll</span>}
+              </div>
+              {!isSidebarCollapsed && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-4 w-4 transition-transform duration-200 ${isHrMenuOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              )}
+            </button>
+
+            {(isHrMenuOpen || isSidebarCollapsed) && (
+              <div
+                className={`${isSidebarCollapsed ? "space-y-2" : "pl-11 space-y-1"}`}
+              >
+                <button
+                  onClick={() => navigate("/dashboard/hr/employees")}
+                  className={`w-full flex items-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive("/dashboard/hr/employees")
+                      ? "text-violet-600 bg-violet-50"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  } ${isSidebarCollapsed ? "justify-center p-2" : "px-3"}`}
+                  title="Employees"
+                >
+                  {isSidebarCollapsed ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                      />
+                    </svg>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 opacity-50"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                        />
+                      </svg>
+                      Employees
                     </>
                   )}
                 </button>
