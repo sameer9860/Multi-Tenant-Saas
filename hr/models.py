@@ -2,6 +2,49 @@ from django.db import models
 from apps.core.models import Organization
 
 
+class Department(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='departments'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.organization.name})"
+
+    class Meta:
+        ordering = ['name']
+        unique_together = ['name', 'organization']
+
+
+class Designation(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.CASCADE,
+        related_name='designations'
+    )
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='designations'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.department.name} ({self.organization.name})"
+
+    class Meta:
+        ordering = ['name']
+        unique_together = ['name', 'department', 'organization']
+
+
 class Employee(models.Model):
 
     EMPLOYMENT_TYPE_CHOICES = [
@@ -28,8 +71,20 @@ class Employee(models.Model):
     address = models.TextField(blank=True, null=True)
 
     # Job Information
-    department = models.CharField(max_length=100, blank=True, null=True)
-    position = models.CharField(max_length=100, blank=True, null=True)
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='employees'
+    )
+    designation = models.ForeignKey(
+        Designation,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='employees'
+    )
     join_date = models.DateField(blank=True, null=True)
 
     # Salary & Employment
