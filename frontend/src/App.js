@@ -22,6 +22,7 @@ import Reports from './pages/Reports';
 import VATSummary from './pages/VATSummary';
 import Employees from './pages/dashboard/hr/Employees';
 import CreateEmployee from './pages/dashboard/hr/CreateEmployee';
+import Departments from './pages/dashboard/hr/Departments';
 
 // Basic Auth Guard Component
 const ProtectedRoute = ({ children }) => {
@@ -173,6 +174,12 @@ function App() {
         <Route path="/dashboard/hr/employees/create" element={
           <ProtectedRoute>
              <CreateEmployee />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/dashboard/hr/departments" element={
+          <ProtectedRoute>
+            <Departments />
           </ProtectedRoute>
         } />
 
