@@ -7,8 +7,9 @@ const EMPTY_FORM = {
   phone: "",
   email: "",
   address: "",
+  address: "",
   department: "",
-  position: "",
+  designation: "",
   join_date: "",
   basic_salary: "",
   employment_type: "FULL_TIME",
@@ -33,6 +34,8 @@ const Employees = () => {
 
   // List state
   const [employees, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [designations, setDesignations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -61,21 +64,31 @@ const Employees = () => {
       if (search) url += `&search=${encodeURIComponent(search)}`;
       if (statusFilter !== "ALL") url += `&status=${statusFilter}`;
 
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const [empRes, deptRes, roleRes] = await Promise.all([
+        fetch(url, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/hr/departments/?no_pagination=true", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/hr/designations/?no_pagination=true", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      if (res.status === 401) {
+      if (empRes.status === 401) {
         localStorage.clear();
         navigate("/login");
         return;
       }
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setError(err.detail || err.error || "Failed to fetch employees.");
+      if (!empRes.ok) {
+        const err = await empRes.json().catch(() => ({}));
+        setError(err.detail || err.error || "Failed to fetch data.");
         return;
       }
-      const data = await res.json();
+
+      const data = await empRes.json();
+      if (deptRes.ok) setDepartments(await deptRes.json());
+      if (roleRes.ok) setDesignations(await roleRes.json());
+
       if (data.results !== undefined) {
         setEmployees(data.results);
         setTotalCount(data.count);
@@ -119,7 +132,7 @@ const Employees = () => {
       email: emp.email || "",
       address: emp.address || "",
       department: emp.department || "",
-      position: emp.position || "",
+      designation: emp.designation || "",
       join_date: emp.join_date || "",
       basic_salary: emp.basic_salary || "",
       employment_type: emp.employment_type || "FULL_TIME",
@@ -144,13 +157,18 @@ const Employees = () => {
         : "/api/hr/employees/";
       const method = isEditing ? "PUT" : "POST";
 
+      // Format data for API
+      const payload = { ...form };
+      if (!payload.department) payload.department = null;
+      if (!payload.designation) payload.designation = null;
+
       const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -404,10 +422,10 @@ const Employees = () => {
                       </td>
                       <td className="px-5 py-4">
                         <div className="text-sm font-semibold text-slate-700">
-                          {emp.department || "—"}
+                          {emp.department_name || "—"}
                         </div>
                         <div className="text-xs text-slate-400">
-                          {emp.position || "—"}
+                          {emp.designation_name || "—"}
                         </div>
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap">
@@ -613,27 +631,47 @@ const Employees = () => {
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">
                     Department
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={form.department}
-                    onChange={(e) => field("department", e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all font-medium text-slate-800"
-                    placeholder="e.g. Engineering"
-                  />
+                    onChange={(e) => {
+                      field("department", e.target.value);
+                      field("designation", "");
+                    }}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all font-medium text-slate-800 appearance-none bg-white"
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                {/* Position */}
+                {/* Designation */}
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                    Position
+                    Role / Position
                   </label>
-                  <input
-                    type="text"
-                    value={form.position}
-                    onChange={(e) => field("position", e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all font-medium text-slate-800"
-                    placeholder="e.g. Software Engineer"
-                  />
+                  <select
+                    value={form.designation}
+                    onChange={(e) => field("designation", e.target.value)}
+                    disabled={!form.department && designations.length > 0}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all font-medium text-slate-800 appearance-none bg-white"
+                  >
+                    <option value="">Select Role</option>
+                    {designations
+                      .filter(
+                        (d) =>
+                          !form.department ||
+                          d.department === parseInt(form.department),
+                      )
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                  </select>
                 </div>
 
                 {/* Join Date */}
