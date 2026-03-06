@@ -44,22 +44,22 @@ You now have digital staff records.
 
 Progress: 10%
 
-🟢 DAY 2 – Departments & Roles Structure
+🟢 DAY 2 – Departments & Roles Structure (COMPLETED)
 🎯 Goal:
 
 Make system organized for growing companies.
 
 Build:
 
-Department model
+[x] Department model
 
-Assign employees to department
+[x] Assign employees to department
 
-Department summary page (count employees)
+[x] Department summary page (count employees)
 
 Optional:
 
-Designation model
+[x] Designation model
 
 Why:
 
