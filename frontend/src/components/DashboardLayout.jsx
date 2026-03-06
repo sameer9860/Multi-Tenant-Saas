@@ -1034,7 +1034,7 @@ const DashboardLayout = ({ children, title, subtitle }) => {
                       ? "text-violet-600 bg-violet-50"
                       : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                   } ${isSidebarCollapsed ? "justify-center p-2" : "px-3"}`}
-                  title="Departments & Roles"
+                  title="Departments"
                 >
                   {isSidebarCollapsed ? (
                     <svg
@@ -1067,7 +1067,53 @@ const DashboardLayout = ({ children, title, subtitle }) => {
                           d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                         />
                       </svg>
-                      Departments & Roles
+                      Departments
+                    </>
+                  )}
+                </button>
+
+                {/* Roles Link */}
+                <button
+                  onClick={() => navigate("/dashboard/hr/roles")}
+                  className={`w-full flex items-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive("/dashboard/hr/roles")
+                      ? "text-violet-600 bg-violet-50"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  } ${isSidebarCollapsed ? "justify-center p-2" : "px-3"}`}
+                  title="Roles & Designations"
+                >
+                  {isSidebarCollapsed ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                      />
+                    </svg>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 opacity-50"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                        />
+                      </svg>
+                      Roles
                     </>
                   )}
                 </button>
