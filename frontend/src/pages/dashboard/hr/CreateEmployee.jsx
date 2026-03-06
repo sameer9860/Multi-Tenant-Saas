@@ -16,33 +16,76 @@ const CreateEmployee = () => {
     email: "",
     address: "",
     department: "",
-    position: "",
+    designation: "",
     join_date: "",
     basic_salary: "",
     employment_type: "FULL_TIME",
     status: "ACTIVE",
   });
 
+  const [departments, setDepartments] = useState([]);
+  const [designations, setDesignations] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
   React.useEffect(() => {
     if (!token) {
       navigate("/login");
+      return;
     } else if (userRole !== "ADMIN" && userRole !== "OWNER") {
       navigate("/dashboard/hr/employees");
+      return;
     }
+
+    const fetchData = async () => {
+      try {
+        const [deptRes, roleRes] = await Promise.all([
+          fetch("/api/hr/departments/?no_pagination=true", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch("/api/hr/designations/?no_pagination=true", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        if (deptRes.ok) setDepartments(await deptRes.json());
+        if (roleRes.ok) setDesignations(await roleRes.json());
+      } catch (err) {
+        console.error("Failed to fetch departments/roles:", err);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    fetchData();
   }, [token, userRole, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    // If department changes, clear designation
+    if (name === "department") {
+      setFormData((prev) => ({
+        ...prev,
+        department: value,
+        designation: "",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    // Filter empty selections to null/blank for API
+    const submissionData = { ...formData };
+    if (!submissionData.department) submissionData.department = null;
+    if (!submissionData.designation) submissionData.designation = null;
 
     try {
       const response = await fetch("/api/hr/employees/", {
@@ -51,7 +94,7 @@ const CreateEmployee = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       });
 
       if (!response.ok) {
@@ -180,29 +223,50 @@ const CreateEmployee = () => {
                 <label className="block text-sm font-bold text-slate-700 mb-2">
                   Department
                 </label>
-                <input
-                  type="text"
+                <select
                   name="department"
                   value={formData.department}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 outline-none transition font-medium text-slate-800"
-                  placeholder="e.g. Engineering"
-                />
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 outline-none transition font-medium text-slate-800 bg-white appearance-none"
+                  disabled={dataLoading}
+                >
+                  <option value="">Select Department</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Position */}
+              {/* Position / Designation */}
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Position
+                  Role / Position
                 </label>
-                <input
-                  type="text"
-                  name="position"
-                  value={formData.position}
+                <select
+                  name="designation"
+                  value={formData.designation}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 outline-none transition font-medium text-slate-800"
-                  placeholder="e.g. Software Engineer"
-                />
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 outline-none transition font-medium text-slate-800 bg-white appearance-none"
+                  disabled={
+                    dataLoading ||
+                    (!formData.department && designations.length > 0)
+                  }
+                >
+                  <option value="">Select Role</option>
+                  {designations
+                    .filter(
+                      (dsg) =>
+                        !formData.department ||
+                        dsg.department === parseInt(formData.department),
+                    )
+                    .map((dsg) => (
+                      <option key={dsg.id} value={dsg.id}>
+                        {dsg.name}
+                      </option>
+                    ))}
+                </select>
               </div>
 
               {/* Join Date */}
