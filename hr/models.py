@@ -110,3 +110,39 @@ class Employee(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+class Attendance(models.Model):
+    STATUS_CHOICES = [
+        ('PRESENT', 'Present'),
+        ('ABSENT', 'Absent'),
+        ('LEAVE', 'Leave'),
+        ('HALF_DAY', 'Half Day'),
+    ]
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='attendance_records'
+    )
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name='attendance_records'
+    )
+    date = models.DateField()
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default='PRESENT'
+    )
+    notes = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date', 'employee__full_name']
+        unique_together = ['organization', 'employee', 'date']
+
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.date} ({self.status})"
