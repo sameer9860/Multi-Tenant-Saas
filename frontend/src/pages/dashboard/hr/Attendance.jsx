@@ -26,6 +26,16 @@ const Attendance = () => {
   const [success, setSuccess] = useState(null);
   const [viewMode, setViewMode] = useState("DAILY"); // DAILY or MONTHLY
 
+  // Filters State
+  const [departments, setDepartments] = useState([]);
+  const [designations, setDesignations] = useState([]);
+  const [searchDaily, setSearchDaily] = useState("");
+  const [deptDaily, setDeptDaily] = useState("");
+  const [roleDaily, setRoleDaily] = useState("");
+  const [searchMonthly, setSearchMonthly] = useState("");
+  const [deptMonthly, setDeptMonthly] = useState("");
+  const [roleMonthly, setRoleMonthly] = useState("");
+
   // Monthly View State
   const [monthlyRecords, setMonthlyRecords] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -35,6 +45,19 @@ const Attendance = () => {
     setLoading(true);
     setError(null);
     try {
+      // Fetch departments and designations
+      const [deptRes, roleRes] = await Promise.all([
+        fetch("/api/hr/departments/?no_pagination=true", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/hr/designations/?no_pagination=true", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (deptRes.ok) setDepartments(await deptRes.json());
+      if (roleRes.ok) setDesignations(await roleRes.json());
+
       // Fetch active employees
       const empRes = await fetch(
         "/api/hr/employees/?no_pagination=true&status=ACTIVE",
@@ -77,12 +100,14 @@ const Attendance = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
-        `/api/hr/attendance/?month=${selectedMonth}&year=${selectedYear}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      let url = `/api/hr/attendance/?month=${selectedMonth}&year=${selectedYear}`;
+      if (searchMonthly) url += `&search=${encodeURIComponent(searchMonthly)}`;
+      if (deptMonthly) url += `&department=${deptMonthly}`;
+      if (roleMonthly) url += `&designation=${roleMonthly}`;
+
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error("Failed to fetch monthly history");
       const data = await res.json();
       setMonthlyRecords(data);
@@ -91,7 +116,14 @@ const Attendance = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, selectedMonth, selectedYear]);
+  }, [
+    token,
+    selectedMonth,
+    selectedYear,
+    searchMonthly,
+    deptMonthly,
+    roleMonthly,
+  ]);
 
   useEffect(() => {
     if (viewMode === "DAILY") {
@@ -192,6 +224,56 @@ const Attendance = () => {
               </button>
             </div>
 
+            {/* Daily Filters */}
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="relative">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">
+                  Search Employee
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter name..."
+                  value={searchDaily}
+                  onChange={(e) => setSearchDaily(e.target.value)}
+                  className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:border-violet-500/50 outline-none text-sm font-medium transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">
+                  Department
+                </label>
+                <select
+                  value={deptDaily}
+                  onChange={(e) => setDeptDaily(e.target.value)}
+                  className="w-full bg-slate-50 px-4 py-3 rounded-xl border border-slate-100 focus:outline-none focus:border-violet-500/50 transition-all text-sm font-medium"
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">
+                  Role
+                </label>
+                <select
+                  value={roleDaily}
+                  onChange={(e) => setRoleDaily(e.target.value)}
+                  className="w-full bg-slate-50 px-4 py-3 rounded-xl border border-slate-100 focus:outline-none focus:border-violet-500/50 transition-all text-sm font-medium"
+                >
+                  <option value="">All Roles</option>
+                  {designations.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {error && (
               <div className="p-4 bg-rose-50 text-rose-700 rounded-2xl border border-rose-200 font-bold">
                 {error}
@@ -208,6 +290,9 @@ const Attendance = () => {
               <table className="min-w-full divide-y divide-slate-100">
                 <thead className="bg-slate-50/50">
                   <tr>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-16">
+                      S.N
+                    </th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Employee
                     </th>
@@ -223,63 +308,90 @@ const Attendance = () => {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan="3"
+                        colSpan="4"
                         className="px-6 py-12 text-center text-slate-400"
                       >
                         Loading employees...
                       </td>
                     </tr>
-                  ) : employees.length === 0 ? (
+                  ) : employees.filter((emp) => {
+                      const matchesSearch = emp.full_name
+                        .toLowerCase()
+                        .includes(searchDaily.toLowerCase());
+                      const matchesDept =
+                        !deptDaily ||
+                        String(emp.department) === String(deptDaily);
+                      const matchesRole =
+                        !roleDaily ||
+                        String(emp.designation) === String(roleDaily);
+                      return matchesSearch && matchesDept && matchesRole;
+                    }).length === 0 ? (
                     <tr>
                       <td
-                        colSpan="3"
+                        colSpan="4"
                         className="px-6 py-12 text-center text-slate-400"
                       >
-                        No active employees found.
+                        No active employees found matching filters.
                       </td>
                     </tr>
                   ) : (
-                    employees.map((emp) => (
-                      <tr
-                        key={emp.id}
-                        className="hover:bg-slate-50/50 transition-colors"
-                      >
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-slate-900">
-                            {emp.full_name}
-                          </div>
-                          <div className="text-xs text-slate-400 font-medium">
-                            {emp.designation_name}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex justify-center gap-2">
-                            {STATUS_OPTIONS.map((opt) => (
-                              <button
-                                key={opt.value}
-                                onClick={() =>
-                                  handleStatusChange(emp.id, opt.value)
-                                }
-                                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${attendanceRecords[emp.id] === opt.value ? `${opt.color} text-white shadow-md` : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <input
-                            type="text"
-                            value={notes[emp.id] || ""}
-                            onChange={(e) =>
-                              handleNoteChange(emp.id, e.target.value)
-                            }
-                            placeholder="Add notes..."
-                            className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:border-violet-500/50 outline-none text-sm font-medium transition-all"
-                          />
-                        </td>
-                      </tr>
-                    ))
+                    employees
+                      .filter((emp) => {
+                        const matchesSearch = emp.full_name
+                          .toLowerCase()
+                          .includes(searchDaily.toLowerCase());
+                        const matchesDept =
+                          !deptDaily ||
+                          String(emp.department) === String(deptDaily);
+                        const matchesRole =
+                          !roleDaily ||
+                          String(emp.designation) === String(roleDaily);
+                        return matchesSearch && matchesDept && matchesRole;
+                      })
+                      .map((emp, idx) => (
+                        <tr
+                          key={emp.id}
+                          className="hover:bg-slate-50/50 transition-colors"
+                        >
+                          <td className="px-6 py-4 text-xs font-bold text-slate-400">
+                            {idx + 1}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-slate-900">
+                              {emp.full_name}
+                            </div>
+                            <div className="text-xs text-slate-400 font-medium">
+                              {emp.designation_name} • {emp.department_name}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex justify-center gap-2">
+                              {STATUS_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  onClick={() =>
+                                    handleStatusChange(emp.id, opt.value)
+                                  }
+                                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${attendanceRecords[emp.id] === opt.value ? `${opt.color} text-white shadow-md` : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <input
+                              type="text"
+                              value={notes[emp.id] || ""}
+                              onChange={(e) =>
+                                handleNoteChange(emp.id, e.target.value)
+                              }
+                              placeholder="Add notes..."
+                              className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:border-violet-500/50 outline-none text-sm font-medium transition-all"
+                            />
+                          </td>
+                        </tr>
+                      ))
                   )}
                 </tbody>
               </table>
@@ -287,41 +399,89 @@ const Attendance = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">
-                  Month
+            {/* Monthly Filters */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="md:col-span-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">
+                  Search Employee
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter name..."
+                  value={searchMonthly}
+                  onChange={(e) => setSearchMonthly(e.target.value)}
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 outline-none text-sm font-medium transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">
+                  Dept
                 </label>
                 <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="w-full bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all font-bold appearance-none cursor-pointer"
+                  value={deptMonthly}
+                  onChange={(e) => setDeptMonthly(e.target.value)}
+                  className="w-full bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all text-xs font-bold"
                 >
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      {new Date(0, i).toLocaleString("default", {
-                        month: "long",
-                      })}
+                  <option value="">All</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
                     </option>
                   ))}
                 </select>
               </div>
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">
-                  Year
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">
+                  Role
                 </label>
                 <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  className="w-full bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all font-bold appearance-none cursor-pointer"
+                  value={roleMonthly}
+                  onChange={(e) => setRoleMonthly(e.target.value)}
+                  className="w-full bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all text-xs font-bold"
                 >
-                  {[2024, 2025, 2026].map((y) => (
-                    <option key={y} value={y}>
-                      {y}
+                  <option value="">All</option>
+                  {designations.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">
+                    Month
+                  </label>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="w-full bg-slate-50 px-2 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all text-xs font-bold"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {new Date(0, i).toLocaleString("default", {
+                          month: "short",
+                        })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">
+                    Year
+                  </label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    className="w-full bg-slate-50 px-2 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all text-xs font-bold"
+                  >
+                    {[2024, 2025, 2026].map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -330,6 +490,9 @@ const Attendance = () => {
               <table className="min-w-full divide-y divide-slate-100">
                 <thead className="bg-slate-50/50">
                   <tr>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-16">
+                      S.N
+                    </th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Date
                     </th>
@@ -348,7 +511,7 @@ const Attendance = () => {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan="4"
+                        colSpan="5"
                         className="px-6 py-12 text-center text-slate-400"
                       >
                         Loading history...
@@ -357,18 +520,21 @@ const Attendance = () => {
                   ) : monthlyRecords.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="4"
+                        colSpan="5"
                         className="px-6 py-12 text-center text-slate-400"
                       >
                         No records found for this period.
                       </td>
                     </tr>
                   ) : (
-                    monthlyRecords.map((rec) => (
+                    monthlyRecords.map((rec, idx) => (
                       <tr
                         key={rec.id}
                         className="hover:bg-slate-50/50 transition-colors"
                       >
+                        <td className="px-6 py-4 text-xs font-bold text-slate-400">
+                          {idx + 1}
+                        </td>
                         <td className="px-6 py-4 font-bold text-slate-700">
                           {new Date(rec.date).toLocaleDateString()}
                         </td>
