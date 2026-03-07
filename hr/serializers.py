@@ -1,5 +1,24 @@
 from rest_framework import serializers
-from .models import Employee, Department, Designation
+from .models import Employee, Department, Designation, Attendance
+
+
+class AttendanceSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+
+    class Meta:
+        model = Attendance
+        fields = [
+            'id',
+            'employee',
+            'employee_name',
+            'date',
+            'status',
+            'notes',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
