@@ -141,6 +141,20 @@ const Attendance = () => {
     setNotes((prev) => ({ ...prev, [empId]: note }));
   };
 
+  const handleClearDaily = () => {
+    setSearchDaily("");
+    setDeptDaily("");
+    setRoleDaily("");
+  };
+
+  const handleClearMonthly = () => {
+    setSearchMonthly("");
+    setDeptMonthly("");
+    setRoleMonthly("");
+    setSelectedMonth(new Date().getMonth() + 1);
+    setSelectedYear(new Date().getFullYear());
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
@@ -225,7 +239,7 @@ const Attendance = () => {
             </div>
 
             {/* Daily Filters */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
               <div className="relative">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">
                   Search Employee
@@ -271,6 +285,14 @@ const Attendance = () => {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <button
+                  onClick={handleClearDaily}
+                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-500 py-3 rounded-xl text-sm font-bold transition-all"
+                >
+                  Clear Filters
+                </button>
               </div>
             </div>
 
@@ -400,7 +422,7 @@ const Attendance = () => {
         ) : (
           <div className="space-y-6">
             {/* Monthly Filters */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
               <div className="md:col-span-2">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">
                   Search Employee
@@ -482,6 +504,14 @@ const Attendance = () => {
                     ))}
                   </select>
                 </div>
+              </div>
+              <div>
+                <button
+                  onClick={handleClearMonthly}
+                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-500 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  Clear
+                </button>
               </div>
             </div>
 
