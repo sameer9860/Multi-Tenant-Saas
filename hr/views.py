@@ -27,6 +27,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         org = self.get_org()
         queryset = Attendance.objects.filter(organization=org)
 
+        # Filters
         date = self.request.query_params.get('date')
         if date:
             queryset = queryset.filter(date=date)
@@ -34,6 +35,18 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         employee = self.request.query_params.get('employee')
         if employee:
             queryset = queryset.filter(employee_id=employee)
+
+        department = self.request.query_params.get('department')
+        if department:
+            queryset = queryset.filter(employee__department_id=department)
+
+        designation = self.request.query_params.get('designation')
+        if designation:
+            queryset = queryset.filter(employee__designation_id=designation)
+
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(employee__full_name__icontains=search)
 
         month = self.request.query_params.get('month')
         year = self.request.query_params.get('year')
