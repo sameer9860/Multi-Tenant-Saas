@@ -3,8 +3,95 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django.db import models
 
-from .models import Employee, Department, Designation
-from .serializers import EmployeeSerializer, DepartmentSerializer, DesignationSerializer
+from .models import Employee, Department, Designation, Attendance
+from .serializers import (
+    EmployeeSerializer, DepartmentSerializer, 
+    DesignationSerializer, AttendanceSerializer
+)
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
+
+
+class AttendanceViewSet(viewsets.ModelViewSet):
+    serializer_class = AttendanceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_org(self):
+        return (
+            getattr(self.request, 'organization', None)
+            or getattr(self.request.user, 'organization', None)
+        )
+
+    def get_queryset(self):
+        org = self.get_org()
+        queryset = Attendance.objects.filter(organization=org)
+
+        date = self.request.query_params.get('date')
+        if date:
+            queryset = queryset.filter(date=date)
+
+        employee = self.request.query_params.get('employee')
+        if employee:
+            queryset = queryset.filter(employee_id=employee)
+
+        month = self.request.query_params.get('month')
+        year = self.request.query_params.get('year')
+        if month and year:
+            queryset = queryset.filter(date__month=month, date__year=year)
+
+        return queryset.order_by('-date', 'employee__full_name')
+
+    def perform_create(self, serializer):
+        org = self.get_org()
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+        serializer.save(organization=org)
+
+    @action(detail=False, methods=['post'])
+    def bulk_mark(self, request):
+        org = self.get_org()
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+        
+        records = request.data.get('records', [])
+        date = request.data.get('date')
+        
+        if not date or not records:
+            return Response(
+                {"error": "Date and records are required."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        created_count = 0
+        updated_count = 0
+        
+        for record in records:
+            employee_id = record.get('employee')
+            status_val = record.get('status')
+            notes = record.get('notes', '')
+            
+            attendance, created = Attendance.objects.update_or_create(
+                organization=org,
+                employee_id=employee_id,
+                date=date,
+                defaults={
+                    'status': status_val,
+                    'notes': notes
+                }
+            )
+            
+            if created:
+                created_count += 1
+            else:
+                updated_count += 1
+                
+        return Response({
+            "message": f"Successfully processed {len(records)} records.",
+            "created": created_count,
+            "updated": updated_count
+        })
+
 
 
 class EmployeePagination(pagination.PageNumberPagination):
