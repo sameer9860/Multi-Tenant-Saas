@@ -83,3 +83,36 @@ class AttendanceApiTest(TestCase):
         att2 = Attendance.objects.get(date="2026-03-02", employee=self.employee)
         self.assertEqual(att2.status, "ABSENT")
         self.assertEqual(att2.notes, "Sick")
+
+    def test_export_csv(self):
+        user = User.objects.create_user(
+            email="test_export@example.com",
+            full_name="Export User",
+            organization=self.org,
+            password="password123"
+        )
+        self.client.force_authenticate(user=user)
+        
+        # Create some records
+        Attendance.objects.create(
+            organization=self.org,
+            employee=self.employee,
+            date="2026-03-01",
+            status="PRESENT",
+            notes="Note 1"
+        )
+        
+        url = reverse('attendance-export-csv')
+        response = self.client.get(url, {'month': 3, 'year': 2026})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertIn('attachment; filename="attendance_history.csv"', response['Content-Disposition'])
+        
+        # Check content
+        content = b"".join(response.streaming_content).decode('utf-8')
+        lines = content.strip().split('\r\n')
+        self.assertEqual(len(lines), 2) # Header + 1 record
+        self.assertIn("John Doe", lines[1])
+        self.assertIn("PRESENT", lines[1])
+        self.assertIn("Note 1", lines[1])
