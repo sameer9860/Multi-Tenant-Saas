@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../../components/DashboardLayout";
+import AttendanceImport from "./AttendanceImport";
 
 const STATUS_OPTIONS = [
   { value: "PRESENT", label: "Present", color: "bg-emerald-500" },
@@ -40,6 +41,7 @@ const Attendance = () => {
   const [monthlyRecords, setMonthlyRecords] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -229,13 +231,33 @@ const Attendance = () => {
                   className="px-4 py-2 border border-slate-200 rounded-xl focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 outline-none font-bold"
                 />
               </div>
-              <button
-                onClick={handleSave}
-                disabled={saving || loading || employees.length === 0}
-                className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-violet-200 transition-all active:scale-95 disabled:opacity-50"
-              >
-                {saving ? "Saving..." : "Save Daily Attendance"}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setImportModalOpen(true)}
+                  className="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 px-6 py-3 rounded-xl font-bold transition-all active:scale-95 flex items-center gap-2"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Import CSV
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || loading || employees.length === 0}
+                  className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-violet-200 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save Daily Attendance"}
+                </button>
+              </div>
             </div>
 
             {/* Daily Filters */}
@@ -590,6 +612,14 @@ const Attendance = () => {
           </div>
         )}
       </div>
+      <AttendanceImport
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImportSuccess={() => {
+          if (viewMode === "DAILY") fetchData();
+          else fetchMonthlyData();
+        }}
+      />
     </DashboardLayout>
   );
 };
