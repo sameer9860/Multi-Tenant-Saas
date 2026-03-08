@@ -2,6 +2,7 @@ from rest_framework import viewsets, pagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django.db import models
+from django.http import StreamingHttpResponse
 import csv
 import io
 from datetime import datetime
@@ -29,7 +30,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         org = self.get_org()
         queryset = Attendance.objects.filter(organization=org)
+        return self.filter_queryset_by_params(queryset).order_by('-date', 'employee__full_name')
 
+    def filter_queryset_by_params(self, queryset):
         # Filters
         date = self.request.query_params.get('date')
         if date:
@@ -56,7 +59,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         if month and year:
             queryset = queryset.filter(date__month=month, date__year=year)
 
-        return queryset.order_by('-date', 'employee__full_name')
+        return queryset
 
     def perform_create(self, serializer):
         org = self.get_org()
@@ -207,6 +210,39 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             
         except Exception as e:
             return Response({"error": f"Failed to process CSV file: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'])
+    def export_csv(self, request):
+        org = self.get_org()
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+            
+        queryset = Attendance.objects.filter(organization=org).select_related('employee')
+        queryset = self.filter_queryset_by_params(queryset).order_by('-date', 'employee__full_name')
+        
+        def iter_items(items):
+            yield ['S.N', 'Date', 'Employee Name', 'Status', 'Notes']
+            for idx, item in enumerate(items, 1):
+                yield [
+                    idx,
+                    item.date.strftime('%Y-%m-%d'),
+                    item.employee.full_name,
+                    item.status,
+                    item.notes or ''
+                ]
+
+        class Echo:
+            def write(self, value):
+                return value
+
+        pseudo_buffer = Echo()
+        writer = csv.writer(pseudo_buffer)
+        response = StreamingHttpResponse(
+            (writer.writerow(row) for row in iter_items(queryset)),
+            content_type="text/csv"
+        )
+        response['Content-Disposition'] = 'attachment; filename="attendance_history.csv"'
+        return response
 
 
 
