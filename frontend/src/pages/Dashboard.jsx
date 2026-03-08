@@ -746,6 +746,13 @@ const Dashboard = () => {
                 bg: "bg-yellow-50",
               },
               {
+                label: "Interested",
+                count: stats.status_counts.INTERESTED,
+                color: "bg-purple-500",
+                text: "text-purple-700",
+                bg: "bg-purple-50",
+              },
+              {
                 label: "Converted",
                 count: stats.status_counts.CONVERTED,
                 color: "bg-emerald-500",
