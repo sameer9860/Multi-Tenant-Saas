@@ -71,22 +71,24 @@ const Dashboard = () => {
     status_counts: analytics?.status_counts || {
       NEW: 0,
       CONTACTED: 0,
+      INTERESTED: 0,
       CONVERTED: 0,
       LOST: 0,
     },
   };
 
   const chartData = {
-    labels: ["New", "Contacted", "Converted", "Lost"],
+    labels: ["New", "Contacted", "Interested", "Converted", "Lost"],
     datasets: [
       {
         data: [
           stats.status_counts.NEW,
           stats.status_counts.CONTACTED,
+          stats.status_counts.INTERESTED,
           stats.status_counts.CONVERTED,
           stats.status_counts.LOST,
         ],
-        backgroundColor: ["#3B82F6", "#FACC15", "#22C55E", "#EF4444"],
+        backgroundColor: ["#3B82F6", "#FACC15", "#A855F7", "#22C55E", "#EF4444"],
         borderWidth: 1,
       },
     ],
