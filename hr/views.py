@@ -2,6 +2,9 @@ from rest_framework import viewsets, pagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django.db import models
+import csv
+import io
+from datetime import datetime
 
 from .models import Employee, Department, Designation, Attendance
 from .serializers import (
@@ -104,6 +107,106 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             "created": created_count,
             "updated": updated_count
         })
+
+    @action(detail=False, methods=['post'])
+    def import_csv(self, request):
+        org = self.get_org()
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+            
+        file = request.FILES.get('file')
+        if not file:
+            return Response({"error": "No file uploaded."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            decoded_file = file.read().decode('utf-8')
+            io_string = io.StringIO(decoded_file)
+            reader = csv.DictReader(io_string)
+            
+            # Normalize headers (lowercase and strip spaces)
+            # This handles things like "Employee Name" vs "employee name"
+            headers = [h.strip().lower() for h in reader.fieldnames]
+            
+            success_count = 0
+            errors = []
+            
+            # Map required columns
+            # Expected: employee name, date, status
+            # Optional: notes
+            
+            for row_idx, row in enumerate(reader, start=2): # Header is line 1
+                try:
+                    # Clean the row keys
+                    clean_row = {k.strip().lower(): v.strip() for k, v in row.items() if k}
+                    
+                    emp_name = clean_row.get('employee name') or clean_row.get('name') or clean_row.get('employee')
+                    date_str = clean_row.get('date')
+                    status_str = clean_row.get('status', 'PRESENT').upper()
+                    notes = clean_row.get('notes', '')
+                    
+                    if not emp_name or not date_str:
+                        errors.append(f"Row {row_idx}: Missing employee name or date.")
+                        continue
+                        
+                    # Find employee
+                    employees = Employee.objects.filter(organization=org, full_name__iexact=emp_name)
+                    if not employees.exists():
+                        errors.append(f"Row {row_idx}: Employee '{emp_name}' not found.")
+                        continue
+                    if employees.count() > 1:
+                        errors.append(f"Row {row_idx}: Multiple employees found with name '{emp_name}'.")
+                        continue
+                        
+                    employee = employees.first()
+                    
+                    # Parse date - handle common formats
+                    try:
+                        # ISO format YYYY-MM-DD
+                        parsed_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                    except ValueError:
+                        try:
+                            # DD/MM/YYYY
+                            parsed_date = datetime.strptime(date_str, '%d/%m/%Y').date()
+                        except ValueError:
+                            errors.append(f"Row {row_idx}: Invalid date format '{date_str}'. Use YYYY-MM-DD.")
+                            continue
+                            
+                    # Validate Status
+                    valid_statuses = [choice[0] for choice in Attendance.STATUS_CHOICES]
+                    if status_str not in valid_statuses:
+                        # Try to map common variations
+                        if status_str == 'P': status_str = 'PRESENT'
+                        elif status_str == 'A': status_str = 'ABSENT'
+                        elif status_str == 'L': status_str = 'LEAVE'
+                        elif status_str == 'H': status_str = 'HALF_DAY'
+                        else:
+                            errors.append(f"Row {row_idx}: Invalid status '{status_str}'. Valid statuses: {', '.join(valid_statuses)}")
+                            continue
+                    
+                    # Create or update
+                    Attendance.objects.update_or_create(
+                        organization=org,
+                        employee=employee,
+                        date=parsed_date,
+                        defaults={
+                            'status': status_str,
+                            'notes': notes
+                        }
+                    )
+                    success_count += 1
+                    
+                except Exception as e:
+                    errors.append(f"Row {row_idx}: Error processing - {str(e)}")
+                    
+            return Response({
+                "message": f"Import completed. {success_count} records processed successfully.",
+                "success_count": success_count,
+                "error_count": len(errors),
+                "errors": errors
+            })
+            
+        except Exception as e:
+            return Response({"error": f"Failed to process CSV file: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 
