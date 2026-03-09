@@ -365,17 +365,39 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         org = self.get_org()
-        queryset = LeaveRequest.objects.filter(organization=org)
-        
+        queryset = LeaveRequest.objects.filter(organization=org).select_related('employee', 'approved_by')
+        return self.filter_queryset_by_params(queryset).order_by('-created_at')
+
+    def filter_queryset_by_params(self, queryset):
         employee = self.request.query_params.get('employee')
         if employee:
             queryset = queryset.filter(employee_id=employee)
             
         status = self.request.query_params.get('status')
-        if status:
+        if status and status != 'ALL':
             queryset = queryset.filter(status=status)
+
+        department = self.request.query_params.get('department')
+        if department:
+            queryset = queryset.filter(employee__department_id=department)
+
+        designation = self.request.query_params.get('designation')
+        if designation:
+            queryset = queryset.filter(employee__designation_id=designation)
+
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(employee__full_name__icontains=search)
+
+        start_date = self.request.query_params.get('start_date')
+        if start_date:
+            queryset = queryset.filter(start_date__gte=start_date)
+
+        end_date = self.request.query_params.get('end_date')
+        if end_date:
+            queryset = queryset.filter(end_date__lte=end_date)
             
-        return queryset.order_by('-created_at')
+        return queryset
 
     def perform_create(self, serializer):
         org = self.get_org()
@@ -413,3 +435,39 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
                 }
             )
             current_date += timedelta(days=1)
+
+    @action(detail=False, methods=['get'])
+    def export_csv(self, request):
+        org = self.get_org()
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+            
+        queryset = LeaveRequest.objects.filter(organization=org).select_related('employee')
+        queryset = self.filter_queryset_by_params(queryset).order_by('-created_at')
+        
+        def iter_items(items):
+            yield ['S.N', 'Employee Name', 'Leave Type', 'Start Date', 'End Date', 'Status', 'Reason', 'Approved By']
+            for idx, item in enumerate(items, 1):
+                yield [
+                    idx,
+                    item.employee.full_name,
+                    item.get_leave_type_display(),
+                    item.start_date.strftime('%Y-%m-%d'),
+                    item.end_date.strftime('%Y-%m-%d'),
+                    item.status,
+                    item.reason or '',
+                    item.approved_by.username if item.approved_by else '—'
+                ]
+
+        class Echo:
+            def write(self, value):
+                return value
+
+        pseudo_buffer = Echo()
+        writer = csv.writer(pseudo_buffer)
+        response = StreamingHttpResponse(
+            (writer.writerow(row) for row in iter_items(queryset)),
+            content_type="text/csv"
+        )
+        response['Content-Disposition'] = 'attachment; filename="leave_requests.csv"'
+        return response
