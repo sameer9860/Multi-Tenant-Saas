@@ -30,10 +30,19 @@ const LeaveRequests = () => {
 
   const [requests, setRequests] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [designations, setDesignations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Filters state
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
+  const [deptFilter, setDeptFilter] = useState("");
+  const [desigFilter, setDesigFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -41,12 +50,23 @@ const LeaveRequests = () => {
   const fetchRequests = useCallback(async () => {
     setLoading(true);
     try {
-      let url = "/api/hr/leave-requests/";
-      if (statusFilter !== "ALL") url += `?status=${statusFilter}`;
+      let url = "/api/hr/leave-requests/?";
+      if (statusFilter !== "ALL") url += `status=${statusFilter}&`;
+      if (search) url += `search=${encodeURIComponent(search)}&`;
+      if (deptFilter) url += `department=${deptFilter}&`;
+      if (desigFilter) url += `designation=${desigFilter}&`;
+      if (startDate) url += `start_date=${startDate}&`;
+      if (endDate) url += `end_date=${endDate}&`;
 
-      const [reqRes, empRes] = await Promise.all([
+      const [reqRes, empRes, deptRes, desigRes] = await Promise.all([
         fetch(url, { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/hr/employees/?no_pagination=true", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/hr/departments/?no_pagination=true", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/hr/designations/?no_pagination=true", {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -59,12 +79,23 @@ const LeaveRequests = () => {
 
       if (reqRes.ok) setRequests(await reqRes.json());
       if (empRes.ok) setEmployees(await empRes.json());
+      if (deptRes.ok) setDepartments(await deptRes.json());
+      if (desigRes.ok) setDesignations(await desigRes.json());
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [token, navigate, statusFilter]);
+  }, [
+    token,
+    navigate,
+    statusFilter,
+    search,
+    deptFilter,
+    desigFilter,
+    startDate,
+    endDate,
+  ]);
 
   useEffect(() => {
     if (!token) {
@@ -121,12 +152,51 @@ const LeaveRequests = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    let url = "/api/hr/leave-requests/export_csv/?";
+    if (statusFilter !== "ALL") url += `status=${statusFilter}&`;
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (deptFilter) url += `department=${deptFilter}&`;
+    if (desigFilter) url += `designation=${desigFilter}&`;
+    if (startDate) url += `start_date=${startDate}&`;
+    if (endDate) url += `end_date=${endDate}&`;
+
+    window.open(url, "_blank");
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const clearFilters = () => {
+    setStatusFilter("ALL");
+    setSearch("");
+    setDeptFilter("");
+    setDesigFilter("");
+    setStartDate("");
+    setEndDate("");
+  };
+
   const field = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <style>
+          {`
+            @media print {
+              .no-print { display: none !important; }
+              body { background: white !important; }
+              .print-container { padding: 0 !important; margin: 0 !important; width: 100% !important; }
+              table { width: 100% !important; border-collapse: collapse !important; }
+              th, td { border: 1px solid #e2e8f0 !important; padding: 8px !important; font-size: 10px !important; }
+              .print-header { display: block !important; margin-bottom: 20px !important; }
+            }
+            .print-header { display: none; }
+          `}
+        </style>
+
+        <div className="flex justify-between items-center no-print">
           <div>
             <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 mb-1">
               Leave Management
@@ -135,35 +205,173 @@ const LeaveRequests = () => {
               Manage and track employee leave requests.
             </p>
           </div>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-violet-200 transition-all active:scale-95 flex items-center gap-2"
-          >
-            Request Leave
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleExportCSV}
+              className="bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              CSV
+            </button>
+            <button
+              onClick={handlePrint}
+              className="bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                />
+              </svg>
+              Print
+            </button>
+            <button
+              onClick={() => setModalOpen(true)}
+              className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-violet-200 transition-all active:scale-95 flex items-center gap-2"
+            >
+              Request Leave
+            </button>
+          </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-6 flex gap-4 items-center">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold focus:ring-4 focus:ring-violet-500/10 outline-none min-w-[150px]"
-          >
-            <option value="ALL">All Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
+        {/* Print Header */}
+        <div className="print-header text-center">
+          <h1 className="text-2xl font-bold">Leave Management Report</h1>
+          <p className="text-slate-500">
+            Report Generated on {new Date().toLocaleDateString()}
+          </p>
+        </div>
+
+        {/* Improved Filters */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 no-print space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                Search Employee
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Employee name..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-medium focus:ring-4 focus:ring-violet-500/10 outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:ring-4 focus:ring-violet-500/10 outline-none"
+              >
+                <option value="ALL">All Status</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                Department
+              </label>
+              <select
+                value={deptFilter}
+                onChange={(e) => setDeptFilter(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:ring-4 focus:ring-violet-500/10 outline-none"
+              >
+                <option value="">All Depts</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                Role
+              </label>
+              <select
+                value={desigFilter}
+                onChange={(e) => setDesigFilter(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:ring-4 focus:ring-violet-500/10 outline-none"
+              >
+                <option value="">All Roles</option>
+                {designations.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={clearFilters}
+                className="w-full px-4 py-2 text-xs font-black text-rose-500 uppercase tracking-widest hover:bg-rose-50 rounded-xl transition-all"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-50 pt-4">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                From Date
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-medium focus:ring-4 focus:ring-violet-500/10 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                To Date
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-medium focus:ring-4 focus:ring-violet-500/10 outline-none"
+              />
+            </div>
+          </div>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl font-semibold text-sm">
+          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl font-semibold text-sm no-print">
             {error}
           </div>
         )}
 
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100">
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100 print-container">
           {loading ? (
             <div className="p-20 text-center text-slate-400 font-medium">
               Loading requests…
@@ -174,7 +382,7 @@ const LeaveRequests = () => {
                 No leave requests found
               </h3>
               <p className="text-slate-400">
-                Click 'Request Leave' to submit a new application.
+                Try adjusting your filters or submit a new application.
               </p>
             </div>
           ) : (
@@ -197,7 +405,7 @@ const LeaveRequests = () => {
                     <th className="px-5 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-5 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="px-5 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider no-print">
                       Actions
                     </th>
                   </tr>
@@ -214,7 +422,7 @@ const LeaveRequests = () => {
                       <td className="px-5 py-4 text-sm text-slate-600">
                         {LEAVE_TYPE_LABELS[req.leave_type]}
                       </td>
-                      <td className="px-5 py-4 text-sm text-slate-600">
+                      <td className="px-5 py-4 text-sm text-slate-600 whitespace-nowrap">
                         {new Date(req.start_date).toLocaleDateString()} -{" "}
                         {new Date(req.end_date).toLocaleDateString()}
                       </td>
@@ -228,7 +436,7 @@ const LeaveRequests = () => {
                           {req.status}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-5 py-4 text-right no-print whitespace-nowrap">
                         {req.status === "PENDING" &&
                           (userRole === "ADMIN" || userRole === "OWNER") && (
                             <div className="flex justify-end gap-2">
@@ -257,7 +465,7 @@ const LeaveRequests = () => {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm no-print">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-violet-600 text-white">
               <h2 className="text-xl font-black">Request Leave</h2>
@@ -277,7 +485,7 @@ const LeaveRequests = () => {
                   required
                   value={form.employee}
                   onChange={(e) => field("employee", e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium"
                 >
                   <option value="">Select Employee</option>
                   {employees.map((e) => (
@@ -291,12 +499,12 @@ const LeaveRequests = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                    Type
+                    Leave Type
                   </label>
                   <select
                     value={form.leave_type}
                     onChange={(e) => field("leave_type", e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium"
                   >
                     {Object.entries(LEAVE_TYPE_LABELS).map(([k, v]) => (
                       <option key={k} value={k}>
@@ -304,11 +512,6 @@ const LeaveRequests = () => {
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                    &nbsp;
-                  </label>
                 </div>
               </div>
 
@@ -322,7 +525,7 @@ const LeaveRequests = () => {
                     type="date"
                     value={form.start_date}
                     onChange={(e) => field("start_date", e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium"
                   />
                 </div>
                 <div>
@@ -334,7 +537,7 @@ const LeaveRequests = () => {
                     type="date"
                     value={form.end_date}
                     onChange={(e) => field("end_date", e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium"
                   />
                 </div>
               </div>
@@ -348,7 +551,7 @@ const LeaveRequests = () => {
                   rows={3}
                   value={form.reason}
                   onChange={(e) => field("reason", e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 resize-none"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 resize-none text-sm font-medium"
                   placeholder="Reason for leave"
                 />
               </div>
