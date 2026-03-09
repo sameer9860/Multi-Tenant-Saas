@@ -7,11 +7,12 @@ import csv
 import io
 from datetime import datetime
 
-from .models import Employee, Department, Designation, Attendance
+from .models import Employee, Department, Designation, Attendance, LeaveRequest
 from .serializers import (
     EmployeeSerializer, DepartmentSerializer, 
-    DesignationSerializer, AttendanceSerializer
+    DesignationSerializer, AttendanceSerializer, LeaveRequestSerializer
 )
+from datetime import datetime, timedelta
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
@@ -350,3 +351,65 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
         serializer.save(organization=org)
+
+
+class LeaveRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = LeaveRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_org(self):
+        return (
+            getattr(self.request, 'organization', None)
+            or getattr(self.request.user, 'organization', None)
+        )
+
+    def get_queryset(self):
+        org = self.get_org()
+        queryset = LeaveRequest.objects.filter(organization=org)
+        
+        employee = self.request.query_params.get('employee')
+        if employee:
+            queryset = queryset.filter(employee_id=employee)
+            
+        status = self.request.query_params.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+            
+        return queryset.order_by('-created_at')
+
+    def perform_create(self, serializer):
+        org = self.get_org()
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+        serializer.save(organization=org)
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        old_status = instance.status
+        new_status = serializer.validated_data.get('status', old_status)
+        
+        # Set approved_by if status changed to APPROVED
+        if old_status != 'APPROVED' and new_status == 'APPROVED':
+            serializer.validated_data['approved_by'] = self.request.user
+            
+        updated_instance = serializer.save()
+        
+        # Bonus: Auto-mark attendance as Leave when approved
+        if old_status != 'APPROVED' and new_status == 'APPROVED':
+            self.create_attendance_for_leave(updated_instance)
+
+    def create_attendance_for_leave(self, leave_request):
+        current_date = leave_request.start_date
+        end_date = leave_request.end_date
+        
+        while current_date <= end_date:
+            Attendance.objects.update_or_create(
+                organization=leave_request.organization,
+                employee=leave_request.employee,
+                date=current_date,
+                defaults={
+                    'status': 'LEAVE',
+                    'notes': f"Auto-marked from approved {leave_request.leave_type} leave request."
+                }
+            )
+            current_date += timedelta(days=1)
