@@ -121,7 +121,7 @@ Now system becomes practical.
 
 Progress: 40%
 
-🟢 DAY 5 – Leave Management System
+🟢 DAY 5 – Leave Management System (COMPLETED)
 🎯 Goal:
 
 Formal leave approval workflow.
@@ -155,7 +155,7 @@ Leave history
 Bonus:
 Auto-mark attendance as Leave when approved.
 
-Progress: 55%
+Progress: 55% (Completed Day 5)
 
 🟢 DAY 6 – Payroll Calculation Engine
 
