@@ -2,17 +2,15 @@ from rest_framework import viewsets, pagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django.db import models
-from django.http import StreamingHttpResponse
+from django.http import StreamingHttpResponse, HttpResponse
 import csv
 import io
-from datetime import datetime
-
+from datetime import datetime, timedelta
 from .models import Employee, Department, Designation, Attendance, LeaveRequest
 from .serializers import (
     EmployeeSerializer, DepartmentSerializer, 
     DesignationSerializer, AttendanceSerializer, LeaveRequestSerializer
 )
-from datetime import datetime, timedelta
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
@@ -221,28 +219,24 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         queryset = Attendance.objects.filter(organization=org).select_related('employee')
         queryset = self.filter_queryset_by_params(queryset).order_by('-date', 'employee__full_name')
         
-        def iter_items(items):
-            yield ['S.N', 'Date', 'Employee Name', 'Status', 'Notes']
-            for idx, item in enumerate(items, 1):
-                yield [
-                    idx,
-                    item.date.strftime('%Y-%m-%d'),
-                    item.employee.full_name,
-                    item.status,
-                    item.notes or ''
-                ]
-
-        class Echo:
-            def write(self, value):
-                return value
-
-        pseudo_buffer = Echo()
-        writer = csv.writer(pseudo_buffer)
-        response = StreamingHttpResponse(
-            (writer.writerow(row) for row in iter_items(queryset)),
-            content_type="text/csv"
-        )
-        response['Content-Disposition'] = 'attachment; filename="attendance_history.csv"'
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write headers
+        writer.writerow(['S.N', 'Date', 'Employee Name', 'Status', 'Notes'])
+        
+        # Write data
+        for idx, item in enumerate(queryset, 1):
+            writer.writerow([
+                idx,
+                item.date.strftime('%Y-%m-%d'),
+                item.employee.full_name,
+                item.status,
+                item.notes or ''
+            ])
+            
+        response = HttpResponse(output.getvalue(), content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="attendance_history_{datetime.now().strftime("%Y-%m-%d")}.csv"'
         return response
 
 
@@ -355,6 +349,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
 class LeaveRequestViewSet(viewsets.ModelViewSet):
     serializer_class = LeaveRequestSerializer
+    pagination_class = None
     permission_classes = [IsAuthenticated]
 
     def get_org(self):
@@ -442,32 +437,28 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
             
-        queryset = LeaveRequest.objects.filter(organization=org).select_related('employee')
+        queryset = LeaveRequest.objects.filter(organization=org).select_related('employee', 'approved_by')
         queryset = self.filter_queryset_by_params(queryset).order_by('-created_at')
         
-        def iter_items(items):
-            yield ['S.N', 'Employee Name', 'Leave Type', 'Start Date', 'End Date', 'Status', 'Reason', 'Approved By']
-            for idx, item in enumerate(items, 1):
-                yield [
-                    idx,
-                    item.employee.full_name,
-                    item.get_leave_type_display(),
-                    item.start_date.strftime('%Y-%m-%d'),
-                    item.end_date.strftime('%Y-%m-%d'),
-                    item.status,
-                    item.reason or '',
-                    item.approved_by.username if item.approved_by else '—'
-                ]
-
-        class Echo:
-            def write(self, value):
-                return value
-
-        pseudo_buffer = Echo()
-        writer = csv.writer(pseudo_buffer)
-        response = StreamingHttpResponse(
-            (writer.writerow(row) for row in iter_items(queryset)),
-            content_type="text/csv"
-        )
-        response['Content-Disposition'] = 'attachment; filename="leave_requests.csv"'
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write headers
+        writer.writerow(['S.N', 'Employee Name', 'Leave Type', 'Start Date', 'End Date', 'Status', 'Reason', 'Approved By'])
+        
+        # Write data
+        for idx, item in enumerate(queryset, 1):
+            writer.writerow([
+                idx,
+                item.employee.full_name,
+                item.get_leave_type_display(),
+                item.start_date.strftime('%Y-%m-%d'),
+                item.end_date.strftime('%Y-%m-%d'),
+                item.status,
+                item.reason or '',
+                item.approved_by.full_name if item.approved_by else '—'
+            ])
+        
+        response = HttpResponse(output.getvalue(), content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="leave_requests_{datetime.now().strftime("%Y-%m-%d")}.csv"'
         return response
