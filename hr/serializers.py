@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Employee, Department, Designation, Attendance
+from .models import Employee, Department, Designation, Attendance, LeaveRequest
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
@@ -60,6 +60,29 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'basic_salary',
             'employment_type',
             'status',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class LeaveRequestSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    approved_by_name = serializers.CharField(source='approved_by.username', read_only=True)
+
+    class Meta:
+        model = LeaveRequest
+        fields = [
+            'id',
+            'employee',
+            'employee_name',
+            'leave_type',
+            'start_date',
+            'end_date',
+            'reason',
+            'status',
+            'approved_by',
+            'approved_by_name',
             'created_at',
             'updated_at',
         ]
