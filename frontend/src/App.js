@@ -25,6 +25,7 @@ import CreateEmployee from './pages/dashboard/hr/CreateEmployee';
 import Departments from './pages/dashboard/hr/Departments';
 import Roles from './pages/dashboard/hr/Roles';
 import Attendance from './pages/dashboard/hr/Attendance';
+import LeaveRequests from './pages/dashboard/hr/LeaveRequests';
 
 
 // Basic Auth Guard Component
@@ -193,6 +194,11 @@ function App() {
         <Route path="/dashboard/hr/attendance" element={
           <ProtectedRoute>
             <Attendance />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/hr/leave" element={
+          <ProtectedRoute>
+            <LeaveRequests />
           </ProtectedRoute>
         } />
 
