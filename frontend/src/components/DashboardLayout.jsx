@@ -68,9 +68,9 @@ const DashboardLayout = ({ children, title, subtitle }) => {
   } bg-white border-r border-slate-100 flex flex-col shadow-sm transition-all duration-300 ease-in-out`;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex h-screen overflow-hidden">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex h-screen overflow-hidden DashboardLayout_container">
       {/* Sidebar Navigation */}
-      <div className={sidebarClasses}>
+      <div className={`${sidebarClasses} no-print`}>
         {/* Sidebar Header */}
         <div
           className={`p-6 flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"}`}
@@ -1377,10 +1377,10 @@ const DashboardLayout = ({ children, title, subtitle }) => {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
+      <main className="flex-1 overflow-y-auto p-8 bg-slate-50/50 DashboardLayout_main">
         <div className="max-w-7xl mx-auto">
           {(title || subtitle) && (
-            <header className="mb-8">
+            <header className="mb-8 no-print">
               {title && (
                 <h1 className="text-3xl font-black text-slate-900 mb-2">
                   {title}
