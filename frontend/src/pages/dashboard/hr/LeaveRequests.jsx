@@ -133,6 +133,34 @@ const LeaveRequests = () => {
     }
   };
 
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/hr/leave-requests/${form.id}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+
+      if (res.ok) {
+        setModalOpen(false);
+        setForm(EMPTY_FORM);
+        fetchRequests();
+      } else {
+        const err = await res.json();
+        setError(JSON.stringify(err));
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleAction = async (id, status) => {
     try {
       const res = await fetch(`/api/hr/leave-requests/${id}/`, {
@@ -152,7 +180,21 @@ const LeaveRequests = () => {
     }
   };
 
-  const handleExportCSV = () => {
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this request?"))
+      return;
+    try {
+      const res = await fetch(`/api/hr/leave-requests/${id}/`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) fetchRequests();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const handleExportCSV = async () => {
     let url = "/api/hr/leave-requests/export_csv/?";
     if (statusFilter !== "ALL") url += `status=${statusFilter}&`;
     if (search) url += `search=${encodeURIComponent(search)}&`;
@@ -161,7 +203,27 @@ const LeaveRequests = () => {
     if (startDate) url += `start_date=${startDate}&`;
     if (endDate) url += `end_date=${endDate}&`;
 
-    window.open(url, "_blank");
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to export CSV");
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.setAttribute(
+        "download",
+        `leave_requests_${new Date().toISOString().split("T")[0]}.csv`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      setError(e.message);
+    }
   };
 
   const handlePrint = () => {
@@ -186,11 +248,13 @@ const LeaveRequests = () => {
           {`
             @media print {
               .no-print { display: none !important; }
-              body { background: white !important; }
-              .print-container { padding: 0 !important; margin: 0 !important; width: 100% !important; }
+              body { background: white !important; overflow: visible !important; height: auto !important; }
+              .print-container { padding: 0 !important; margin: 0 !important; width: 100% !important; border: none !important; box-shadow: none !important; }
               table { width: 100% !important; border-collapse: collapse !important; }
               th, td { border: 1px solid #e2e8f0 !important; padding: 8px !important; font-size: 10px !important; }
               .print-header { display: block !important; margin-bottom: 20px !important; }
+              .DashboardLayout_main { padding: 0 !important; margin: 0 !important; width: 100% !important; display: block !important; }
+              .DashboardLayout_container { display: block !important; height: auto !important; overflow: visible !important; padding: 0 !important; background: white !important; }
             }
             .print-header { display: none; }
           `}
@@ -437,23 +501,99 @@ const LeaveRequests = () => {
                         </span>
                       </td>
                       <td className="px-5 py-4 text-right no-print whitespace-nowrap">
-                        {req.status === "PENDING" &&
-                          (userRole === "ADMIN" || userRole === "OWNER") && (
-                            <div className="flex justify-end gap-2">
-                              <button
-                                onClick={() => handleAction(req.id, "APPROVED")}
-                                className="px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors"
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setForm({ ...req });
+                              setModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                            title={
+                              req.status === "PENDING" ? "Edit" : "View Details"
+                            }
+                          >
+                            {req.status === "PENDING" ? (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
                               >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleAction(req.id, "REJECTED")}
-                                className="px-3 py-1 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-colors"
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                            ) : (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
                               >
-                                Reject
-                              </button>
-                            </div>
-                          )}
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                />
+                              </svg>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => handleDelete(req.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                            title="Delete"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+
+                          {req.status === "PENDING" &&
+                            (userRole === "ADMIN" || userRole === "OWNER") && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleAction(req.id, "APPROVED")
+                                  }
+                                  className="px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleAction(req.id, "REJECTED")
+                                  }
+                                  className="px-3 py-1 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-colors"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -468,24 +608,37 @@ const LeaveRequests = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm no-print">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-violet-600 text-white">
-              <h2 className="text-xl font-black">Request Leave</h2>
+              <h2 className="text-xl font-black">
+                {form.id
+                  ? form.status === "PENDING"
+                    ? "Edit Request"
+                    : "View Details"
+                  : "Request Leave"}
+              </h2>
               <button
-                onClick={() => setModalOpen(false)}
+                onClick={() => {
+                  setModalOpen(false);
+                  setForm(EMPTY_FORM);
+                }}
                 className="text-white/70 hover:text-white"
               >
                 ✕
               </button>
             </div>
-            <form onSubmit={handleSave} className="p-6 space-y-4">
+            <form
+              onSubmit={form.id ? handleUpdate : handleSave}
+              className="p-6 space-y-4"
+            >
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">
                   Employee
                 </label>
                 <select
                   required
+                  disabled={form.id && form.status !== "PENDING"}
                   value={form.employee}
                   onChange={(e) => field("employee", e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium disabled:bg-slate-50 disabled:text-slate-500"
                 >
                   <option value="">Select Employee</option>
                   {employees.map((e) => (
@@ -502,9 +655,10 @@ const LeaveRequests = () => {
                     Leave Type
                   </label>
                   <select
+                    disabled={form.id && form.status !== "PENDING"}
                     value={form.leave_type}
                     onChange={(e) => field("leave_type", e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium disabled:bg-slate-50 disabled:text-slate-500"
                   >
                     {Object.entries(LEAVE_TYPE_LABELS).map(([k, v]) => (
                       <option key={k} value={k}>
@@ -522,10 +676,11 @@ const LeaveRequests = () => {
                   </label>
                   <input
                     required
+                    disabled={form.id && form.status !== "PENDING"}
                     type="date"
                     value={form.start_date}
                     onChange={(e) => field("start_date", e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
                 <div>
@@ -534,10 +689,11 @@ const LeaveRequests = () => {
                   </label>
                   <input
                     required
+                    disabled={form.id && form.status !== "PENDING"}
                     type="date"
                     value={form.end_date}
                     onChange={(e) => field("end_date", e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 text-sm font-medium disabled:bg-slate-50 disabled:text-slate-500"
                   />
                 </div>
               </div>
@@ -548,10 +704,11 @@ const LeaveRequests = () => {
                 </label>
                 <textarea
                   required
+                  disabled={form.id && form.status !== "PENDING"}
                   rows={3}
                   value={form.reason}
                   onChange={(e) => field("reason", e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 resize-none text-sm font-medium"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-violet-500 resize-none text-sm font-medium disabled:bg-slate-50 disabled:text-slate-500"
                   placeholder="Reason for leave"
                 />
               </div>
@@ -564,13 +721,19 @@ const LeaveRequests = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-6 py-2 bg-violet-600 text-white rounded-xl font-bold hover:bg-violet-700 disabled:opacity-50"
-                >
-                  {saving ? "Submitting..." : "Submit Request"}
-                </button>
+                {(!form.id || form.status === "PENDING") && (
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-6 py-2 bg-violet-600 text-white rounded-xl font-bold hover:bg-violet-700 disabled:opacity-50"
+                  >
+                    {saving
+                      ? "Submitting..."
+                      : form.id
+                        ? "Update Request"
+                        : "Submit Request"}
+                  </button>
+                )}
               </div>
             </form>
           </div>
