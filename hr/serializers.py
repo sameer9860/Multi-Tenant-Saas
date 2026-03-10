@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Employee, Department, Designation, Attendance, LeaveRequest
+from .models import Employee, Department, Designation, Attendance, LeaveRequest, Payroll
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
@@ -87,3 +87,31 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+class PayrollSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    basic_salary = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    working_days = serializers.IntegerField(required=False)
+    
+    class Meta:
+        model = Payroll
+        fields = [
+            'id',
+            'employee',
+            'employee_name',
+            'month',
+            'basic_salary',
+            'working_days',
+            'present_days',
+            'absent_days',
+            'leave_days',
+            'half_days',
+            'allowances',
+            'deductions',
+            'absence_deduction',
+            'net_salary',
+            'status',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'net_salary']
