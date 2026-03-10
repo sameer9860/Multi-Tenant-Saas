@@ -504,6 +504,10 @@ class PayrollViewSet(viewsets.ModelViewSet):
         if department:
             queryset = queryset.filter(employee__department_id=department)
 
+        designation = self.request.query_params.get('designation')
+        if designation:
+            queryset = queryset.filter(employee__designation_id=designation)
+
         return queryset
 
     def perform_create(self, serializer):
@@ -592,3 +596,34 @@ class PayrollViewSet(viewsets.ModelViewSet):
             "generated": generated_count,
             "updated": updated_count
         })
+
+    @action(detail=False, methods=['get'])
+    def export_csv(self, request):
+        queryset = self.get_queryset()
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="payroll_{datetime.now().strftime("%Y-%m-%d")}.csv"'
+        writer = csv.writer(response)
+        writer.writerow([
+            'Employee', 'Department', 'Role', 'Month',
+            'Basic Salary', 'Working Days', 'Present', 'Absent', 'Leave', 'Half Days',
+            'Allowances', 'Deductions', 'Absence Deduction', 'Net Salary', 'Status'
+        ])
+        for p in queryset:
+            writer.writerow([
+                p.employee.full_name,
+                p.employee.department.name if p.employee.department else '',
+                p.employee.designation.name if p.employee.designation else '',
+                p.month.strftime('%B %Y'),
+                p.basic_salary,
+                p.working_days,
+                p.present_days,
+                p.absent_days,
+                p.leave_days,
+                p.half_days,
+                p.allowances,
+                p.deductions,
+                p.absence_deduction,
+                p.net_salary,
+                p.status,
+            ])
+        return response
