@@ -26,7 +26,7 @@ import Departments from './pages/dashboard/hr/Departments';
 import Roles from './pages/dashboard/hr/Roles';
 import Attendance from './pages/dashboard/hr/Attendance';
 import LeaveRequests from './pages/dashboard/hr/LeaveRequests';
-
+import Payroll from './pages/dashboard/hr/Payroll';
 
 // Basic Auth Guard Component
 const ProtectedRoute = ({ children }) => {
@@ -201,7 +201,11 @@ function App() {
             <LeaveRequests />
           </ProtectedRoute>
         } />
-
+        <Route path="/dashboard/hr/payroll" element={
+          <ProtectedRoute>
+            <Payroll />
+          </ProtectedRoute>
+        } />
 
         {/* Default Redirects */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
