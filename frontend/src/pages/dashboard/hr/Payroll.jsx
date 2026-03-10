@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "../../../components/DashboardLayout";
 
 const Payroll = () => {
@@ -14,6 +14,13 @@ const Payroll = () => {
     currentDate.getMonth() + 1,
   );
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+
+  // Filters
+  const [search, setSearch] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [designationFilter, setDesignationFilter] = useState("");
+  const [departments, setDepartments] = useState([]);
+  const [designations, setDesignations] = useState([]);
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -39,18 +46,45 @@ const Payroll = () => {
     { value: 12, label: "December" },
   ];
 
-  const fetchPayrolls = async () => {
+  // Fetch departments and designations for filter dropdowns
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    Promise.all([
+      fetch("/api/hr/departments/?no_pagination=true", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      fetch("/api/hr/designations/?no_pagination=true", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]).then(async ([deptRes, desigRes]) => {
+      if (deptRes.ok) setDepartments(await deptRes.json());
+      if (desigRes.ok) setDesignations(await desigRes.json());
+    });
+  }, []);
+
+  const buildQueryString = useCallback(() => {
+    let qs = `month=${selectedMonth}&year=${selectedYear}`;
+    if (search) qs += `&search=${encodeURIComponent(search)}`;
+    if (departmentFilter) qs += `&department=${departmentFilter}`;
+    if (designationFilter) qs += `&designation=${designationFilter}`;
+    return qs;
+  }, [
+    selectedMonth,
+    selectedYear,
+    search,
+    departmentFilter,
+    designationFilter,
+  ]);
+
+  const fetchPayrolls = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(
-        `/api/hr/payrolls/?month=${selectedMonth}&year=${selectedYear}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+      const response = await fetch(`/api/hr/payrolls/?${buildQueryString()}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-      );
+      });
       if (!response.ok) throw new Error("Failed to fetch payrolls");
       const data = await response.json();
       setPayrolls(data.results || data);
@@ -59,11 +93,11 @@ const Payroll = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildQueryString]);
 
   useEffect(() => {
     fetchPayrolls();
-  }, [selectedMonth, selectedYear]);
+  }, [fetchPayrolls]);
 
   const handleGeneratePayroll = async () => {
     try {
@@ -89,13 +123,36 @@ const Payroll = () => {
         throw new Error(data.error || "Failed to generate payroll");
 
       setSuccess(data.message);
-      fetchPayrolls(); // Refresh list
+      fetchPayrolls();
     } catch (err) {
       setError(err.message);
     } finally {
       setGenerating(false);
       setTimeout(() => setSuccess(null), 5000);
     }
+  };
+
+  const handleExportCSV = () => {
+    const url = `/api/hr/payrolls/export_csv/?${buildQueryString()}`;
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "payroll.csv");
+    // Attach token via fetch for authenticated download
+    fetch(url, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    })
+      .then((res) => res.blob())
+      .then((blob) => {
+        const blobUrl = window.URL.createObjectURL(blob);
+        link.href = blobUrl;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(blobUrl);
+      })
+      .catch(() => setError("Failed to export CSV"));
   };
 
   const openEditModal = (payroll) => {
@@ -158,6 +215,14 @@ const Payroll = () => {
     );
   };
 
+  const clearFilters = () => {
+    setSearch("");
+    setDepartmentFilter("");
+    setDesignationFilter("");
+  };
+
+  const hasActiveFilters = search || departmentFilter || designationFilter;
+
   return (
     <DashboardLayout
       title="Payroll Generator"
@@ -166,7 +231,7 @@ const Payroll = () => {
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-4 items-center flex-wrap">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
                 Month
@@ -196,55 +261,148 @@ const Payroll = () => {
             </div>
           </div>
 
-          <button
-            onClick={handleGeneratePayroll}
-            disabled={generating}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 w-full sm:w-auto justify-center"
-          >
-            {generating ? (
-              <>
-                <svg
-                  className="animate-spin h-4 w-4 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleExportCSV}
+              disabled={payrolls.length === 0}
+              className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 w-full sm:w-auto justify-center"
+              title="Export filtered payroll to CSV"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              Export CSV
+            </button>
+            <button
+              onClick={handleGeneratePayroll}
+              disabled={generating}
+              className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 w-full sm:w-auto justify-center"
+            >
+              {generating ? (
+                <>
+                  <svg
+                    className="animate-spin h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
                     stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Generating...
-              </>
-            ) : (
-              <>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-                Generate Payroll
-              </>
-            )}
-          </button>
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  Generate Payroll
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Search & Filters Row */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center">
+          <div className="relative flex-1 group">
+            <svg
+              className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search by employee name…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-12 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-sm text-slate-800"
+            />
+          </div>
+          <div>
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all min-w-[160px] appearance-none bg-white"
+            >
+              <option value="">All Departments</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <select
+              value={designationFilter}
+              onChange={(e) => setDesignationFilter(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all min-w-[160px] appearance-none bg-white"
+            >
+              <option value="">All Roles</option>
+              {designations
+                .filter(
+                  (d) =>
+                    !departmentFilter ||
+                    d.department === parseInt(departmentFilter),
+                )
+                .map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-xs font-black text-rose-500 uppercase tracking-widest hover:text-rose-600 px-2 whitespace-nowrap"
+            >
+              Clear
+            </button>
+          )}
         </div>
 
         {/* Alerts */}
@@ -483,7 +641,7 @@ const Payroll = () => {
                       onChange={(e) =>
                         setEditForm({ ...editForm, allowances: e.target.value })
                       }
-                      className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                      className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
                     />
                   </div>
                 </div>
@@ -502,7 +660,7 @@ const Payroll = () => {
                       onChange={(e) =>
                         setEditForm({ ...editForm, deductions: e.target.value })
                       }
-                      className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                      className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
                     />
                   </div>
                 </div>
