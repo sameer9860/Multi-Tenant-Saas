@@ -6,10 +6,10 @@ from django.http import StreamingHttpResponse, HttpResponse
 import csv
 import io
 from datetime import datetime, timedelta
-from .models import Employee, Department, Designation, Attendance, LeaveRequest
+from .models import Employee, Department, Designation, Attendance, LeaveRequest, Payroll
 from .serializers import (
     EmployeeSerializer, DepartmentSerializer, 
-    DesignationSerializer, AttendanceSerializer, LeaveRequestSerializer
+    DesignationSerializer, AttendanceSerializer, LeaveRequestSerializer, PayrollSerializer
 )
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -462,3 +462,133 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         response = HttpResponse(output.getvalue(), content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="leave_requests_{datetime.now().strftime("%Y-%m-%d")}.csv"'
         return response
+
+class PayrollViewSet(viewsets.ModelViewSet):
+    serializer_class = PayrollSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_org(self):
+        return (
+            getattr(self.request, 'organization', None)
+            or getattr(self.request.user, 'organization', None)
+        )
+
+    def get_queryset(self):
+        org = self.get_org()
+        queryset = Payroll.objects.filter(organization=org).select_related('employee')
+        return self.filter_queryset_by_params(queryset).order_by('-month', 'employee__full_name')
+
+    def filter_queryset_by_params(self, queryset):
+        employee = self.request.query_params.get('employee')
+        if employee:
+            queryset = queryset.filter(employee_id=employee)
+            
+        status = self.request.query_params.get('status')
+        if status and status != 'ALL':
+            queryset = queryset.filter(status=status)
+
+        month = self.request.query_params.get('month')
+        year = self.request.query_params.get('year')
+        if month and year:
+            try:
+                date_filter = datetime(int(year), int(month), 1).date()
+                queryset = queryset.filter(month=date_filter)
+            except ValueError:
+                pass
+
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(employee__full_name__icontains=search)
+            
+        department = self.request.query_params.get('department')
+        if department:
+            queryset = queryset.filter(employee__department_id=department)
+
+        return queryset
+
+    def perform_create(self, serializer):
+        org = self.get_org()
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+        serializer.save(organization=org)
+        
+    @action(detail=False, methods=['post'])
+    def generate_payroll(self, request):
+        org = self.get_org()
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+            
+        month_str = request.data.get('month')
+        year_str = request.data.get('year')
+        
+        if not month_str or not year_str:
+            return Response(
+                {"error": "Month and year are required."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        try:
+            target_month = datetime(int(year_str), int(month_str), 1).date()
+            if int(month_str) == 12:
+                next_month = datetime(int(year_str) + 1, 1, 1).date()
+            else:
+                next_month = datetime(int(year_str), int(month_str) + 1, 1).date()
+        except ValueError:
+             return Response(
+                {"error": "Invalid month or year."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        employees = Employee.objects.filter(organization=org, status='ACTIVE')
+        
+        generated_count = 0
+        updated_count = 0
+        
+        for employee in employees:
+            # Get attendance for the month
+            attendances = Attendance.objects.filter(
+                organization=org,
+                employee=employee,
+                date__gte=target_month,
+                date__lt=next_month
+            )
+            
+            present_days = attendances.filter(status='PRESENT').count()
+            absent_days = attendances.filter(status='ABSENT').count()
+            leave_days = attendances.filter(status='LEAVE').count()
+            half_days = attendances.filter(status='HALF_DAY').count()
+            
+            # Create or update draft payroll
+            payroll, created = Payroll.objects.get_or_create(
+                organization=org,
+                employee=employee,
+                month=target_month,
+                defaults={
+                    'basic_salary': employee.basic_salary,
+                    'working_days': 30, # Defaulting to 30 for monthly calculation, could be dynamic
+                    'present_days': present_days,
+                    'absent_days': absent_days,
+                    'leave_days': leave_days,
+                    'half_days': half_days,
+                }
+            )
+            
+            if not created and payroll.status == 'DRAFT':
+                # Update if only DRAFT, don't overwrite user adjustments unless fully recalculating
+                payroll.basic_salary = employee.basic_salary
+                payroll.present_days = present_days
+                payroll.absent_days = absent_days
+                payroll.leave_days = leave_days
+                payroll.half_days = half_days
+                payroll.save() # calculates net_salary
+                updated_count += 1
+            elif created:
+                # Save just to trigger calculate_net_salary in model
+                payroll.save()
+                generated_count += 1
+                
+        return Response({
+            "message": f"Successfully generated {generated_count} new payrolls and updated {updated_count} drafts.",
+            "generated": generated_count,
+            "updated": updated_count
+        })
