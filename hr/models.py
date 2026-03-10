@@ -201,3 +201,81 @@ class LeaveRequest(models.Model):
 
     def __str__(self):
         return f"{self.employee.full_name} - {self.leave_type} ({self.status})"
+
+class Payroll(models.Model):
+    STATUS_CHOICES = [
+        ('DRAFT', 'Draft'),
+        ('FINALIZED', 'Finalized'),
+        ('PAID', 'Paid'),
+    ]
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='payrolls'
+    )
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name='payrolls'
+    )
+    month = models.DateField() # Store as 1st day of the month
+    
+    # Financial fields
+    basic_salary = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    
+    # Attendance summary for the month
+    working_days = models.IntegerField(default=30)
+    present_days = models.IntegerField(default=0)
+    absent_days = models.IntegerField(default=0)
+    leave_days = models.IntegerField(default=0)
+    half_days = models.IntegerField(default=0)
+    
+    # Adjustments
+    allowances = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    deductions = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    absence_deduction = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    
+    # Final amounts
+    net_salary = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='DRAFT'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-month', 'employee__full_name']
+        unique_together = ['organization', 'employee', 'month']
+
+    def calculate_net_salary(self):
+        """
+        Calculate net salary based on basic, allowances, deductions, and absence deduction.
+        If basic_salary or working_days are 0, we assume no baseline income is provided here.
+        """
+        if self.working_days > 0:
+            daily_rate = float(self.basic_salary) / float(self.working_days)
+            # Absence deduction: full day absent + half days
+            total_absent_value = float(self.absent_days) + (float(self.half_days) * 0.5)
+            self.absence_deduction = round(daily_rate * total_absent_value, 2)
+        else:
+            self.absence_deduction = 0.00
+            
+        self.net_salary = float(self.basic_salary) + float(self.allowances) - float(self.deductions) - float(self.absence_deduction)
+        
+        # Ensure net_salary doesn't go negative arbitrarily, though legally possible with high deductions.
+        if self.net_salary < 0:
+            self.net_salary = 0.00
+            
+        return self.net_salary
+
+    def save(self, *args, **kwargs):
+        self.calculate_net_salary()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.month.strftime('%B %Y')} - {self.status}"
