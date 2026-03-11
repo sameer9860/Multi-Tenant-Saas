@@ -6,10 +6,11 @@ from django.http import StreamingHttpResponse, HttpResponse
 import csv
 import io
 from datetime import datetime, timedelta
-from .models import Employee, Department, Designation, Attendance, LeaveRequest, Payroll
+from .models import Employee, Department, Designation, Attendance, LeaveRequest, Payroll, SalaryAdvance
 from .serializers import (
     EmployeeSerializer, DepartmentSerializer, 
-    DesignationSerializer, AttendanceSerializer, LeaveRequestSerializer, PayrollSerializer
+    DesignationSerializer, AttendanceSerializer, LeaveRequestSerializer, 
+    PayrollSerializer, SalaryAdvanceSerializer
 )
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -578,15 +579,41 @@ class PayrollViewSet(viewsets.ModelViewSet):
             )
             
             if not created and payroll.status == 'DRAFT':
+                # Get pending advances for this month
+                pending_advances = SalaryAdvance.objects.filter(
+                    organization=org,
+                    employee=employee,
+                    deduct_in_month=target_month,
+                    is_deducted=False
+                )
+                advance_deduction = pending_advances.aggregate(total=models.Sum('amount'))['total'] or 0
+                
                 # Update if only DRAFT, don't overwrite user adjustments unless fully recalculating
                 payroll.basic_salary = employee.basic_salary
                 payroll.present_days = present_days
                 payroll.absent_days = absent_days
                 payroll.leave_days = leave_days
                 payroll.half_days = half_days
+                payroll.advance_deduction = advance_deduction
                 payroll.save() # calculates net_salary
+                
+                # Mark advances as deducted (Note: realistically this should happen on FINALIZED/PAID)
+                # But for this simple implementation as per Day 7, we'll do it on generation
+                # or maybe better to keep them False until payroll is finalized.
+                # Let's keep them False for now and just set the deduction amount.
+                
                 updated_count += 1
             elif created:
+                # Get pending advances
+                pending_advances = SalaryAdvance.objects.filter(
+                    organization=org,
+                    employee=employee,
+                    deduct_in_month=target_month,
+                    is_deducted=False
+                )
+                advance_deduction = pending_advances.aggregate(total=models.Sum('amount'))['total'] or 0
+                
+                payroll.advance_deduction = advance_deduction
                 # Save just to trigger calculate_net_salary in model
                 payroll.save()
                 generated_count += 1
@@ -606,7 +633,7 @@ class PayrollViewSet(viewsets.ModelViewSet):
         writer.writerow([
             'Employee', 'Department', 'Role', 'Month',
             'Basic Salary', 'Working Days', 'Present', 'Absent', 'Leave', 'Half Days',
-            'Allowances', 'Deductions', 'Absence Deduction', 'Net Salary', 'Status'
+            'Allowances', 'Advance Deduction', 'Deductions', 'Absence Deduction', 'Net Salary', 'Status'
         ])
         for p in queryset:
             writer.writerow([
@@ -621,9 +648,52 @@ class PayrollViewSet(viewsets.ModelViewSet):
                 p.leave_days,
                 p.half_days,
                 p.allowances,
+                p.advance_deduction,
                 p.deductions,
                 p.absence_deduction,
                 p.net_salary,
                 p.status,
             ])
         return response
+
+class SalaryAdvanceViewSet(viewsets.ModelViewSet):
+    serializer_class = SalaryAdvanceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_org(self):
+        return (
+            getattr(self.request, 'organization', None)
+            or getattr(self.request.user, 'organization', None)
+        )
+
+    def get_queryset(self):
+        org = self.get_org()
+        queryset = SalaryAdvance.objects.filter(organization=org).select_related('employee')
+        
+        employee = self.request.query_params.get('employee')
+        if employee:
+            queryset = queryset.filter(employee_id=employee)
+            
+        status = self.request.query_params.get('status')
+        if status == 'PENDING':
+            queryset = queryset.filter(is_deducted=False)
+        elif status == 'DEDUCTED':
+            queryset = queryset.filter(is_deducted=True)
+            
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(employee__full_name__icontains=search)
+            
+        return queryset.order_by('-date')
+
+    def perform_create(self, serializer):
+        org = self.get_org()
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+        
+        # Ensure deduct_in_month is the 1st of the month
+        deduct_in_month = serializer.validated_data.get('deduct_in_month')
+        if deduct_in_month:
+            serializer.validated_data['deduct_in_month'] = deduct_in_month.replace(day=1)
+            
+        serializer.save(organization=org)
