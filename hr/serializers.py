@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Employee, Department, Designation, Attendance, LeaveRequest, Payroll
+from .models import Employee, Department, Designation, Attendance, LeaveRequest, Payroll, SalaryAdvance
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
@@ -88,6 +88,26 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+class SalaryAdvanceSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+
+    class Meta:
+        model = SalaryAdvance
+        fields = [
+            'id',
+            'employee',
+            'employee_name',
+            'amount',
+            'date',
+            'deduct_in_month',
+            'is_deducted',
+            'reason',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'date']
+
+
 class PayrollSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.full_name', read_only=True)
     basic_salary = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
@@ -109,6 +129,7 @@ class PayrollSerializer(serializers.ModelSerializer):
             'allowances',
             'deductions',
             'absence_deduction',
+            'advance_deduction',
             'net_salary',
             'status',
             'created_at',
