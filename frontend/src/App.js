@@ -27,6 +27,7 @@ import Roles from './pages/dashboard/hr/Roles';
 import Attendance from './pages/dashboard/hr/Attendance';
 import LeaveRequests from './pages/dashboard/hr/LeaveRequests';
 import Payroll from './pages/dashboard/hr/Payroll';
+import SalaryAdvance from './pages/dashboard/hr/SalaryAdvance';
 
 // Basic Auth Guard Component
 const ProtectedRoute = ({ children }) => {
@@ -204,6 +205,11 @@ function App() {
         <Route path="/dashboard/hr/payroll" element={
           <ProtectedRoute>
             <Payroll />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/hr/salary-advance" element={
+          <ProtectedRoute>
+            <SalaryAdvance />
           </ProtectedRoute>
         } />
 
