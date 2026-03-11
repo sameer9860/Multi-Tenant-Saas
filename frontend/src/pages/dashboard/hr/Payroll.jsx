@@ -28,6 +28,7 @@ const Payroll = () => {
   const [editForm, setEditForm] = useState({
     allowances: 0,
     deductions: 0,
+    advance_deduction: 0,
     status: "DRAFT",
   });
 
@@ -160,6 +161,7 @@ const Payroll = () => {
     setEditForm({
       allowances: payroll.allowances || 0,
       deductions: payroll.deductions || 0,
+      advance_deduction: payroll.advance_deduction || 0,
       status: payroll.status || "DRAFT",
     });
     setIsEditModalOpen(true);
@@ -182,6 +184,7 @@ const Payroll = () => {
         body: JSON.stringify({
           allowances: editForm.allowances,
           deductions: editForm.deductions,
+          advance_deduction: editForm.advance_deduction,
           status: editForm.status,
         }),
       });
@@ -206,12 +209,13 @@ const Payroll = () => {
   };
 
   const formatCurrency = (amount) => {
+    const numericAmount = parseFloat(amount) || 0;
     return (
       "Rs. " +
       new Intl.NumberFormat("en-IN", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-      }).format(amount)
+      }).format(numericAmount)
     );
   };
 
@@ -451,7 +455,8 @@ const Payroll = () => {
                   <th className="px-6 py-4">Attendance</th>
                   <th className="px-6 py-4">Basic</th>
                   <th className="px-6 py-4 text-emerald-600">+ Allowances</th>
-                  <th className="px-6 py-4 text-red-600">- Deductions</th>
+                  <th className="px-6 py-4 text-red-600">- Adv. Ded.</th>
+                  <th className="px-6 py-4 text-red-600">- Other Ded.</th>
                   <th className="px-6 py-4 font-black">Net Salary</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -537,9 +542,12 @@ const Payroll = () => {
                       <td className="px-6 py-4 text-emerald-600">
                         {formatCurrency(p.allowances)}
                       </td>
+                      <td className="px-6 py-4 text-red-600">
+                        {formatCurrency(p.advance_deduction)}
+                      </td>
                       <td
                         className="px-6 py-4 text-red-600 truncate max-w-[150px]"
-                        title={`Absence: ${p.absence_deduction} + Other: ${p.deductions}`}
+                        title={`Absence: ${p.absence_deduction} + Misc: ${p.deductions}`}
                       >
                         {formatCurrency(
                           parseFloat(p.deductions) +
@@ -626,6 +634,32 @@ const Payroll = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-rose-600 uppercase mb-2">
+                    Advance Deduction
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      Rs.
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editForm.advance_deduction}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          advance_deduction: e.target.value,
+                        })
+                      }
+                      className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 italic">
+                    Note: Adjusting this manually overrides auto-calculated
+                    advances.
+                  </p>
+                </div>
                 <div>
                   <label className="block text-xs font-bold text-emerald-600 uppercase mb-2">
                     Allowances
