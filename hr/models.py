@@ -202,6 +202,34 @@ class LeaveRequest(models.Model):
     def __str__(self):
         return f"{self.employee.full_name} - {self.leave_type} ({self.status})"
 
+
+class SalaryAdvance(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='salary_advances'
+    )
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name='salary_advances'
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    date = models.DateField(auto_now_add=True)
+    deduct_in_month = models.DateField()  # Store as 1st day of the month
+    is_deducted = models.BooleanField(default=False)
+    reason = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.amount} ({self.deduct_in_month.strftime('%B %Y')})"
+
+
 class Payroll(models.Model):
     STATUS_CHOICES = [
         ('DRAFT', 'Draft'),
@@ -235,6 +263,7 @@ class Payroll(models.Model):
     allowances = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     deductions = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     absence_deduction = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    advance_deduction = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     
     # Final amounts
     net_salary = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
@@ -265,7 +294,7 @@ class Payroll(models.Model):
         else:
             self.absence_deduction = 0.00
             
-        self.net_salary = float(self.basic_salary) + float(self.allowances) - float(self.deductions) - float(self.absence_deduction)
+        self.net_salary = float(self.basic_salary) + float(self.allowances) - float(self.deductions) - float(self.absence_deduction) - float(self.advance_deduction)
         
         # Ensure net_salary doesn't go negative arbitrarily, though legally possible with high deductions.
         if self.net_salary < 0:
