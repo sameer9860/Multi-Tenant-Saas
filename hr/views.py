@@ -15,6 +15,7 @@ from .serializers import (
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
+from .utils import generate_payslip_pdf
 
 
 class AttendanceViewSet(viewsets.ModelViewSet):
@@ -654,6 +655,24 @@ class PayrollViewSet(viewsets.ModelViewSet):
                 p.net_salary,
                 p.status,
             ])
+        return response
+
+    @action(detail=True, methods=['get'])
+    def download_payslip(self, request, pk=None):
+        payroll = self.get_object()
+        
+        # Security check: Ensure user belongs to the same organization
+        org = self.get_org()
+        if payroll.organization != org:
+            raise PermissionDenied("You do not have permission to download this payslip.")
+            
+        buffer = generate_payslip_pdf(payroll)
+        
+        filename = f"payslip_{payroll.employee.full_name.replace(' ', '_')}_{payroll.month.strftime('%b_%Y')}.pdf"
+        
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
         return response
 
 class SalaryAdvanceViewSet(viewsets.ModelViewSet):
