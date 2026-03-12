@@ -156,6 +156,55 @@ const Payroll = () => {
       .catch(() => setError("Failed to export CSV"));
   };
 
+  const handleDownloadPayslip = (payroll) => {
+    const url = `/api/hr/payrolls/${payroll.id}/download_payslip/`;
+    const link = document.createElement("a");
+    // Attach token via fetch for authenticated download
+    fetch(url, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to download payslip");
+        return res.blob();
+      })
+      .then((blob) => {
+        const blobUrl = window.URL.createObjectURL(blob);
+        link.href = blobUrl;
+        link.setAttribute(
+          "download",
+          `payslip_${payroll.employee_name.replace(" ", "_")}.pdf`,
+        );
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(blobUrl);
+      })
+      .catch((err) => setError(err.message));
+  };
+
+  const handlePrintPayslip = (payroll) => {
+    const url = `/api/hr/payrolls/${payroll.id}/download_payslip/`;
+    // We fetch the PDF as a blob and then open it in a new window/tab for printing
+    fetch(url, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch payslip for printing");
+        return res.blob();
+      })
+      .then((blob) => {
+        const blobUrl = window.URL.createObjectURL(
+          new Blob([blob], { type: "application/pdf" }),
+        );
+        window.open(blobUrl, "_blank");
+      })
+      .catch((err) => setError(err.message));
+  };
+
   const openEditModal = (payroll) => {
     setEditingPayroll(payroll);
     setEditForm({
@@ -576,12 +625,54 @@ const Payroll = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => openEditModal(p)}
-                          className="text-indigo-600 hover:text-indigo-900 font-medium px-3 py-1.5 hover:bg-indigo-50 rounded-lg transition-colors"
-                        >
-                          Edit
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handlePrintPayslip(p)}
+                            className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200"
+                            title="Print Payslip"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDownloadPayslip(p)}
+                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Download Payslip (PDF)"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => openEditModal(p)}
+                            className="text-indigo-600 hover:text-indigo-900 font-medium px-3 py-1.5 hover:bg-indigo-50 rounded-lg transition-colors"
+                          >
+                            Edit
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
