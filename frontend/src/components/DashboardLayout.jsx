@@ -935,6 +935,53 @@ const DashboardLayout = ({ children, title, subtitle }) => {
               <div
                 className={`${isSidebarCollapsed ? "space-y-2" : "pl-11 space-y-1"}`}
               >
+                {/* HR Dashboard Link */}
+                <button
+                  onClick={() => navigate("/dashboard/hr")}
+                  className={`w-full flex items-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                    location.pathname === "/dashboard/hr" ||
+                    location.pathname === "/dashboard/hr/"
+                      ? "text-violet-600 bg-violet-50"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  } ${isSidebarCollapsed ? "justify-center p-2" : "px-3"}`}
+                  title="HR Dashboard"
+                >
+                  {isSidebarCollapsed ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                      />
+                    </svg>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 opacity-50"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                        />
+                      </svg>
+                      Dashboard
+                    </>
+                  )}
+                </button>
+
                 <button
                   onClick={() => navigate("/dashboard/hr/employees")}
                   className={`w-full flex items-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
