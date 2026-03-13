@@ -741,9 +741,12 @@ class HRDashboardView(APIView):
 
         # 2. Active employees
         active_employees = Employee.objects.filter(organization=org, status='ACTIVE').count()
+        resigned_employees = Employee.objects.filter(organization=org, status='RESIGNED').count()
 
         # 3. Pending leave requests
         pending_leave_requests = LeaveRequest.objects.filter(organization=org, status='PENDING').count()
+        approved_leave_requests = LeaveRequest.objects.filter(organization=org, status='APPROVED').count()
+        rejected_leave_requests = LeaveRequest.objects.filter(organization=org, status='REJECTED').count()
 
         # 4. Monthly payroll expense for the current month
         payroll_expense_agg = Payroll.objects.filter(
@@ -770,6 +773,43 @@ class HRDashboardView(APIView):
             status__in=['FINALIZED', 'PAID']
         ).count()
 
+        # 7. Chart Data
+        employee_status_chart = {
+            'labels': ['Active', 'Resigned'],
+            'data': [active_employees, resigned_employees]
+        }
+        
+        leave_requests_chart = {
+            'labels': ['Pending', 'Approved', 'Rejected'],
+            'data': [pending_leave_requests, approved_leave_requests, rejected_leave_requests]
+        }
+        
+        attendance_trend = {'labels': [], 'present': [], 'absent': [], 'leave': []}
+        for i in range(6, -1, -1):
+            d = today - timedelta(days=i)
+            day_att = Attendance.objects.filter(organization=org, date=d)
+            attendance_trend['labels'].append(d.strftime('%a'))
+            attendance_trend['present'].append(day_att.filter(status='PRESENT').count() + day_att.filter(status='HALF_DAY').count())
+            attendance_trend['absent'].append(day_att.filter(status='ABSENT').count())
+            attendance_trend['leave'].append(day_att.filter(status='LEAVE').count())
+            
+        payroll_expense_chart = {'labels': [], 'data': []}
+        for i in range(5, -1, -1):
+            year, month = today.year, today.month
+            month -= i
+            while month <= 0:
+                month += 12
+                year -= 1
+            m_date = datetime(year, month, 1).date()
+            
+            payroll_expense_chart['labels'].append(m_date.strftime('%b %Y'))
+            p_agg = Payroll.objects.filter(
+                organization=org,
+                month=m_date,
+                status__in=['FINALIZED', 'PAID']
+            ).aggregate(models.Sum('net_salary'))
+            payroll_expense_chart['data'].append(p_agg['net_salary__sum'] or 0)
+
         return Response({
             'total_employees': total_employees,
             'active_employees': active_employees,
@@ -777,5 +817,9 @@ class HRDashboardView(APIView):
             'monthly_payroll_expense': monthly_payroll_expense,
             'attendance_summary': attendance_summary,
             'payroll_processed_count': payroll_processed_count,
+            'employee_status_chart': employee_status_chart,
+            'leave_requests_chart': leave_requests_chart,
+            'attendance_trend': attendance_trend,
+            'payroll_expense_chart': payroll_expense_chart
         })
 
