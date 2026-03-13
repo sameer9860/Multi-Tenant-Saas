@@ -15,6 +15,8 @@ from .serializers import (
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
+from django.utils import timezone
 from .utils import generate_payslip_pdf
 
 
@@ -716,3 +718,64 @@ class SalaryAdvanceViewSet(viewsets.ModelViewSet):
             serializer.validated_data['deduct_in_month'] = deduct_in_month.replace(day=1)
             
         serializer.save(organization=org)
+
+class HRDashboardView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_org(self):
+        return (
+            getattr(self.request, 'organization', None)
+            or getattr(self.request.user, 'organization', None)
+        )
+
+    def get(self, request):
+        org = self.get_org()
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+
+        today = timezone.now().date()
+        current_month = today.replace(day=1)
+
+        # 1. Total employees
+        total_employees = Employee.objects.filter(organization=org).count()
+
+        # 2. Active employees
+        active_employees = Employee.objects.filter(organization=org, status='ACTIVE').count()
+
+        # 3. Pending leave requests
+        pending_leave_requests = LeaveRequest.objects.filter(organization=org, status='PENDING').count()
+
+        # 4. Monthly payroll expense for the current month
+        payroll_expense_agg = Payroll.objects.filter(
+            organization=org,
+            month=current_month,
+            status__in=['FINALIZED', 'PAID']
+        ).aggregate(models.Sum('net_salary'))
+        monthly_payroll_expense = payroll_expense_agg['net_salary__sum'] or 0
+
+        # 5. Attendance summary for today
+        today_attendance = Attendance.objects.filter(organization=org, date=today)
+        attendance_summary = {
+            'present': today_attendance.filter(status='PRESENT').count(),
+            'absent': today_attendance.filter(status='ABSENT').count(),
+            'leave': today_attendance.filter(status='LEAVE').count(),
+            'half_day': today_attendance.filter(status='HALF_DAY').count(),
+            'total_today': today_attendance.count(),
+        }
+
+        # 6. Payroll processed count
+        payroll_processed_count = Payroll.objects.filter(
+            organization=org,
+            month=current_month,
+            status__in=['FINALIZED', 'PAID']
+        ).count()
+
+        return Response({
+            'total_employees': total_employees,
+            'active_employees': active_employees,
+            'pending_leave_requests': pending_leave_requests,
+            'monthly_payroll_expense': monthly_payroll_expense,
+            'attendance_summary': attendance_summary,
+            'payroll_processed_count': payroll_processed_count,
+        })
+
