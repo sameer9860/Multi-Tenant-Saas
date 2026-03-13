@@ -2,7 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     EmployeeViewSet, DepartmentViewSet, DesignationViewSet, 
-    AttendanceViewSet, LeaveRequestViewSet, PayrollViewSet, SalaryAdvanceViewSet
+    AttendanceViewSet, LeaveRequestViewSet, PayrollViewSet, SalaryAdvanceViewSet,
+    HRDashboardView
 )
 
 router = DefaultRouter()
@@ -16,5 +17,6 @@ router.register(r'salary-advances', SalaryAdvanceViewSet, basename='salary-advan
 
 
 urlpatterns = [
+    path('dashboard/', HRDashboardView.as_view(), name='hr-dashboard'),
     path('', include(router.urls)),
 ]
