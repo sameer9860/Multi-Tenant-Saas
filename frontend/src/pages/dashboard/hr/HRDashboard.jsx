@@ -1,6 +1,33 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../../components/DashboardLayout";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Filler,
+} from "chart.js";
+import { Doughnut, Pie, Line, Bar } from "react-chartjs-2";
+
+ChartJS.register(
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Filler,
+);
 
 const HRDashboard = () => {
   const navigate = useNavigate();
@@ -173,6 +200,129 @@ const HRDashboard = () => {
                   <div className="text-2xl font-black text-amber-600">
                     {data.attendance_summary.leave}
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Employee Status (Doughnut) */}
+              <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-6 border border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 mb-6">
+                  Employee Status
+                </h3>
+                <div className="h-64 flex justify-center">
+                  <Doughnut
+                    data={{
+                      labels: data.employee_status_chart?.labels || [],
+                      datasets: [
+                        {
+                          data: data.employee_status_chart?.data || [],
+                          backgroundColor: ["#10b981", "#f43f5e"],
+                          borderWidth: 0,
+                          hoverOffset: 4,
+                        },
+                      ],
+                    }}
+                    options={{ maintainAspectRatio: false }}
+                  />
+                </div>
+              </div>
+
+              {/* Leave Requests (Pie) */}
+              <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-6 border border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 mb-6">
+                  Leave Requests
+                </h3>
+                <div className="h-64 flex justify-center">
+                  <Pie
+                    data={{
+                      labels: data.leave_requests_chart?.labels || [],
+                      datasets: [
+                        {
+                          data: data.leave_requests_chart?.data || [],
+                          backgroundColor: ["#f59e0b", "#10b981", "#f43f5e"],
+                          borderWidth: 0,
+                          hoverOffset: 4,
+                        },
+                      ],
+                    }}
+                    options={{ maintainAspectRatio: false }}
+                  />
+                </div>
+              </div>
+
+              {/* Attendance Trend (Line) */}
+              <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-6 border border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 mb-6">
+                  Attendance Trend (7 Days)
+                </h3>
+                <div className="h-64">
+                  <Line
+                    data={{
+                      labels: data.attendance_trend?.labels || [],
+                      datasets: [
+                        {
+                          label: "Present/Half-day",
+                          data: data.attendance_trend?.present || [],
+                          borderColor: "#10b981",
+                          backgroundColor: "rgba(16, 185, 129, 0.1)",
+                          tension: 0.4,
+                          fill: true,
+                        },
+                        {
+                          label: "Absent",
+                          data: data.attendance_trend?.absent || [],
+                          borderColor: "#f43f5e",
+                          backgroundColor: "rgba(244, 63, 94, 0.1)",
+                          tension: 0.4,
+                          fill: true,
+                        },
+                        {
+                          label: "On Leave",
+                          data: data.attendance_trend?.leave || [],
+                          borderColor: "#f59e0b",
+                          backgroundColor: "rgba(245, 158, 11, 0.1)",
+                          tension: 0.4,
+                          fill: true,
+                        },
+                      ],
+                    }}
+                    options={{
+                      maintainAspectRatio: false,
+                      plugins: { legend: { position: "bottom" } },
+                      scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                      },
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Payroll Expense (Bar) */}
+              <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-6 border border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 mb-6">
+                  Payroll Expense (6 Months)
+                </h3>
+                <div className="h-64">
+                  <Bar
+                    data={{
+                      labels: data.payroll_expense_chart?.labels || [],
+                      datasets: [
+                        {
+                          label: "Total Expense (Rs)",
+                          data: data.payroll_expense_chart?.data || [],
+                          backgroundColor: "#8b5cf6",
+                          borderRadius: 4,
+                        },
+                      ],
+                    }}
+                    options={{
+                      maintainAspectRatio: false,
+                      plugins: { legend: { display: false } },
+                      scales: { y: { beginAtZero: true } },
+                    }}
+                  />
                 </div>
               </div>
             </div>
