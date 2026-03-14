@@ -293,8 +293,6 @@ Export leave report
 
 Filter by month / employee
 
-Optional:
-Simple profit impact view (Salary expense vs revenue if billing connected)
 
 Progress: 100%
 
