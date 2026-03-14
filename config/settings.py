@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'apps.subscriptions',
     'crm',
     'hr',
+    'appointments',
     'corsheaders',
 ]
 
