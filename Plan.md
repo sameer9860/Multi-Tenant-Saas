@@ -1,314 +1,444 @@
-👩‍💼 HR + PAYROLL SYSTEM – 10 DAY BUILD PLAN
-🟢 DAY 1 – Employee Management Foundation
-🎯 Goal:
+📅 Appointment Scheduling Module – Complete Phase-Based Plan
+🎯 Goal
 
-Create professional employee records.
+Build a flexible appointment scheduling system that businesses can use to manage bookings, staff availability, and customer appointments.
 
-Build:
+This module should work for:
 
-Employee model
+Clinics (doctor appointments)
 
-Employee list page
+Salons (stylist bookings)
 
-Add / edit employee
+Tutors (lesson scheduling)
 
-Active / resigned status
+Consultants (meeting bookings)
 
-Business isolation
+Agencies (client sessions)
 
-Fields:
+The system should be multi-tenant, meaning each organization manages its own appointments independently.
 
-Full name
+🧱 PHASE 1 – Service Management
+Purpose
 
-Phone
+Businesses must define what services they offer.
+
+Features
+
+Organizations can create services such as:
+
+Haircut
+
+Consultation
+
+Medical Checkup
+
+Training Session
+
+Service Model Fields
+
+organization (ForeignKey)
+
+name
+
+description
+
+duration_minutes
+
+price
+
+active status
+
+created_at
+
+Backend Tasks
+
+Create:
+app appointments
+
+Add:
+
+CRUD API for services
+
+Organization isolation
+
+Service list endpoint
+
+UI Tasks
+
+Service Management Page:
+
+List services
+
+Create service
+
+Edit service
+
+Activate / deactivate
+
+👩‍⚕️ PHASE 2 – Staff Management
+Purpose
+
+Appointments must be assigned to a staff member.
+
+Examples:
+
+Doctor
+Salon stylist
+Tutor
+Consultant
+
+Staff Model Fields
+
+organization
+
+name
+
+email
+
+phone
+
+role
+
+active status
+
+created_at
+
+Backend Tasks
+
+Create:
+
+appointments/models.py
+Staff
+
+Add:
+
+CRUD API
+
+Staff list per organization
+
+UI Tasks
+
+Staff Management Page:
+
+Add staff
+
+Edit staff
+
+View staff members
+
+🕒 PHASE 3 – Staff Availability System
+Purpose
+
+Businesses must define when staff are available.
+
+Example:
+
+Doctor available:
+
+Monday 9–5
+Tuesday 9–5
+
+Availability Model Fields
+
+staff
+
+day_of_week
+
+start_time
+
+end_time
+
+slot_duration_minutes
+
+Backend Tasks
+
+Create:
+
+StaffAvailability
+
+Add logic:
+
+Generate time slots automatically
+
+Example slots:
+
+9:00
+9:30
+10:00
+10:30
+UI Tasks
+
+Availability Settings Page
+
+Choose staff
+
+Set working days
+
+Set time range
+
+Define slot duration
+
+📆 PHASE 4 – Appointment Booking
+Purpose
+
+Core feature of the system.
+
+Customers can be booked for available slots.
+
+Appointment Model Fields
+
+organization
+
+customer
+
+service
+
+staff
+
+date
+
+time
+
+status
+
+notes
+
+created_at
+
+Appointment Status
+
+Scheduled
+
+Completed
+
+Cancelled
+
+No-show
+
+Backend Tasks
+
+Create:
+
+Appointment
+
+Add validation:
+
+Prevent double booking.
+
+Example rule:
+
+staff + date + time must be unique
+UI Tasks
+
+Booking Page:
+
+Select service
+
+Select staff
+
+Select date
+
+Show available slots
+
+Confirm appointment
+
+📊 PHASE 5 – Appointment Dashboard
+Purpose
+
+Give businesses quick overview.
+
+Dashboard Metrics
+
+Today’s appointments
+
+Upcoming appointments
+
+Completed appointments
+
+Cancelled appointments
+
+UI Tasks
+
+Create dashboard cards:
+
+Today's Appointments
+Upcoming
+Completed
+Cancelled
+
+Add table:
+
+Time | Customer | Service | Staff | Status
+🗓 PHASE 6 – Calendar View
+Purpose
+
+Visual scheduling view.
+
+Calendar formats:
+
+Day view
+
+Week view
+
+Month view
+
+Businesses can quickly see bookings.
+
+UI Tools
+
+Use calendar libraries like:
+
+FullCalendar
+
+React Calendar
+
+Features:
+
+Drag appointments
+
+Click to view details
+
+Edit booking
+
+🔔 PHASE 7 – Reminder System
+Purpose
+
+Reduce missed appointments.
+
+Reminders can be sent via:
 
 Email
 
-Address
+SMS
 
-Department
+WhatsApp (future)
 
-Position
+Reminder Logic
 
-Join date
+Send reminder:
 
-Basic salary
+24 hours before
 
-Employment type
+2 hours before
 
-Status
+Backend Tasks
 
-Result:
+Create scheduled job:
 
-You now have digital staff records.
+Celery / Cron job
 
-Progress: 10%
+Send reminders automatically.
 
-🟢 DAY 2 – Departments & Roles Structure (COMPLETED)
-🎯 Goal:
+📈 PHASE 8 – Appointment Reports
+Purpose
 
-Make system organized for growing companies.
+Help businesses understand demand.
 
-Build:
+Reports
 
-[x] Department model
+Appointments per day
+Appointments per staff
+Revenue per service
+Cancellation rate
 
-[x] Assign employees to department
+UI
 
-[x] Department summary page (count employees)
+Reports dashboard with charts.
+
+💰 PHASE 9 – Payment Integration (Optional)
+
+Allow payment during booking.
+
+Payment options:
+
+Cash
+
+eSewa
+
+Khalti
+
+Online payment
+
+Appointment fields:
+
+payment_status
+
+payment_method
+
+amount
+
+🔐 PHASE 10 – Business Rules & Limits
+
+For SaaS plans.
+
+Example:
+
+FREE plan:
+
+50 appointments/month
+
+PRO plan:
+
+unlimited bookings
+
+Add validation:
+
+if appointment_limit_reached:
+    block new bookings
+🧠 DATABASE STRUCTURE
+
+Main models:
+
+Service
+Staff
+StaffAvailability
+Appointment
+AppointmentReminder
 
 Optional:
 
-[x] Designation model
-
-Why:
-
-HR becomes scalable, not messy.
-
-Progress: 15%
-
-🟢 DAY 3 – Attendance System (Manual Entry)
-🎯 Goal:
-
-Track daily attendance.
-
-Build:
-
-Attendance model:
-
-Employee
-
-Date
-
-Status (Present / Absent / Leave / Half-day)
-
-Notes
-
-Pages:
-
-Daily attendance entry
-
-Monthly attendance view per employee
-
-Filter by date
-
-Add:
-Prevent duplicate entry per employee per date.
-
-Progress: 30%
-
-🟢 DAY 4 – CSV Attendance Import
-🎯 Goal:
-
-Save HR time.
-
-Build:
-
-CSV upload feature
-
-Bulk attendance creation
-
-Validation (skip duplicates)
-
-Example CSV:
-
-Employee Name, Date, Status
-
-Add:
-Import summary message (Success / Failed rows)
-
-Now system becomes practical.
-
-Progress: 40%
-
-🟢 DAY 5 – Leave Management System (COMPLETED)
-🎯 Goal:
-
-Formal leave approval workflow.
-
-Build:
-
-LeaveRequest model:
-
-Employee
-
-Leave type
-
-From date
-
-To date
-
-Reason
-
-Status (Pending / Approved / Rejected)
-
-Approved by
-
-Pages:
-
-Employee leave request
-
-Manager approval page
-
-Leave history
-
-Bonus:
-Auto-mark attendance as Leave when approved.
-
-Progress: 55% (Completed Day 5)
-
-🟢 DAY 6 – Payroll Calculation Engine
-
-🔥 This is the core money feature.
-
-🎯 Goal:
-
-Automatic salary calculation.
-
-Build:
-
-Payroll model:
-
-Employee
-
-Month
-
-Basic salary
-
-Allowances
-
-Deductions
-
-Absence deduction
-
-Net salary
-
-Status (Draft / Finalized / Paid)
-
-Logic:
-
-Net Salary =
-Basic
-
-Allowances
-
-(Absent days × daily rate)
-
-Other deductions
-
-Daily rate =
-Basic salary / working days
-
-Add:
-Auto-calculate from attendance.
-
-Progress: 70%
-
-🟢 DAY 7 – Salary Advance & Deductions
-🎯 Goal:
-
-Handle real-world payroll.
-
-Build:
-AdvanceSalary model:
-
-Employee
-
-Amount
-
-Date
-
-Deduct in month
-
-Payroll auto deducts advance.
-
-Optional:
-Late fine logic.
-
-Now payroll becomes real-world ready.
-
-Progress: 80%
-
-🟢 DAY 8 – Payslip Generation (PDF)
-
-Huge selling point 💰
-
-Build:
-
-Generate professional payslip including:
-
-Business name
-
-Employee details
-
-Salary breakdown
-
-Deductions
-
-Net payable
-
-Signature section
-
-Export:
-
-PDF download
-
-Printable version
-
-This makes system look premium.
-
-Progress: 90%
-
-🟢 DAY 9 – HR Dashboard
-🎯 Goal:
-
-Management overview.
-
-Show:
-
-Total employees
-
-Active employees
-
-Pending leave requests
-
-Monthly payroll expense
-
-Attendance summary
-
-Payroll processed count
-
-Now managers feel control.
-
-Progress: 95%
-
-🟢 DAY 10 – Reports & Export
-Build:
-
-Export payroll CSV
-
-Export attendance CSV
-
-Export leave report
-
-Filter by month / employee
-
-
-Progress: 100%
-
-💰 FINAL HR MODULE FEATURES
-
-After Day 10 you will have:
-
-✔ Employee profiles
-✔ Department structure
-✔ Attendance tracking
-✔ CSV import
-✔ Leave workflow
-✔ Automated payroll calculation
-✔ Advance deduction
-✔ Payslip PDF
-✔ HR dashboard
-✔ Reports & export
-
-This is fully sellable HR system for small businesses.
+AppointmentPayment
+📊 FINAL FEATURES
+
+After all phases, the system supports:
+
+✔ Service management
+✔ Staff management
+✔ Staff availability scheduling
+✔ Appointment booking
+✔ Slot management
+✔ Calendar view
+✔ Appointment dashboard
+✔ Reminder notifications
+✔ Appointment reports
+✔ Payment support
+✔ SaaS plan limits
+
+💰 BUSINESS VALUE
+
+This module can be sold to:
+
+Clinics
+Salons
+Training centers
+Consultants
+Freelancers
+
+It can be:
+
+Sold as standalone SaaS
+
+Bundled with CRM + Billing
+
+🚀 Suggested Build Order
+
+Day 1 – Services
+Day 2 – Staff
+Day 3 – Staff availability
+Day 4 – Slot generation
+Day 5 – Booking system
+Day 6 – Appointment dashboard
+Day 7 – Calendar view
+Day 8 – Reminder system
+Day 9 – Reports
+Day 10 – Payment integration
