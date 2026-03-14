@@ -25,6 +25,9 @@ const DashboardLayout = ({ children, title, subtitle }) => {
   const [isHrMenuOpen, setIsHrMenuOpen] = useState(
     location.pathname.includes("/dashboard/hr"),
   );
+  const [isAppointmentsMenuOpen, setIsAppointmentsMenuOpen] = useState(
+    location.pathname.includes("/dashboard/appointments"),
+  );
 
   // Sync open section with route changes
   React.useEffect(() => {
@@ -39,6 +42,8 @@ const DashboardLayout = ({ children, title, subtitle }) => {
     if (location.pathname.includes("/dashboard/reports"))
       setIsReportsMenuOpen(true);
     if (location.pathname.includes("/dashboard/hr")) setIsHrMenuOpen(true);
+    if (location.pathname.includes("/dashboard/appointments"))
+      setIsAppointmentsMenuOpen(true);
   }, [location.pathname]);
 
   // Toggle function for accordion behavior
@@ -50,6 +55,9 @@ const DashboardLayout = ({ children, title, subtitle }) => {
     setIsTeamMenuOpen(menu === "team" ? !isTeamMenuOpen : false);
     setIsReportsMenuOpen(menu === "reports" ? !isReportsMenuOpen : false);
     setIsHrMenuOpen(menu === "hr" ? !isHrMenuOpen : false);
+    setIsAppointmentsMenuOpen(
+      menu === "appointments" ? !isAppointmentsMenuOpen : false,
+    );
   };
 
   const logout = () => {
@@ -62,6 +70,9 @@ const DashboardLayout = ({ children, title, subtitle }) => {
   const isInvoicesActive = location.pathname.includes("/dashboard/invoices");
   const isTeamActive = location.pathname.includes("/dashboard/team");
   const isReportsActive = location.pathname.includes("/dashboard/reports");
+  const isAppointmentsActive = location.pathname.includes(
+    "/dashboard/appointments",
+  );
 
   const sidebarClasses = `${
     isSidebarCollapsed ? "w-20" : "w-80"
@@ -1345,6 +1356,105 @@ const DashboardLayout = ({ children, title, subtitle }) => {
                         />
                       </svg>
                       Salary Advance
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Appointment Scheduling Dropdown */}
+          <div className="space-y-1">
+            <button
+              onClick={() => toggleMenu("appointments")}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${
+                isAppointmentsActive && !isSidebarCollapsed
+                  ? "text-indigo-700"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              } ${isSidebarCollapsed ? "justify-center px-2 cursor-default" : "cursor-pointer"}`}
+              title={isSidebarCollapsed ? "Appointments" : ""}
+            >
+              <div className="flex items-center gap-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-5 w-5 flex-shrink-0 ${isAppointmentsActive && isSidebarCollapsed ? "text-indigo-600" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                {!isSidebarCollapsed && <span>Appointments</span>}
+              </div>
+              {!isSidebarCollapsed && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-4 w-4 transition-transform duration-200 ${isAppointmentsMenuOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              )}
+            </button>
+
+            {(isAppointmentsMenuOpen || isSidebarCollapsed) && (
+              <div
+                className={`${isSidebarCollapsed ? "space-y-2" : "pl-11 space-y-1"}`}
+              >
+                {/* Services Item */}
+                <button
+                  onClick={() => navigate("/dashboard/appointments/services")}
+                  className={`w-full flex items-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive("/dashboard/appointments/services")
+                      ? "text-indigo-600 bg-indigo-50"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  } ${isSidebarCollapsed ? "justify-center p-2" : "px-3"}`}
+                  title="Service Management"
+                >
+                  {isSidebarCollapsed ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                      />
+                    </svg>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 opacity-50"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                        />
+                      </svg>
+                      Services
                     </>
                   )}
                 </button>
