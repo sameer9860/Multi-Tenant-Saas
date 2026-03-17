@@ -1,6 +1,6 @@
 from rest_framework import viewsets, permissions
-from .models import Service, Staff
-from .serializers import ServiceSerializer, StaffSerializer
+from .models import Service, Staff, StaffAvailability
+from .serializers import ServiceSerializer, StaffSerializer, StaffAvailabilitySerializer
 
 class ServiceViewSet(viewsets.ModelViewSet):
     serializer_class = ServiceSerializer
@@ -23,3 +23,11 @@ class StaffViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(organization=self.request.user.organization)
+
+class StaffAvailabilityViewSet(viewsets.ModelViewSet):
+    serializer_class = StaffAvailabilitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Filter by the user's organization through the staff model
+        return StaffAvailability.objects.filter(staff__organization=self.request.user.organization)
