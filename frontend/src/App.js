@@ -31,6 +31,8 @@ import SalaryAdvance from './pages/dashboard/hr/SalaryAdvance';
 import HRDashboard from './pages/dashboard/hr/HRDashboard';
 import ServiceList from './pages/dashboard/appointments/ServiceList';
 import StaffList from './pages/dashboard/appointments/StaffList';
+import AvailabilitySettings from './pages/dashboard/appointments/AvailabilitySettings';
+
 
 // Basic Auth Guard Component
 const ProtectedRoute = ({ children }) => {
@@ -230,6 +232,11 @@ function App() {
         <Route path="/dashboard/appointments/staff" element={
           <ProtectedRoute>
             <StaffList />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/appointments/availability" element={
+          <ProtectedRoute>
+            <AvailabilitySettings />
           </ProtectedRoute>
         } />
 
