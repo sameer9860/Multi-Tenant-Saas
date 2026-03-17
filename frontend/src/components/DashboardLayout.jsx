@@ -1504,6 +1504,54 @@ const DashboardLayout = ({ children, title, subtitle }) => {
                     </>
                   )}
                 </button>
+
+                {/* Availability Item */}
+                <button
+                  onClick={() =>
+                    navigate("/dashboard/appointments/availability")
+                  }
+                  className={`w-full flex items-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive("/dashboard/appointments/availability")
+                      ? "text-indigo-600 bg-indigo-50"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                  } ${isSidebarCollapsed ? "justify-center p-2" : "px-3"}`}
+                  title="Staff Availability"
+                >
+                  {isSidebarCollapsed ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 opacity-50"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      Availability
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>
