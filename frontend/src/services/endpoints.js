@@ -63,6 +63,14 @@ export const ENDPOINTS = {
     dashboard: '/api/crm/dashboard/',
     dashboardFallback: '/crm/dashboard/',
   },
+
+  // Appointments endpoints
+  appointments: {
+    services: '/api/appointments/services/',
+    staff: '/api/appointments/staff/',
+    availability: '/api/appointments/staff-availability/',
+    appointments: '/api/appointments/appointments/',
+  },
 };
 
 /**
