@@ -1,4 +1,5 @@
 from django.db import models
+from apps.invoices.models import Customer
 
 class Service(models.Model):
     organization = models.ForeignKey(
@@ -55,3 +56,44 @@ class StaffAvailability(models.Model):
 
     def __str__(self):
         return f"{self.staff.name} - {self.get_day_of_week_display()} ({self.start_time} - {self.end_time})"
+
+class Appointment(models.Model):
+    STATUS_CHOICES = (
+        ('SCHEDULED', 'Scheduled'),
+        ('COMPLETED', 'Completed'),
+        ('CANCELLED', 'Cancelled'),
+        ('NO_SHOW', 'No-show'),
+    )
+
+    organization = models.ForeignKey(
+        'core.Organization',
+        on_delete=models.CASCADE,
+        related_name="appointments"
+    )
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name="appointments"
+    )
+    service = models.ForeignKey(
+        Service,
+        on_delete=models.CASCADE,
+        related_name="appointments"
+    )
+    staff = models.ForeignKey(
+        Staff,
+        on_delete=models.CASCADE,
+        related_name="appointments"
+    )
+    date = models.DateField()
+    time = models.TimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='SCHEDULED')
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # Prevent double booking for the same staff member at the same time
+        unique_together = ('staff', 'date', 'time')
+
+    def __str__(self):
+        return f"{self.customer.name} - {self.service.name} with {self.staff.name} on {self.date} at {self.time}"
