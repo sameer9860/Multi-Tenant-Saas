@@ -32,6 +32,8 @@ import HRDashboard from './pages/dashboard/hr/HRDashboard';
 import ServiceList from './pages/dashboard/appointments/ServiceList';
 import StaffList from './pages/dashboard/appointments/StaffList';
 import AvailabilitySettings from './pages/dashboard/appointments/AvailabilitySettings';
+import BookingPage from './pages/dashboard/appointments/BookingPage';
+import AppointmentList from './pages/dashboard/appointments/AppointmentList';
 
 
 // Basic Auth Guard Component
@@ -237,6 +239,26 @@ function App() {
         <Route path="/dashboard/appointments/availability" element={
           <ProtectedRoute>
             <AvailabilitySettings />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/appointments/book" element={
+          <ProtectedRoute>
+            <BookingPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/appointments/list" element={
+          <ProtectedRoute>
+            <AppointmentList />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/appointments/edit/:id" element={
+          <ProtectedRoute>
+            <BookingPage isEdit={true} />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard/appointments/view/:id" element={
+          <ProtectedRoute>
+            <BookingPage isView={true} />
           </ProtectedRoute>
         } />
 
