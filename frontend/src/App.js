@@ -34,6 +34,7 @@ import StaffList from './pages/dashboard/appointments/StaffList';
 import AvailabilitySettings from './pages/dashboard/appointments/AvailabilitySettings';
 import BookingPage from './pages/dashboard/appointments/BookingPage';
 import AppointmentList from './pages/dashboard/appointments/AppointmentList';
+import AppointmentDashboard from './pages/dashboard/appointments/AppointmentDashboard';
 
 
 // Basic Auth Guard Component
@@ -226,6 +227,11 @@ function App() {
         } />
 
         {/* Appointments Routes */}
+        <Route path="/dashboard/appointments" element={
+          <ProtectedRoute>
+            <AppointmentDashboard />
+          </ProtectedRoute>
+        } />
         <Route path="/dashboard/appointments/services" element={
           <ProtectedRoute>
             <ServiceList />
