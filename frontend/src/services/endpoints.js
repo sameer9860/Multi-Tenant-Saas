@@ -69,7 +69,8 @@ export const ENDPOINTS = {
     services: '/api/appointments/services/',
     staff: '/api/appointments/staff/',
     availability: '/api/appointments/staff-availability/',
-    appointments: '/api/appointments/appointments/',
+    list: '/api/appointments/appointments/',
+    dashboard: '/api/appointments/appointments/dashboard/',
   },
 };
 
