@@ -1,4 +1,7 @@
 from rest_framework import viewsets, permissions
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.utils import timezone
 from .models import Service, Staff, StaffAvailability, Appointment
 from .serializers import ServiceSerializer, StaffSerializer, StaffAvailabilitySerializer, AppointmentSerializer
 
@@ -41,3 +44,26 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(organization=self.request.user.organization)
+
+    @action(detail=False, methods=['get'])
+    def dashboard(self, request):
+        org = request.user.organization
+        today = timezone.now().date()
+        
+        appointments = Appointment.objects.filter(organization=org)
+        
+        today_count = appointments.filter(date=today).count()
+        upcoming_count = appointments.filter(date__gte=today, status='SCHEDULED').count()
+        completed_count = appointments.filter(status='COMPLETED').count()
+        cancelled_count = appointments.filter(status='CANCELLED').count()
+        
+        recent_appointments = appointments.order_by('-created_at')[:10]
+        serializer = self.get_serializer(recent_appointments, many=True)
+        
+        return Response({
+            'today_count': today_count,
+            'upcoming_count': upcoming_count,
+            'completed_count': completed_count,
+            'cancelled_count': cancelled_count,
+            'recent_appointments': serializer.data
+        })
