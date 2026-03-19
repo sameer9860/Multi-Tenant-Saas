@@ -554,3 +554,39 @@ export const useCreatePayment = () => {
 
   return { createPayment, loading, error, success };
 };
+/**
+ * Hook for fetching appointment dashboard data
+ */
+export const useAppointmentDashboard = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const endpoint = getEndpoint('appointments', 'dashboard');
+      const result = await api.get(endpoint.primary);
+      setData(result);
+      setError(null);
+    } catch (err) {
+      console.error('[useAppointmentDashboard] Failed:', err);
+      setError({
+        message: err.message || 'Failed to load appointment dashboard',
+        code: err.code,
+        details: err.details,
+      });
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+};
