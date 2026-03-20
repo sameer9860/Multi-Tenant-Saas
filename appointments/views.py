@@ -40,7 +40,18 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Appointment.objects.filter(organization=self.request.user.organization)
+        queryset = Appointment.objects.filter(organization=self.request.user.organization)
+        
+        # Optional date range filtering
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        
+        if start_date:
+            queryset = queryset.filter(date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(date__lte=end_date)
+            
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(organization=self.request.user.organization)
