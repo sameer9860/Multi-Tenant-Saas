@@ -269,6 +269,7 @@ Cancelled
 Add table:
 
 Time | Customer | Service | Staff | Status
+
 🗓 PHASE 6 – Calendar View
 Purpose
 
