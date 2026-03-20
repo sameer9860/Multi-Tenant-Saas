@@ -15,6 +15,13 @@ const AppointmentCalendar = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Filter state
+  const [filters, setFilters] = useState({
+    customerName: "",
+    staffName: "",
+    status: "ALL",
+  });
+
   const fetchAppointments = async () => {
     setLoading(true);
     try {
@@ -33,9 +40,32 @@ const AppointmentCalendar = () => {
     fetchAppointments();
   }, []);
 
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Filter appointments based on user input
+  const filteredAppointments = appointments.filter((appt) => {
+    const matchesCustomer = appt.customer_name
+      ?.toLowerCase()
+      .includes(filters.customerName.toLowerCase());
+    const matchesStaff = appt.staff_name
+      ?.toLowerCase()
+      .includes(filters.staffName.toLowerCase());
+    const matchesStatus =
+      filters.status === "ALL" || appt.status === filters.status;
+
+    return matchesCustomer && matchesStaff && matchesStatus;
+  });
+
   // Map backend appointments to react-big-calendar events
-  const events = appointments.map((appt) => {
-    const start = moment(`${appt.date}T${appt.time}`).toDate();
+  const events = filteredAppointments.map((appt) => {
+    // Robust date parsing using moment
+    const start = moment(
+      `${appt.date}T${appt.time}`,
+      "YYYY-MM-DDTHH:mm:ss",
+    ).toDate();
     const end = moment(start)
       .add(appt.service_duration || 30, "minutes")
       .toDate();
@@ -89,6 +119,7 @@ const AppointmentCalendar = () => {
         fontSize: "0.75rem",
         fontWeight: "bold",
         padding: "2px 5px",
+        height: "auto", // Allow month view events to show properly
       },
     };
   };
@@ -140,8 +171,55 @@ const AppointmentCalendar = () => {
           </div>
         </div>
 
+        {/* Filter Bar */}
+        <div className="bg-white rounded-[2rem] shadow-lg shadow-slate-100 border border-slate-100 p-6 mb-8 flex flex-wrap gap-6 items-end">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
+              Customer Name
+            </label>
+            <input
+              type="text"
+              name="customerName"
+              value={filters.customerName}
+              onChange={handleFilterChange}
+              placeholder="Search customer..."
+              className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-50 focus:border-indigo-500 focus:bg-white rounded-xl text-slate-900 font-bold transition-all outline-none"
+            />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
+              Staff Name
+            </label>
+            <input
+              type="text"
+              name="staffName"
+              value={filters.staffName}
+              onChange={handleFilterChange}
+              placeholder="Search staff..."
+              className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-50 focus:border-indigo-500 focus:bg-white rounded-xl text-slate-900 font-bold transition-all outline-none"
+            />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
+              Status
+            </label>
+            <select
+              name="status"
+              value={filters.status}
+              onChange={handleFilterChange}
+              className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-50 focus:border-indigo-500 focus:bg-white rounded-xl text-slate-900 font-bold transition-all outline-none appearance-none"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="SCHEDULED">Scheduled</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
+              <option value="NO_SHOW">No Show</option>
+            </select>
+          </div>
+        </div>
+
         {/* Calendar Container */}
-        <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-6 flex-1 min-h-[700px]">
+        <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-6 flex-1 min-h-[850px]">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-100 border-t-indigo-600"></div>
@@ -155,12 +233,13 @@ const AppointmentCalendar = () => {
               events={events}
               startAccessor="start"
               endAccessor="end"
-              style={{ height: "100%" }}
+              style={{ height: "800px" }} // Fixed height for better rendering
               onSelectEvent={handleSelectEvent}
               eventPropGetter={eventPropGetter}
               views={["month", "week", "day"]}
               step={30}
               showMultiDayTimes
+              popup
               className="font-sans"
             />
           )}
