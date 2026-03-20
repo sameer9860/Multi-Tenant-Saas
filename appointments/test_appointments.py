@@ -109,6 +109,11 @@ class AppointmentAPITests(APITestCase):
         self.client.force_authenticate(user=other_user)
         
         # List appointments - should be empty for the other org
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data.get('results') if isinstance(response.data, dict) else response.data
+        self.assertEqual(len(data), 0)
+
     def test_create_appointment_with_new_customer(self):
         """Test creating an appointment and a new customer simultaneously."""
         data = {
@@ -127,7 +132,37 @@ class AppointmentAPITests(APITestCase):
         self.assertTrue(Customer.objects.filter(name="Jane Smith", phone="9876543210").exists())
         customer = Customer.objects.get(name="Jane Smith")
         
-        # Verify appointment is linked to the new customer
+        # Verify appointment is linked to the new customer and has service_duration
         appt = Appointment.objects.get(date="2026-04-02", time="11:00:00")
         self.assertEqual(appt.customer, customer)
         self.assertEqual(appt.organization, self.org)
+        self.assertEqual(response.data['service_duration'], 30)
+
+    def test_date_range_filtering(self):
+        """Test filtering appointments by date range."""
+        # Create appointments on different dates
+        Appointment.objects.create(
+            organization=self.org, customer=self.customer, service=self.service,
+            staff=self.staff, date="2026-05-01", time="10:00:00"
+        )
+        Appointment.objects.create(
+            organization=self.org, customer=self.customer, service=self.service,
+            staff=self.staff, date="2026-05-05", time="10:00:00"
+        )
+        Appointment.objects.create(
+            organization=self.org, customer=self.customer, service=self.service,
+            staff=self.staff, date="2026-05-10", time="10:00:00"
+        )
+
+        # Filter for May 1st to May 6th
+        response = self.client.get(self.url, {'start_date': '2026-05-01', 'end_date': '2026-05-06'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get('results') if isinstance(response.data, dict) else response.data
+        self.assertEqual(len(results), 2)
+
+        # Filter for May 7th onwards
+        response = self.client.get(self.url, {'start_date': '2026-05-07'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get('results') if isinstance(response.data, dict) else response.data
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['date'], '2026-05-10')
