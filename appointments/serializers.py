@@ -36,6 +36,7 @@ class StaffAvailabilitySerializer(serializers.ModelSerializer):
 class AppointmentSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     service_name = serializers.CharField(source='service.name', read_only=True)
+    service_duration = serializers.IntegerField(source='service.duration_minutes', read_only=True)
     staff_name = serializers.CharField(source='staff.name', read_only=True)
 
     # Fields for creating a new customer on the fly
