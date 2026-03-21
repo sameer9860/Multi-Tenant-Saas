@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'hr',
     'appointments',
     'corsheaders',
+    'background_task',
 ]
 
 MIDDLEWARE = [
@@ -177,6 +178,17 @@ ESEWA_BASE_URL = os.getenv("ESEWA_BASE_URL")
 ESEWA_VERIFY_URL = os.getenv("ESEWA_VERIFY_URL")
 ESEWA_MERCHANT_CODE = os.getenv("ESEWA_MERCHANT_CODE")
 ESEWA_USE_MOCK = os.getenv('ESEWA_USE_MOCK', 'False') == 'True'
+
+# Email Settings for Mailhog
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 1025
+EMAIL_USE_TLS = False
+DEFAULT_FROM_EMAIL = 'no-reply@skillswap.com'
+
+# Background Tasks
+MAX_ATTEMPTS = 5
+BACKGROUND_TASK_RUN_ASYNC = True
 
 LOGGING = {
     'version': 1,
