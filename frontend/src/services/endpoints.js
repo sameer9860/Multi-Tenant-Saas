@@ -71,6 +71,7 @@ export const ENDPOINTS = {
     availability: '/api/appointments/staff-availability/',
     list: '/api/appointments/appointments/',
     dashboard: '/api/appointments/appointments/dashboard/',
+    reports: '/api/appointments/appointments/reports/',
   },
 };
 
