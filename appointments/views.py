@@ -2,6 +2,8 @@ from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncDate
 from .models import Service, Staff, StaffAvailability, Appointment
 from .serializers import ServiceSerializer, StaffSerializer, StaffAvailabilitySerializer, AppointmentSerializer
 
@@ -77,4 +79,63 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             'completed_count': completed_count,
             'cancelled_count': cancelled_count,
             'recent_appointments': serializer.data
+        })
+
+    @action(detail=False, methods=['get'])
+    def reports(self, request):
+        org = request.user.organization
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        appointments = Appointment.objects.filter(organization=org)
+        if start_date:
+            appointments = appointments.filter(date__gte=start_date)
+        if end_date:
+            appointments = appointments.filter(date__lte=end_date)
+
+        # 1. Appointments per day
+        appointments_per_day = appointments.annotate(
+            day=TruncDate('date')
+        ).values('day').annotate(
+            count=Count('id')
+        ).order_by('day')
+
+        # 2. Appointments per staff
+        appointments_per_staff = appointments.values(
+            'staff__name'
+        ).annotate(
+            count=Count('id')
+        ).order_by('-count')
+
+        # 3. Revenue per service (only completed)
+        revenue_per_service = appointments.filter(
+            status='COMPLETED'
+        ).values(
+            'service__name'
+        ).annotate(
+            total_revenue=Sum('service__price')
+        ).order_by('-total_revenue')
+
+        # 4. Cancellation rate
+        total_count = appointments.count()
+        cancelled_count = appointments.filter(status='CANCELLED').count()
+        cancellation_rate = (cancelled_count / total_count * 100) if total_count > 0 else 0
+
+        # Additional metrics
+        total_revenue = appointments.filter(
+            status='COMPLETED'
+        ).aggregate(
+            total=Sum('service__price')
+        )['total'] or 0
+
+        return Response({
+            'appointments_per_day': list(appointments_per_day),
+            'appointments_per_staff': list(appointments_per_staff),
+            'revenue_per_service': list(revenue_per_service),
+            'metrics': {
+                'total_appointments': total_count,
+                'cancelled_appointments': cancelled_count,
+                'cancellation_rate': round(cancellation_rate, 2),
+                'total_revenue': total_revenue
+            }
         })
