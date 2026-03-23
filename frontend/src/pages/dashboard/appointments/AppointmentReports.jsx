@@ -52,6 +52,7 @@ const AppointmentReports = () => {
       if (params.toString()) url += `?${params.toString()}`;
       
       const response = await api.get(url);
+      console.log('Report Data Response:', response);
       setReportData(response);
     } catch (error) {
       console.error('Error fetching reports:', error);
@@ -140,9 +141,64 @@ const AppointmentReports = () => {
       title="Appointment Analysis" 
       subtitle="Gain insights into your booking trends and performance"
     >
-      <div className="space-y-8">
-        {/* Filters */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-wrap gap-4 items-end">
+      <div className="space-y-8 print:space-y-4">
+        {/* Print Styles */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            /* Hide UI chrome */
+            .no-print { display: none !important; }
+            
+            /* Reset body and html for full content printing */
+            html, body {
+              background: white !important;
+              overflow: visible !important;
+              height: auto !important;
+              width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+
+            /* Hide sidebar, nav, topbars */
+            aside, nav, header, [class*="sidebar"], [class*="Sidebar"] {
+              display: none !important;
+            }
+
+            /* Make all wrappers show full content */
+            #root, #root > *, main, [class*="layout"], [class*="Layout"],
+            [class*="content"], [class*="Content"], [class*="dashboard"], [class*="Dashboard"] {
+              overflow: visible !important;
+              height: auto !important;
+              max-height: none !important;
+              width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              position: static !important;
+            }
+
+            /* Chart cards: auto height so they don't clip */
+            .chart-card-print {
+              height: auto !important;
+              min-height: 320px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              box-shadow: none !important;
+              border: 1px solid #e2e8f0 !important;
+            }
+
+            /* Metric cards */
+            .metric-card-print {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              box-shadow: none !important;
+            }
+
+            /* Remove gaps that cause clipping */
+            .grid { gap: 1.5rem !important; }
+          }
+        `}} />
+
+        {/* Filters and Actions */}
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-wrap gap-4 items-end no-print">
           <div className="space-y-1">
             <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Start Date</label>
             <input 
@@ -167,55 +223,50 @@ const AppointmentReports = () => {
           >
             Reset Filters
           </button>
+          
+          <button 
+            onClick={() => window.print()}
+            className="ml-auto px-6 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print Report
+          </button>
         </div>
 
         {/* Metrics Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <MetricCard title="Total Bookings" value={metrics?.total_appointments} icon="📅" color="indigo" />
-          <MetricCard title="Cancellation Rate" value={`${metrics?.cancellation_rate}%`} icon="❌" color="rose" />
-          <MetricCard title="Total Revenue" value={`Rs. ${metrics?.total_revenue}`} icon="💰" color="emerald" />
-          <MetricCard title="Cancelled" value={metrics?.cancelled_appointments} icon="📉" color="amber" />
+          <MetricCard title="Total Bookings" value={metrics?.total_appointments || 0} icon="📅" color="indigo" />
+          <MetricCard title="Cancellation Rate" value={`${metrics?.cancellation_rate || 0}%`} icon="❌" color="rose" />
+          <MetricCard title="Total Revenue" value={`Rs. ${metrics?.total_revenue || 0}`} icon="💰" color="emerald" />
+          <MetricCard title="Cancelled" value={metrics?.cancelled_appointments || 0} icon="📉" color="amber" />
         </div>
 
-        {/* Charts */}
+        {/* Charts — top row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <ChartCard title="Appointments Trend">
             <Line data={lineData} options={chartOptions} />
           </ChartCard>
-          
+
           <ChartCard title="Staff Performance">
             <Bar data={barData} options={chartOptions} />
           </ChartCard>
+        </div>
 
-          <ChartCard title="Revenue by Service">
-            <div className="h-64">
+        {/* Pie chart centered below */}
+        <div className="flex justify-center">
+          <div className="w-full max-w-md">
+            <ChartCard title="Revenue by Service">
               <Pie data={pieData} options={{...chartOptions, scales: {}}} />
-            </div>
-          </ChartCard>
-
-          <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white flex flex-col justify-center relative overflow-hidden group shadow-2xl shadow-indigo-900/20">
-            <div className="relative z-10">
-              <h3 className="text-2xl font-black mb-4 uppercase tracking-tight">Performance Summary</h3>
-              <p className="text-slate-400 font-medium leading-relaxed mb-8">
-                Your business has generated <span className="text-indigo-400 font-black">Rs. {metrics?.total_revenue}</span> from 
-                <span className="text-white font-black"> {metrics?.total_appointments - metrics?.cancelled_appointments}</span> successful appointments.
-                The cancellation rate is <span className={metrics?.cancellation_rate > 10 ? 'text-rose-400' : 'text-emerald-400 font-black'}>{metrics?.cancellation_rate}%</span>.
-              </p>
-              <button className="bg-indigo-600 hover:bg-indigo-700 px-8 py-4 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-500/30">
-                Download Report PDF
-              </button>
-            </div>
-            <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-110 transition-transform">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-32 w-32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
+            </ChartCard>
           </div>
         </div>
       </div>
     </DashboardLayout>
   );
 };
+
 
 const MetricCard = ({ title, value, icon, color }) => {
   const colors = {
@@ -226,7 +277,7 @@ const MetricCard = ({ title, value, icon, color }) => {
   };
 
   return (
-    <div className={`p-8 rounded-[2rem] border ${colors[color]} relative overflow-hidden group transition-all hover:scale-[1.02]`}>
+    <div className={`metric-card-print p-8 rounded-[2rem] border ${colors[color]} relative overflow-hidden group transition-all hover:scale-[1.02]`}>
       <div className="absolute -right-4 -top-4 text-6xl opacity-10 group-hover:scale-110 transition-transform">{icon}</div>
       <p className="text-xs font-black uppercase tracking-widest mb-1 opacity-60">{title}</p>
       <h4 className="text-3xl font-black text-slate-900">{value}</h4>
@@ -235,7 +286,7 @@ const MetricCard = ({ title, value, icon, color }) => {
 };
 
 const ChartCard = ({ title, children }) => (
-  <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm transition-all hover:shadow-md h-[450px] flex flex-col">
+  <div className="chart-card-print bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm transition-all hover:shadow-md h-[450px] print:h-auto flex flex-col">
     <h3 className="text-lg font-black text-slate-900 mb-8 uppercase tracking-tight flex items-center gap-2">
       <div className="w-2 h-6 bg-indigo-600 rounded-full"></div>
       {title}
