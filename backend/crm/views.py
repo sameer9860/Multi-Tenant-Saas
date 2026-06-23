@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -21,7 +20,7 @@ from .serializers import (
     ExpenseSerializer, NoteSerializer, InteractionSerializer, ReminderSerializer,
     TagSerializer
 )
-
+from apps.core.mixins import TenantScopedViewSetMixin
 from .permissions import IsAdminOrReadOnly, IsAdminOwnerOrStaffUpdate
 from apps.subscriptions.limits import PLAN_LIMITS
 
@@ -34,16 +33,14 @@ class LeadPagination(pagination.PageNumberPagination):
             return None
         return super().paginate_queryset(queryset, request, view)
 
-class LeadViewSet(viewsets.ModelViewSet):
+class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Lead.objects.all()
     serializer_class = LeadSerializer
     pagination_class = LeadPagination
     permission_classes = [IsAuthenticated, IsAdminOwnerOrStaffUpdate]
 
-
-
     def get_queryset(self):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-        queryset = Lead.objects.filter(organization=org)
+        queryset = super().get_queryset()
 
         status = self.request.query_params.get('status')
         if status:
@@ -62,20 +59,15 @@ class LeadViewSet(viewsets.ModelViewSet):
 
 
     def perform_create(self, serializer):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-        
+        org = self.get_organization()
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
-            
-        plan = org.plan  # Organization model has a 'plan' field
 
-        limit = PLAN_LIMITS.get(plan, {}).get("leads")
-
+        limit = PLAN_LIMITS.get(org.plan, {}).get("leads")
         if limit is not None and org.leads.count() >= limit:
             raise PermissionDenied("Lead limit reached. Upgrade your plan.")
 
         lead = serializer.save(organization=org)
-
         LeadActivity.objects.create(
             organization=org,
             lead=lead,
@@ -89,7 +81,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         old_assignee = lead.assigned_to
 
         updated_lead = serializer.save()
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        org = self.get_organization()
 
         # Log Status Change
         if old_status != updated_lead.status:
@@ -156,11 +148,11 @@ class LeadViewSet(viewsets.ModelViewSet):
         ids = request.data.get('ids', [])
         status = request.data.get('status')
         assigned_to_id = request.data.get('assigned_to')
-        
+
         if not ids:
             return Response({"error": "No lead IDs provided"}, status=400)
-            
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+
+        org = self.get_organization()
         leads = Lead.objects.filter(id__in=ids, organization=org)
         
         updated_count = 0
@@ -201,34 +193,26 @@ class LeadViewSet(viewsets.ModelViewSet):
                 
         return Response({"status": f"Successfully updated {updated_count} leads"})
 
-class TagViewSet(viewsets.ModelViewSet):
+class TagViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-        return Tag.objects.filter(organization=org)
-
-    def perform_create(self, serializer):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-        serializer.save(organization=org)
 
 
 
-
-class LeadActivityViewSet(viewsets.ReadOnlyModelViewSet):
+class LeadActivityViewSet(TenantScopedViewSetMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = LeadActivity.objects.all()
     serializer_class = LeadActivitySerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        queryset = super().get_queryset()
         user = self.request.user
-        queryset = LeadActivity.objects.filter(organization=org)
 
-        # Smart Improvement: Staff only see their assigned leads' activities
+        # Staff only see their assigned leads' activities
         user_role_obj = getattr(user, 'role', None)
         user_role = user_role_obj.name if hasattr(user_role_obj, 'name') else user_role_obj
-        
         if user_role == 'STAFF':
             queryset = queryset.filter(lead__assigned_to=user)
 
@@ -239,104 +223,87 @@ class LeadActivityViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset.order_by("-created_at")
 
 
-class ClientViewSet(viewsets.ModelViewSet):
+class ClientViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Client.objects.all()
     serializer_class = ClientSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
-    def get_queryset(self):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-        return Client.objects.filter(organization=org)
-
     def perform_create(self, serializer):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-
+        org = self.get_organization()
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
 
-        plan = org.plan
-
-        limit = PLAN_LIMITS.get(plan, {}).get("clients")
-
+        limit = PLAN_LIMITS.get(org.plan, {}).get("clients")
         if limit is not None and org.clients.count() >= limit:
             raise PermissionDenied("Client limit reached. Upgrade your plan.")
 
         serializer.save(organization=org)
 
 
-class ExpenseViewSet(viewsets.ModelViewSet):
+class ExpenseViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Expense.objects.all()
     serializer_class = ExpenseSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-        return Expense.objects.filter(organization=org)
-
-    def perform_create(self, serializer):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-        if not org:
-            raise PermissionDenied("User is not associated with an organization.")
-        serializer.save(organization=org)
-
-class NoteViewSet(viewsets.ModelViewSet):
+class NoteViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Note.objects.all()
     serializer_class = NoteSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-        queryset = Note.objects.filter(organization=org)
+        queryset = super().get_queryset()
         lead_id = self.request.query_params.get('lead')
         client_id = self.request.query_params.get('client')
         customer_id = self.request.query_params.get('customer')
-        
+
         if lead_id: queryset = queryset.filter(lead_id=lead_id)
         if client_id: queryset = queryset.filter(client_id=client_id)
         if customer_id: queryset = queryset.filter(customer_id=customer_id)
-        
+
         return queryset
 
     def perform_create(self, serializer):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        org = self.get_organization()
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
         serializer.save(organization=org, user=self.request.user)
 
-class InteractionViewSet(viewsets.ModelViewSet):
+class InteractionViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Interaction.objects.all()
     serializer_class = InteractionSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-        queryset = Interaction.objects.filter(organization=org)
-        
+        queryset = super().get_queryset()
         lead_id = self.request.query_params.get('lead')
         client_id = self.request.query_params.get('client')
         customer_id = self.request.query_params.get('customer')
-        
+
         if lead_id: queryset = queryset.filter(lead_id=lead_id)
         if client_id: queryset = queryset.filter(client_id=client_id)
         if customer_id: queryset = queryset.filter(customer_id=customer_id)
-        
+
         return queryset.order_by('-date')
 
     def perform_create(self, serializer):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        org = self.get_organization()
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
         serializer.save(organization=org, user=self.request.user)
 
-class ReminderViewSet(viewsets.ModelViewSet):
+class ReminderViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Reminder.objects.all()
     serializer_class = ReminderSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
-        queryset = Reminder.objects.filter(organization=org)
-        
+        queryset = super().get_queryset()
+
         if self.request.query_params.get('completed') == 'true':
             queryset = queryset.filter(is_completed=True)
         elif self.request.query_params.get('completed') == 'false':
             queryset = queryset.filter(is_completed=False)
-            
+
         lead_id = self.request.query_params.get('lead')
         if lead_id:
             queryset = queryset.filter(lead_id=lead_id)
@@ -344,7 +311,7 @@ class ReminderViewSet(viewsets.ModelViewSet):
         return queryset.order_by('remind_at')
 
     def perform_create(self, serializer):
-        org = getattr(self.request, 'organization', None) or getattr(self.request.user, 'organization', None)
+        org = self.get_organization()
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
         serializer.save(organization=org, user=self.request.user)
@@ -354,7 +321,6 @@ class DashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Ensure user has an organization
         org = getattr(request, 'organization', None) or getattr(request.user, 'organization', None)
         
         if not org:

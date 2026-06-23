@@ -6,44 +6,35 @@ from django.db.models import Count, Sum
 from .models import Service, Staff, StaffAvailability, Appointment
 from .serializers import ServiceSerializer, StaffSerializer, StaffAvailabilitySerializer, AppointmentSerializer
 from collections import defaultdict
+from apps.core.mixins import TenantScopedViewSetMixin
 
 
-class ServiceViewSet(viewsets.ModelViewSet):
+class ServiceViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Service.objects.all()
     serializer_class = ServiceSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        return Service.objects.filter(organization=self.request.user.organization)
 
-    def perform_create(self, serializer):
-        serializer.save(organization=self.request.user.organization)
-
-
-class StaffViewSet(viewsets.ModelViewSet):
+class StaffViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Staff.objects.all()
     serializer_class = StaffSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        return Staff.objects.filter(organization=self.request.user.organization)
 
-    def perform_create(self, serializer):
-        serializer.save(organization=self.request.user.organization)
-
-
-class StaffAvailabilityViewSet(viewsets.ModelViewSet):
+class StaffAvailabilityViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = StaffAvailability.objects.all()
     serializer_class = StaffAvailabilitySerializer
     permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return StaffAvailability.objects.filter(staff__organization=self.request.user.organization)
+    tenant_lookup_field = 'staff__organization'
 
 
-class AppointmentViewSet(viewsets.ModelViewSet):
+class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Appointment.objects.filter(organization=self.request.user.organization)
+        queryset = super().get_queryset()
 
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
@@ -55,8 +46,6 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    def perform_create(self, serializer):
-        serializer.save(organization=self.request.user.organization)
 
     @action(detail=False, methods=['get'])
     def dashboard(self, request):

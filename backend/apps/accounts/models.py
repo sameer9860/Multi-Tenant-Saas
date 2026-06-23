@@ -91,7 +91,6 @@ class OrganizationMember(models.Model):
         return f"{self.user.email} - {self.organization.name}"
 
 
-# SIGNALS for synchronization (Day 21)
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 

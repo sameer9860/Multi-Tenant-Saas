@@ -18,21 +18,16 @@ from rest_framework import status
 from rest_framework.views import APIView
 from django.utils import timezone
 from .utils import generate_payslip_pdf
+from apps.core.mixins import TenantScopedViewSetMixin
 
 
-class AttendanceViewSet(viewsets.ModelViewSet):
+class AttendanceViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Attendance.objects.all()
     serializer_class = AttendanceSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_org(self):
-        return (
-            getattr(self.request, 'organization', None)
-            or getattr(self.request.user, 'organization', None)
-        )
-
     def get_queryset(self):
-        org = self.get_org()
-        queryset = Attendance.objects.filter(organization=org)
+        queryset = super().get_queryset()
         return self.filter_queryset_by_params(queryset).order_by('-date', 'employee__full_name')
 
     def filter_queryset_by_params(self, queryset):
@@ -64,15 +59,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    def perform_create(self, serializer):
-        org = self.get_org()
-        if not org:
-            raise PermissionDenied("User is not associated with an organization.")
-        serializer.save(organization=org)
-
     @action(detail=False, methods=['post'])
     def bulk_mark(self, request):
-        org = self.get_org()
+        org = self.get_organization()
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
         
@@ -116,7 +105,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def import_csv(self, request):
-        org = self.get_org()
+        org = self.get_organization()
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
             
@@ -216,7 +205,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def export_csv(self, request):
-        org = self.get_org()
+        org = self.get_organization()
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
             
@@ -254,84 +243,49 @@ class EmployeePagination(pagination.PageNumberPagination):
         return super().paginate_queryset(queryset, request, view)
 
 
-class DepartmentViewSet(viewsets.ModelViewSet):
+class DepartmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_org(self):
-        return (
-            getattr(self.request, 'organization', None)
-            or getattr(self.request.user, 'organization', None)
-        )
-
     def get_queryset(self):
-        org = self.get_org()
-        queryset = Department.objects.filter(organization=org).annotate(
+        return super().get_queryset().annotate(
             employee_count=models.Count('employees')
         )
-        return queryset
-
-    def perform_create(self, serializer):
-        org = self.get_org()
-        if not org:
-            raise PermissionDenied("User is not associated with an organization.")
-        serializer.save(organization=org)
 
 
-class DesignationViewSet(viewsets.ModelViewSet):
+class DesignationViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Designation.objects.all()
     serializer_class = DesignationSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_org(self):
-        return (
-            getattr(self.request, 'organization', None)
-            or getattr(self.request.user, 'organization', None)
-        )
-
     def get_queryset(self):
-        org = self.get_org()
-        queryset = Designation.objects.filter(organization=org).annotate(
+        queryset = super().get_queryset().annotate(
             employee_count=models.Count('employees')
         )
         department = self.request.query_params.get('department')
         if department:
             queryset = queryset.filter(department_id=department)
-            
         return queryset
 
-    def perform_create(self, serializer):
-        org = self.get_org()
-        if not org:
-            raise PermissionDenied("User is not associated with an organization.")
-        serializer.save(organization=org)
 
-
-class EmployeeViewSet(viewsets.ModelViewSet):
+class EmployeeViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     pagination_class = EmployeePagination
     permission_classes = [IsAuthenticated]
 
-    def get_org(self):
-        return (
-            getattr(self.request, 'organization', None)
-            or getattr(self.request.user, 'organization', None)
-        )
-
     def get_queryset(self):
-        org = self.get_org()
-        queryset = Employee.objects.filter(organization=org)
+        queryset = super().get_queryset()
 
-        # Status filter
         status = self.request.query_params.get('status')
         if status and status != 'ALL':
             queryset = queryset.filter(status=status)
 
-        # Department filter
         department = self.request.query_params.get('department')
         if department:
             queryset = queryset.filter(department_id=department)
 
-        # Search
         search = self.request.query_params.get('search')
         if search:
             queryset = queryset.filter(
@@ -344,27 +298,15 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
         return queryset.order_by('-created_at')
 
-    def perform_create(self, serializer):
-        org = self.get_org()
-        if not org:
-            raise PermissionDenied("User is not associated with an organization.")
-        serializer.save(organization=org)
 
-
-class LeaveRequestViewSet(viewsets.ModelViewSet):
+class LeaveRequestViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = LeaveRequest.objects.all()
     serializer_class = LeaveRequestSerializer
     pagination_class = None
     permission_classes = [IsAuthenticated]
 
-    def get_org(self):
-        return (
-            getattr(self.request, 'organization', None)
-            or getattr(self.request.user, 'organization', None)
-        )
-
     def get_queryset(self):
-        org = self.get_org()
-        queryset = LeaveRequest.objects.filter(organization=org).select_related('employee', 'approved_by')
+        queryset = super().get_queryset().select_related('employee', 'approved_by')
         return self.filter_queryset_by_params(queryset).order_by('-created_at')
 
     def filter_queryset_by_params(self, queryset):
@@ -397,12 +339,6 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(end_date__lte=end_date)
             
         return queryset
-
-    def perform_create(self, serializer):
-        org = self.get_org()
-        if not org:
-            raise PermissionDenied("User is not associated with an organization.")
-        serializer.save(organization=org)
 
     def perform_update(self, serializer):
         instance = self.get_object()
@@ -437,7 +373,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def export_csv(self, request):
-        org = self.get_org()
+        org = self.get_organization()
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
             
@@ -467,19 +403,13 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'attachment; filename="leave_requests_{datetime.now().strftime("%Y-%m-%d")}.csv"'
         return response
 
-class PayrollViewSet(viewsets.ModelViewSet):
+class PayrollViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Payroll.objects.all()
     serializer_class = PayrollSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_org(self):
-        return (
-            getattr(self.request, 'organization', None)
-            or getattr(self.request.user, 'organization', None)
-        )
-
     def get_queryset(self):
-        org = self.get_org()
-        queryset = Payroll.objects.filter(organization=org).select_related('employee')
+        queryset = super().get_queryset().select_related('employee')
         return self.filter_queryset_by_params(queryset).order_by('-month', 'employee__full_name')
 
     def filter_queryset_by_params(self, queryset):
@@ -514,15 +444,9 @@ class PayrollViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    def perform_create(self, serializer):
-        org = self.get_org()
-        if not org:
-            raise PermissionDenied("User is not associated with an organization.")
-        serializer.save(organization=org)
-        
     @action(detail=False, methods=['post'])
     def generate_payroll(self, request):
-        org = self.get_org()
+        org = self.get_organization()
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
             
@@ -677,59 +601,47 @@ class PayrollViewSet(viewsets.ModelViewSet):
         
         return response
 
-class SalaryAdvanceViewSet(viewsets.ModelViewSet):
+class SalaryAdvanceViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = SalaryAdvance.objects.all()
     serializer_class = SalaryAdvanceSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_org(self):
-        return (
-            getattr(self.request, 'organization', None)
-            or getattr(self.request.user, 'organization', None)
-        )
-
     def get_queryset(self):
-        org = self.get_org()
-        queryset = SalaryAdvance.objects.filter(organization=org).select_related('employee')
-        
+        queryset = super().get_queryset().select_related('employee')
+
         employee = self.request.query_params.get('employee')
         if employee:
             queryset = queryset.filter(employee_id=employee)
-            
+
         status = self.request.query_params.get('status')
         if status == 'PENDING':
             queryset = queryset.filter(is_deducted=False)
         elif status == 'DEDUCTED':
             queryset = queryset.filter(is_deducted=True)
-            
+
         search = self.request.query_params.get('search')
         if search:
             queryset = queryset.filter(employee__full_name__icontains=search)
-            
+
         return queryset.order_by('-date')
 
     def perform_create(self, serializer):
-        org = self.get_org()
+        org = self.get_organization()
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
-        
+
         # Ensure deduct_in_month is the 1st of the month
         deduct_in_month = serializer.validated_data.get('deduct_in_month')
         if deduct_in_month:
             serializer.validated_data['deduct_in_month'] = deduct_in_month.replace(day=1)
-            
+
         serializer.save(organization=org)
 
 class HRDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_org(self):
-        return (
-            getattr(self.request, 'organization', None)
-            or getattr(self.request.user, 'organization', None)
-        )
-
     def get(self, request):
-        org = self.get_org()
+        org = getattr(request, 'organization', None) or getattr(request.user, 'organization', None)
         if not org:
             raise PermissionDenied("User is not associated with an organization.")
 

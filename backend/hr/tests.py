@@ -107,10 +107,10 @@ class AttendanceApiTest(TestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response['Content-Type'], 'text/csv')
-        self.assertIn('attachment; filename="attendance_history.csv"', response['Content-Disposition'])
+        self.assertIn('attachment; filename="attendance_history_', response['Content-Disposition'])
         
         # Check content
-        content = b"".join(response.streaming_content).decode('utf-8')
+        content = response.content.decode('utf-8')
         lines = content.strip().split('\r\n')
         self.assertEqual(len(lines), 2) # Header + 1 record
         self.assertIn("John Doe", lines[1])
