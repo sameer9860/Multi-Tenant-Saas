@@ -1,70 +1,58 @@
 /**
  * API Endpoints Configuration
- * Maps endpoint names to URLs
- * Includes both primary and fallback URLs for flexibility
+ * All routes are prefixed with /api/
  */
 
 export const ENDPOINTS = {
-
-
-  // Analytics endpoints - Routes to /analytics/usage/
   analytics: {
-    usage: '/analytics/usage/',
-    usageFallback: '/api/analytics/usage/', // Fallback if primary fails
+    usage: '/api/analytics/usage/',
+    usageFallback: '/api/analytics/usage/',
   },
 
-  // Billing/Payments endpoints - Routes to /billing/payments/ OR /payments/payments/
   billing: {
-    payments: '/billing/payments/',
-    paymentsFallback: '/payments/payments/', // Alternative path when using second include
-    paymentsList: '/api/billing/payments/', // Payment model endpoint (not normally used by frontend)
+    payments: '/api/billing/payments/',
+    paymentsFallback: '/api/billing/payments/',
+    paymentsList: '/api/billing/payments/',
   },
 
-  // Accounts/Profile endpoints - Routes to /api/accounts/profile/
   accounts: {
     profile: '/api/accounts/profile/',
-    profileFallback: '/accounts/profile/',
+    profileFallback: '/api/accounts/profile/',
   },
 
-  // Invoices endpoints - Routes to /api/invoices/
   invoices: {
     list: '/api/invoices/',
-    listFallback: '/invoices/',
+    listFallback: '/api/invoices/',
     items: '/api/invoices/invoice-items/',
-    itemsFallback: '/invoices/invoice-items/',
+    itemsFallback: '/api/invoices/invoice-items/',
   },
 
-  // Payment endpoints
   payments: {
     list: '/api/payments/',
-    listFallback: '/payments/',
+    listFallback: '/api/payments/',
   },
 
-  // Customer endpoints - Django router registers customers at /api/customers/
   customers: {
     list: '/api/customers/',
-    listFallback: '/customers/',
+    listFallback: '/api/customers/',
     create: '/api/customers/',
-    createFallback: '/customers/',
+    createFallback: '/api/customers/',
   },
 
-  // Subscriptions endpoints - Routes to /api/subscription/
   subscriptions: {
     list: '/api/subscription/',
-    listFallback: '/subscription/',
+    listFallback: '/api/subscription/',
   },
 
-  // CRM endpoints - Routes to /api/crm/
   crm: {
     leads: '/api/crm/leads/',
-    leadsFallback: '/crm/leads/',
+    leadsFallback: '/api/crm/leads/',
     clients: '/api/crm/clients/',
-    clientsFallback: '/crm/clients/',
+    clientsFallback: '/api/crm/clients/',
     dashboard: '/api/crm/dashboard/',
-    dashboardFallback: '/crm/dashboard/',
+    dashboardFallback: '/api/crm/dashboard/',
   },
 
-  // Appointments endpoints
   appointments: {
     services: '/api/appointments/services/',
     staff: '/api/appointments/staff/',

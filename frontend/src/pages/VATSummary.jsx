@@ -17,7 +17,7 @@ const VATSummary = () => {
     try {
       setLoading(true);
       const response = await api.get(
-        `/analytics/reports/vat/?month=${month}&year=${year}`,
+        `/api/analytics/reports/vat/?month=${month}&year=${year}`,
       );
       setData(response);
     } catch (err) {
@@ -43,7 +43,7 @@ const VATSummary = () => {
       const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
       const response = await fetch(
-        `${API_URL}/analytics/reports/vat/?month=${month}&year=${year}&export=csv`,
+        `${API_URL}/api/analytics/reports/vat/?month=${month}&year=${year}&export=csv`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

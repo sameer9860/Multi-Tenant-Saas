@@ -61,8 +61,8 @@ class InitiateEsewaPaymentView(APIView):
         
         # Build eSewa payment URL
         # build callback URLs using current request (safer across environments)
-        success_url = request.build_absolute_uri('/billing/esewa/success/')
-        failure_url = request.build_absolute_uri('/billing/esewa/failure/')
+        success_url = request.build_absolute_uri('/api/billing/esewa/success/')
+        failure_url = request.build_absolute_uri('/api/billing/esewa/failure/')
 
         params = {
             'amt': PLAN_PRICES[plan],
@@ -89,7 +89,7 @@ class InitiateEsewaPaymentView(APIView):
                 'su': params['su'],
                 'fu': params['fu'],
             }
-            esewa_url = request.build_absolute_uri('/billing/mock/esewa/?' + urllib.parse.urlencode(mock_params))
+            esewa_url = request.build_absolute_uri('/api/billing/mock/esewa/?' + urllib.parse.urlencode(mock_params))
         
         return Response({
             "payment_id": payment.id,
@@ -355,7 +355,7 @@ def mock_esewa_view(request):
     su = request.GET.get('su')
     fu = request.GET.get('fu')
 
-    pay_url = request.build_absolute_uri('/billing/mock/esewa/pay/')
+    pay_url = request.build_absolute_uri('/api/billing/mock/esewa/pay/')
     return render(request, 'billing/mock_esewa.html', {
         'amt': amt,
         'pid': pid,

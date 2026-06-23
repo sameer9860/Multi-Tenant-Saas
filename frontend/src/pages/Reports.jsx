@@ -19,7 +19,7 @@ const Reports = () => {
     try {
       setLoading(true);
       const data = await api.get(
-        `/analytics/reports/monthly/?month=${month}&year=${year}`,
+        `/api/analytics/reports/monthly/?month=${month}&year=${year}`,
       );
       setReportData(data);
     } catch (err) {
@@ -36,7 +36,7 @@ const Reports = () => {
       const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
       const response = await fetch(
-        `${API_URL}/analytics/reports/monthly/?month=${month}&year=${year}&export=${format}`,
+        `${API_URL}/api/analytics/reports/monthly/?month=${month}&year=${year}&export=${format}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

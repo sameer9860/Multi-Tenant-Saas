@@ -79,8 +79,8 @@ class UpgradePlanView(APIView):
             status='PENDING'
         )
 
-        success_url = request.build_absolute_uri('/billing/esewa/success/')
-        failure_url = request.build_absolute_uri('/billing/esewa/failure/')
+        success_url = request.build_absolute_uri('/api/billing/esewa/success/')
+        failure_url = request.build_absolute_uri('/api/billing/esewa/failure/')
 
         params = {
             'amt': amount,
@@ -104,7 +104,7 @@ class UpgradePlanView(APIView):
                 'su': params['su'],
                 'fu': params['fu'],
             }
-            esewa_url = request.build_absolute_uri('/billing/mock/esewa/?' + urllib.parse.urlencode(mock_params))
+            esewa_url = request.build_absolute_uri('/api/billing/mock/esewa/?' + urllib.parse.urlencode(mock_params))
 
         return Response({
             "requires_payment": True,

@@ -1,22 +1,8 @@
 """
 URL configuration for config project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
-from django.views.generic import RedirectView
+from django.urls import path, include, re_path
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -24,18 +10,18 @@ from rest_framework_simplejwt.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('core/', include('apps.core.urls')),
+    path('api/core/', include('apps.core.urls')),
     path('api/', include('apps.invoices.urls')),
     path('api/accounts/', include('apps.accounts.urls')),
     path('api/subscription/', include('apps.subscriptions.urls')),
-    path('billing/', include('apps.billing.urls')),
-    path('api/billing/', include('apps.billing.urls')),  # API-prefixed billing endpoints
-    path('payments/', include('apps.billing.urls')), 
-    path('analytics/', include('apps.analytics.urls')),  # new line for analytics endpoints
-    path("api/crm/", include("crm.urls")),
-    path("api/hr/", include("hr.urls")),
-    path("api/appointments/", include("appointments.urls")),
-    # for payment-related endpoints
+    path('api/billing/', include('apps.billing.urls')),
+    path('api/analytics/', include('apps.analytics.urls')),
+    path('api/crm/', include('crm.urls')),
+    path('api/hr/', include('hr.urls')),
+    path('api/appointments/', include('appointments.urls')),
+    # allow both `/api/token` and `/api/token/` (optional trailing slash)
+    re_path(r'^api/token/?$', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    re_path(r'^api/token/refresh/?$', TokenRefreshView.as_view(), name='token_refresh'),
 ]
 
 from django.conf import settings
@@ -43,12 +29,3 @@ from django.conf.urls.static import static
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-
-from django.urls import re_path
-
-urlpatterns += [
-    # allow both `/api/token` and `/api/token/` (optional trailing slash)
-    re_path(r'^api/token/?$', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    re_path(r'^api/token/refresh/?$', TokenRefreshView.as_view(), name='token_refresh'),
-]
