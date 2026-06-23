@@ -38,25 +38,22 @@ class UpgradePlanTests(APITestCase):
         self.url = reverse('subscriptions:upgrade_plan')
 
     def test_upgrade_during_trial(self):
-        """Test that user on active trial can upgrade to PRO without payment"""
-        # Set user to trial mode
+        """Trial users must still pay to upgrade to a paid plan."""
         self.subscription.is_trial = True
         self.subscription.trial_end = timezone.now() + timedelta(days=7)
         self.subscription.save()
-        
+
         data = {'plan': 'PRO'}
         response = self.client.post(self.url, data)
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Should not return payment URL or require payment
-        self.assertNotIn('requires_payment', response.data)
-        self.assertEqual(response.data['plan'], 'PRO')
-        
-        # Verify DB updates
+        self.assertTrue(response.data.get('requires_payment'))
+        self.assertIn('esewa_url', response.data)
+
         self.subscription.refresh_from_db()
         self.organization.refresh_from_db()
-        self.assertEqual(self.subscription.plan, 'PRO')
-        self.assertEqual(self.organization.plan, 'PRO')
+        self.assertEqual(self.subscription.plan, 'FREE')
+        self.assertEqual(self.organization.plan, 'FREE')
 
     def test_upgrade_normal_user(self):
         """Test that normal user (not trial) requires payment to upgrade"""

@@ -1,4 +1,5 @@
 from django.urls import reverse
+from django.test import override_settings
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -56,10 +57,12 @@ class BillingAPITests(APITestCase):
 
     def test_esewa_missing_transaction_id(self):
         url = reverse('esewa-verify')
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access}")
         response = self.client.post(url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
 
+    @override_settings(ESEWA_USE_MOCK=True)
     def test_esewa_success_json(self):
         # create transaction
         tx = PaymentTransaction.objects.create(
@@ -70,6 +73,7 @@ class BillingAPITests(APITestCase):
             transaction_id='test-tx-json'
         )
         url = reverse('esewa-verify')
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access}")
         data = {
             "transaction_id": tx.transaction_id,
             "reference_id": "MOCK-json"
@@ -82,6 +86,7 @@ class BillingAPITests(APITestCase):
         subscription = Subscription.objects.get(organization=self.org)
         self.assertEqual(subscription.plan, 'PRO')
 
+    @override_settings(ESEWA_USE_MOCK=True)
     def test_esewa_success_form_encoded(self):
         tx = PaymentTransaction.objects.create(
             organization=self.org,
@@ -91,6 +96,7 @@ class BillingAPITests(APITestCase):
             transaction_id='test-tx-form'
         )
         url = reverse('esewa-verify')
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access}")
         data = {
             "transaction_id": tx.transaction_id,
             "reference_id": "MOCK-form"
@@ -108,6 +114,7 @@ class BillingAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('transaction_id', response.data)
 
+    @override_settings(ESEWA_USE_MOCK=True)
     def test_esewa_accept_txn_key(self):
         tx = PaymentTransaction.objects.create(
             organization=self.org,
@@ -117,6 +124,7 @@ class BillingAPITests(APITestCase):
             transaction_id='test-tx-key'
         )
         url = reverse('esewa-verify')
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access}")
         # use alternate key 'txn' as some clients might
         response = self.client.post(url, {
             "txn": tx.transaction_id,
@@ -142,7 +150,11 @@ class BillingAPITests(APITestCase):
             mock_verify.return_value = {"ok": False, "message": "request error: connection timeout"}
             
             url = reverse('esewa-verify')
-            response = self.client.post(url, {"transaction_id": tx.transaction_id})
+            self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access}")
+            response = self.client.post(url, {
+                "transaction_id": tx.transaction_id,
+                "reference_id": "ESEWA-REF-123",
+            })
             
             self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
             self.assertEqual(response.data['status'], 'PENDING')

@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from apps.billing.models import Subscription
+from apps.billing.utils import get_esewa_merchant_code
 
 
 class UpgradePlanView(APIView):
@@ -31,18 +32,7 @@ class UpgradePlanView(APIView):
             organization = request.user.organization
         subscription, _ = Subscription.objects.get_or_create(organization=organization)
 
-        # Trial Upgrade Logic: Users on active trial can switch to any plan for free
-        # System will auto-downgrade when trial ends if payment not made
-        from django.utils import timezone
-        if subscription.is_trial and subscription.is_active and subscription.trial_end and subscription.trial_end > timezone.now():
-            subscription.plan = plan
-            subscription.save()
-            organization.plan = plan
-            organization.save()
-            return Response({"message": f"Successfully switched to {plan} during trial", "plan": plan})
-        
-        # If upgrading to FREE (downgrade), we can do it immediately or handle it separately
-        # But usually users want to upgrade TO a paid plan.
+        # If upgrading to FREE (downgrade), apply immediately.
         from apps.billing.constants import PLAN_PRICES
         from apps.billing.views import InitiateEsewaPaymentView
         import uuid
@@ -89,7 +79,7 @@ class UpgradePlanView(APIView):
             'txAmt': 0,
             'tAmt': amount,
             'pid': transaction_id,
-            'scd': getattr(settings, 'ESEWA_MERCHANT_CODE', 'EPAYTEST'),
+            'scd': get_esewa_merchant_code(),
             'su': success_url,
             'fu': failure_url,
         }

@@ -7,8 +7,8 @@ from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from .serializers import UserSerializer, OrganizationMemberSerializer
 from .models import User, OrganizationMember, Role
-from apps.accounts.decorators import require_role
 from apps.core.roles import get_user_role_name
+from apps.core.permissions import IsOwnerOrAdmin
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +79,11 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
     serializer_class = OrganizationMemberSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        if self.action in ('create', 'destroy'):
+            return [IsAuthenticated(), IsOwnerOrAdmin()]
+        return [IsAuthenticated()]
+
     def get_queryset(self):
         org = getattr(self.request, 'organization', None)
         if not org:
@@ -89,15 +94,10 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
         org = self.request.organization
         usage = getattr(org, 'usage', None)
         
-        # 1. Enforce Role (Only Admin/Owner can add members)
+        # 1. Enforce Role (Only Admin/Owner can add members) — also enforced by IsOwnerOrAdmin
         user_role = get_user_role_name(self.request)
         
         logger.info(f"Team Creation Attempt: User={self.request.user.email}, request.user_role={user_role}")
-        
-        if user_role not in ['OWNER', 'ADMIN']:
-            raise PermissionDenied(f"Only Owners or Admins can add team members. Your role is: {user_role}")
-
-        # 2. Check Plan Limits
         if usage:
             can_add, msg = usage.can_add_team_member()
             if not can_add:
@@ -109,6 +109,16 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
         phone = self.request.data.get('phone')
         password = self.request.data.get('password')
         role_name = (self.request.data.get('role') or 'STAFF').upper()
+
+        assignable_roles = {
+            'OWNER': {'OWNER', 'ADMIN', 'ACCOUNTANT', 'STAFF'},
+            'ADMIN': {'ADMIN', 'ACCOUNTANT', 'STAFF'},
+        }
+        allowed = assignable_roles.get(user_role, set())
+        if role_name not in allowed:
+            raise PermissionDenied(
+                f"You cannot assign the {role_name} role. Allowed roles: {', '.join(sorted(allowed)) or 'none'}"
+            )
         
         if not email:
             raise drf_serializers.ValidationError({"email": "Email is required for invitation."})
@@ -157,9 +167,6 @@ class OrganizationMemberViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         user_role = get_user_role_name(request)
-        
-        if user_role not in ['OWNER', 'ADMIN']:
-            raise PermissionDenied("Only Owners or Admins can remove team members.")
         
         instance = self.get_object()
         

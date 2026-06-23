@@ -23,6 +23,7 @@ from .serializers import (
 from apps.core.mixins import TenantScopedViewSetMixin
 from .permissions import IsAdminOrReadOnly, IsAdminOwnerOrStaffUpdate
 from apps.subscriptions.limits import PLAN_LIMITS
+from apps.core.roles import get_user_role_name
 
 
 class LeadPagination(pagination.PageNumberPagination):
@@ -174,7 +175,17 @@ class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
                 )
                 
             if assigned_to_id is not None:
-                new_assignee = User.objects.filter(id=assigned_to_id).first()
+                new_assignee = None
+                if assigned_to_id:
+                    new_assignee = User.objects.filter(
+                        id=assigned_to_id,
+                        organization_memberships__organization=org,
+                    ).first()
+                    if not new_assignee:
+                        return Response(
+                            {"error": "Assigned user must be a member of your organization."},
+                            status=400,
+                        )
                 if old_assignee != new_assignee:
                     lead.assigned_to = new_assignee
                     changed = True
@@ -196,7 +207,7 @@ class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 class TagViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
 
 
@@ -211,8 +222,7 @@ class LeadActivityViewSet(TenantScopedViewSetMixin, viewsets.ReadOnlyModelViewSe
         user = self.request.user
 
         # Staff only see their assigned leads' activities
-        user_role_obj = getattr(user, 'role', None)
-        user_role = user_role_obj.name if hasattr(user_role_obj, 'name') else user_role_obj
+        user_role = get_user_role_name(self.request)
         if user_role == 'STAFF':
             queryset = queryset.filter(lead__assigned_to=user)
 
@@ -243,12 +253,12 @@ class ClientViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 class ExpenseViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Expense.objects.all()
     serializer_class = ExpenseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
 class NoteViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Note.objects.all()
     serializer_class = NoteSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -271,7 +281,7 @@ class NoteViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 class InteractionViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Interaction.objects.all()
     serializer_class = InteractionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -294,7 +304,7 @@ class InteractionViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 class ReminderViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Reminder.objects.all()
     serializer_class = ReminderSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset()

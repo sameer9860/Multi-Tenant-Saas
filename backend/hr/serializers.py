@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Employee, Department, Designation, Attendance, LeaveRequest, Payroll, SalaryAdvance
+from apps.core.serializers import get_request_organization
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
@@ -18,6 +19,13 @@ class AttendanceSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_employee(self, employee):
+        request = self.context.get('request')
+        org = get_request_organization(request) if request else None
+        if org and employee.organization_id != org.id:
+            raise serializers.ValidationError("Employee does not belong to your organization.")
+        return employee
 
 
 
@@ -86,7 +94,14 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'status', 'approved_by']
+
+    def validate_employee(self, employee):
+        request = self.context.get('request')
+        org = get_request_organization(request) if request else None
+        if org and employee.organization_id != org.id:
+            raise serializers.ValidationError("Employee does not belong to your organization.")
+        return employee
 
 class SalaryAdvanceSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.full_name', read_only=True)

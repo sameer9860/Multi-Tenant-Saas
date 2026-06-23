@@ -23,6 +23,7 @@ from .models import PaymentTransaction, Payment, Usage, Subscription
 from .constants import PLAN_PRICES, PLAN_LIMITS
 from .payment_gateway import ESewaPaymentManager
 from .serializers import PaymentTransactionSerializer, PaymentSerializer
+from .utils import get_esewa_merchant_code
 from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.utils.http import urlencode
 from django.views.decorators.csrf import csrf_exempt
@@ -72,7 +73,7 @@ class InitiateEsewaPaymentView(APIView):
             # eSewa requires tAmt (total amount). Include it to avoid Bad Request.
             'tAmt': PLAN_PRICES[plan],
             'pid': transaction_id,
-            'scd': getattr(settings, 'ESEWA_MERCHANT_CODE', 'EPAYTEST'),
+            'scd': get_esewa_merchant_code(),
             'su': success_url,
             'fu': failure_url,
         }
@@ -100,7 +101,7 @@ class InitiateEsewaPaymentView(APIView):
         })
 
 
-def _process_esewa_verification(payment, ref_id, amt=None):
+def _process_esewa_verification(payment, ref_id):
     """
     Internal helper to verify payment with eSewa and upgrade plan.
     Returns: (status_code, response_message)
@@ -111,30 +112,32 @@ def _process_esewa_verification(payment, ref_id, amt=None):
     if payment.status == 'FAILED':
         return 400, "❌ Payment previously failed"
 
-    # Perform verification with eSewa
-    is_mock = getattr(settings, 'ESEWA_USE_MOCK', False) or (ref_id and str(ref_id).startswith('MOCK-'))
+    is_mock = getattr(settings, 'ESEWA_USE_MOCK', False)
+    ref_id = (ref_id or '').strip()
+
+    if not ref_id:
+        return 400, "❌ Missing payment reference"
 
     if not is_mock:
         manager = ESewaPaymentManager()
-        # Use raw amount if available from callback to avoid rounding/formatting issues
-        expected_amount = amt or payment.amount
-        result = manager.verify_payment(payment.transaction_id, amount=expected_amount, reference_id=ref_id)
+        result = manager.verify_payment(
+            payment.transaction_id,
+            amount=payment.amount,
+            reference_id=ref_id,
+        )
 
         if not result.get('ok'):
-            # Distinguish temporary verification failures
             msg = str(result.get('message') or '')
             if msg.startswith('request error') or msg.startswith('bad response'):
                 logger.warning('eSewa verification deferred for pid=%s: %s', payment.transaction_id, msg)
                 return 202, f"⚠️ Verification deferred: {msg}"
 
-            # Hard failure: mark failed
             payment.status = 'FAILED'
             payment.reference_id = ref_id
             payment.save()
             Payment.objects.filter(transaction_id=payment.transaction_id).update(status='FAILED')
             return 400, f"❌ Verification failed: {msg}"
 
-    # Verified or mock -> mark SUCCESS and activate
     with transaction.atomic():
         payment.status = 'SUCCESS'
         payment.reference_id = ref_id
@@ -151,26 +154,25 @@ def esewa_success(request):
     """eSewa success callback - VERIFY & UPGRADE"""
     ref_id = request.GET.get("refId")
     pid = request.GET.get("oid") or request.GET.get("pid")
-    amt = request.GET.get('amt')
 
-    # Try to find the transaction even if status isn't PENDING (handle idempotency)
-    payment = None
-    if pid:
-        payment = PaymentTransaction.objects.filter(transaction_id=pid).first()
+    if not pid or not ref_id:
+        return HttpResponse("❌ Missing transaction or reference", status=400)
 
+    payment = PaymentTransaction.objects.filter(transaction_id=pid).first()
     if not payment:
-        # fallback: maybe Payment model exists but no PaymentTransaction
-        payment_record = Payment.objects.filter(transaction_id=pid).first()
-        if payment_record:
-            payment = PaymentTransaction.objects.filter(organization=payment_record.organization, amount=payment_record.amount).order_by('-created_at').first()
+        return HttpResponse("❌ Unknown transaction", status=400)
 
-    if not payment:
+    if payment.status == 'SUCCESS':
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        return HttpResponseRedirect(
+            f'{frontend_url}/dashboard?payment_success=true&plan={payment.plan}'
+        )
+
+    if payment.status != 'PENDING':
         return HttpResponse("❌ Invalid or already processed payment", status=400)
 
-    status_code, message = _process_esewa_verification(payment, ref_id, amt)
+    status_code, message = _process_esewa_verification(payment, ref_id)
     if status_code == 200:
-        # Redirect to React frontend dashboard with success message
-        # Use settings.FRONTEND_URL if available, otherwise default to localhost:3000
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
         return HttpResponseRedirect(f'{frontend_url}/dashboard?payment_success=true&plan={payment.plan}')
     return HttpResponse(message, status=status_code)
@@ -180,12 +182,16 @@ def esewa_success(request):
 @permission_classes([AllowAny])
 def esewa_failure(request):
     """eSewa failure callback"""
-    pid = request.GET.get("pid")
+    pid = request.GET.get("pid") or request.GET.get("oid")
+    if not pid:
+        return HttpResponse("❌ Missing transaction", status=400)
+
     PaymentTransaction.objects.filter(
-        transaction_id=pid
+        transaction_id=pid,
+        status='PENDING',
     ).update(status="FAILED")
 
-    Payment.objects.filter(transaction_id=pid).update(status='FAILED')
+    Payment.objects.filter(transaction_id=pid, status='PENDING').update(status='FAILED')
 
     return HttpResponse("❌ Payment failed")
 
@@ -214,7 +220,7 @@ def payment_failed(request):
 
 
 class UsageDashboardAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         # If organization is not attached to request, return friendly message
@@ -319,7 +325,7 @@ class UpgradePlanAPIView(APIView):
 
 
 class EsewaVerifyAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         transaction_id = (
@@ -330,15 +336,23 @@ class EsewaVerifyAPIView(APIView):
         if not transaction_id:
             return Response({"error": "transaction_id is required"}, status=400)
 
+        org = getattr(request, 'organization', None)
+        if not org:
+            return Response({"error": "Organization context required"}, status=403)
+
         try:
-            tx = PaymentTransaction.objects.get(transaction_id=transaction_id)
+            tx = PaymentTransaction.objects.get(
+                transaction_id=transaction_id,
+                organization=org,
+            )
         except PaymentTransaction.DoesNotExist:
             return Response({"error": "transaction not found"}, status=404)
 
-        ref_id = request.data.get('reference_id') or 'ESEWA_CALLBACK_API'
-        amt = request.data.get('amount')
-        
-        status_code, message = _process_esewa_verification(tx, ref_id, amt)
+        ref_id = request.data.get('reference_id')
+        if not ref_id and not getattr(settings, 'ESEWA_USE_MOCK', False):
+            return Response({"error": "reference_id is required"}, status=400)
+
+        status_code, message = _process_esewa_verification(tx, ref_id or 'MOCK-API')
         
         if status_code == 200:
             return Response({"status": "SUCCESS", "plan": tx.plan, "message": message})
@@ -350,6 +364,9 @@ class EsewaVerifyAPIView(APIView):
 
 def mock_esewa_view(request):
     """Render a local mock eSewa page for dev testing."""
+    if not getattr(settings, 'ESEWA_USE_MOCK', False):
+        return HttpResponse('Not found', status=404)
+
     amt = request.GET.get('amt')
     pid = request.GET.get('pid')
     su = request.GET.get('su')
@@ -368,6 +385,9 @@ def mock_esewa_view(request):
 @csrf_exempt
 def mock_esewa_pay(request):
     """Handle mock payment action and redirect to success/failure callback."""
+    if not getattr(settings, 'ESEWA_USE_MOCK', False):
+        return HttpResponse('Not found', status=404)
+
     if request.method != 'POST':
         return HttpResponse('Method not allowed', status=405)
 

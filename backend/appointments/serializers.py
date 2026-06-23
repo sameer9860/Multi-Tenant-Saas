@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Service, Staff, StaffAvailability, Appointment
 from apps.invoices.models import Customer
+from apps.core.serializers import filter_queryset_by_organization, get_request_organization
 
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -8,22 +9,11 @@ class ServiceSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('organization', 'created_at')
 
-    def create(self, validated_data):
-        # Automatically assign the organization from the user's profile
-        user = self.context['request'].user
-        validated_data['organization'] = user.organization
-        return super().create(validated_data)
-
 class StaffSerializer(serializers.ModelSerializer):
     class Meta:
         model = Staff
         fields = '__all__'
         read_only_fields = ('organization', 'created_at')
-
-    def create(self, validated_data):
-        user = self.context['request'].user
-        validated_data['organization'] = user.organization
-        return super().create(validated_data)
 
 class StaffAvailabilitySerializer(serializers.ModelSerializer):
     day_of_week_display = serializers.CharField(source='get_day_of_week_display', read_only=True)
@@ -33,15 +23,22 @@ class StaffAvailabilitySerializer(serializers.ModelSerializer):
         model = StaffAvailability
         fields = '__all__'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request is not None:
+            self.fields['staff'].queryset = filter_queryset_by_organization(
+                Staff.objects.all(), request
+            )
+
 class AppointmentSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     service_name = serializers.CharField(source='service.name', read_only=True)
     service_duration = serializers.IntegerField(source='service.duration_minutes', read_only=True)
     staff_name = serializers.CharField(source='staff.name', read_only=True)
 
-    # Fields for creating a new customer on the fly
     customer = serializers.PrimaryKeyRelatedField(
-        queryset=Customer.objects.all(),
+        queryset=Customer.objects.none(),
         required=False,
         allow_null=True
     )
@@ -54,28 +51,51 @@ class AppointmentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('organization', 'created_at')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request is not None:
+            self.fields['customer'].queryset = filter_queryset_by_organization(
+                Customer.objects.all(), request
+            )
+            self.fields['service'].queryset = filter_queryset_by_organization(
+                Service.objects.all(), request
+            )
+            self.fields['staff'].queryset = filter_queryset_by_organization(
+                Staff.objects.all(), request
+            )
+
     def validate(self, data):
         if not data.get('customer') and not data.get('new_customer_name'):
             raise serializers.ValidationError(
                 "Either an existing customer or new customer details must be provided."
             )
+
+        request = self.context.get('request')
+        org = get_request_organization(request) if request else None
+        for field_name in ('service', 'staff'):
+            related = data.get(field_name)
+            if related and org and related.organization_id != org.id:
+                raise serializers.ValidationError(
+                    {field_name: f"{field_name.title()} does not belong to your organization."}
+                )
         return data
 
     def create(self, validated_data):
-        user = self.context['request'].user
+        request = self.context['request']
+        org = get_request_organization(request)
         new_customer_name = validated_data.pop('new_customer_name', None)
         new_customer_phone = validated_data.pop('new_customer_phone', None)
         new_customer_email = validated_data.pop('new_customer_email', None)
 
         if new_customer_name:
-            # Create a new customer for the organization
             customer = Customer.objects.create(
-                organization=user.organization,
+                organization=org,
                 name=new_customer_name,
                 phone=new_customer_phone,
                 email=new_customer_email
             )
             validated_data['customer'] = customer
-        
-        validated_data['organization'] = user.organization
+
+        validated_data.pop('organization', None)
         return super().create(validated_data)

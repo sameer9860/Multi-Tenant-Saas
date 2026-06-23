@@ -6,7 +6,8 @@ import logging
 from decimal import Decimal
 from django.http import HttpResponse
 from .utils import generate_invoice_pdf
-from apps.core.roles import get_user_role_name
+from apps.core.mixins import TenantScopedViewSetMixin
+from apps.core.permissions import IsOwnerOrAdmin
 
 from .models import Invoice, Customer, InvoiceItem, Payment
 from rest_framework.decorators import action
@@ -18,27 +19,22 @@ from .serializers import (
 
 logger = logging.getLogger(__name__)
 
-class CustomerViewSet(ModelViewSet):
+
+class CustomerViewSet(TenantScopedViewSetMixin, ModelViewSet):
+    queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [parsers.JSONParser, parsers.FormParser]
 
-    def get_queryset(self):
-        return Customer.objects.filter(organization=self.request.organization)
-
     def perform_create(self, serializer):
-        org = self.request.organization
+        org = self.get_organization()
         usage = org.usage
 
-        # Check usage limits
         can_add, msg = usage.can_add_customer()
         if not can_add:
             raise PermissionDenied(msg)
 
-        # Save customer
-        serializer.save(organization=org)
-
-        # Increment usage count
+        super().perform_create(serializer)
         usage.increment_customer_count()
 
     @action(detail=True, methods=['get'])
@@ -71,10 +67,8 @@ class CustomerViewSet(ModelViewSet):
                     })
                     total_paid += payment.amount
             
-            # Sort by date, then by type (Invoices before Payments on same day)
             ledger_entries.sort(key=lambda x: (x["date"], 0 if x["type"] == "Invoice" else 1))
             
-            # Calculate running balance
             running_balance = Decimal('0.00')
             for entry in ledger_entries:
                 running_balance += (entry["debit"] - entry["credit"])
@@ -91,54 +85,45 @@ class CustomerViewSet(ModelViewSet):
                 "entries": ledger_entries
             })
             return Response(serializer.data)
-        except Exception as e:
+        except Exception:
             logger.exception("Error generating ledger for customer %s", pk)
-            return Response({"error": str(e)}, status=500)
+            return Response({"error": "Unable to generate customer ledger."}, status=500)
 
-class InvoiceViewSet(ModelViewSet):
+
+class InvoiceViewSet(TenantScopedViewSetMixin, ModelViewSet):
+    queryset = Invoice.objects.all()
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated]
-    # allow form-data fallback in case request isn't strict JSON
     parser_classes = [parsers.JSONParser, parsers.FormParser]
 
-    def get_queryset(self):
-        # include customer in queryset so serializer can efficiently serialize nested data
-        return Invoice.objects.filter(
-            organization=self.request.organization
-        ).select_related('customer', 'organization').prefetch_related('items', 'payments')
+    def get_permissions(self):
+        if self.action == 'destroy':
+            return [IsAuthenticated(), IsOwnerOrAdmin()]
+        return [IsAuthenticated()]
 
-    def perform_update(self, serializer):
-        serializer.save()
+    def get_queryset(self):
+        return super().get_queryset().select_related(
+            'customer', 'organization'
+        ).prefetch_related('items', 'payments')
 
     def perform_create(self, serializer):
-        org = self.request.organization
+        org = self.get_organization()
         usage = org.usage
 
-        # Check usage limits
         can_add, msg = usage.can_create_invoice()
         if not can_add:
             raise PermissionDenied(msg)
 
-        # Save invoice (model handles initial payment if provided)
-        serializer.save(organization=org)
-
-        # Increment usage count
+        super().perform_create(serializer)
         usage.increment_invoice_count()
 
     def create(self, request, *args, **kwargs):
-        # log raw body for easier debugging
         logger.debug('Invoice create raw body: %s', request.body)
         try:
             return super().create(request, *args, **kwargs)
         except ParseError as exc:
             logger.error('JSON parsing failed for invoice creation: %s', exc)
             raise ValidationError({'detail': 'Request body contained invalid JSON'})
-
-    def destroy(self, request, *args, **kwargs):
-        user_role = get_user_role_name(request, default="STAFF")
-        if user_role not in ['OWNER', 'ADMIN']:
-            raise PermissionDenied("Only Owners or Admins can delete invoices.")
-        return super().destroy(request, *args, **kwargs)
 
     @action(detail=True, methods=['get'])
     def download_pdf(self, request, pk=None):
@@ -151,19 +136,15 @@ class InvoiceViewSet(ModelViewSet):
         response.write(pdf_content)
         return response
 
-class InvoiceItemViewSet(ModelViewSet):
+
+class InvoiceItemViewSet(TenantScopedViewSetMixin, ModelViewSet):
+    queryset = InvoiceItem.objects.all()
     serializer_class = InvoiceItemSerializer
     permission_classes = [IsAuthenticated]
+    tenant_lookup_field = 'invoice__organization'
 
-    def get_queryset(self):
-        return InvoiceItem.objects.filter(invoice__organization=self.request.organization)
 
-class PaymentViewSet(ModelViewSet):
+class PaymentViewSet(TenantScopedViewSetMixin, ModelViewSet):
+    queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return Payment.objects.filter(organization=self.request.organization)
-
-    def perform_create(self, serializer):
-        serializer.save(organization=self.request.organization)

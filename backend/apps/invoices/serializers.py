@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Customer, Invoice, InvoiceItem, Payment
+from apps.core.serializers import filter_queryset_by_organization, get_request_organization
 
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,14 +20,27 @@ class PaymentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('organization',)
 
+    def validate_invoice(self, invoice):
+        request = self.context.get('request')
+        org = get_request_organization(request) if request else None
+        if org and invoice.organization_id != org.id:
+            raise serializers.ValidationError("Invoice does not belong to your organization.")
+        return invoice
+
     def validate(self, attrs):
         invoice = attrs.get('invoice')
         amount = attrs.get('amount')
-        if invoice and amount:
-            # For new payments (no id), check against current remaining due
-            if not self.instance:
-                if amount > invoice.remaining_due:
-                    raise serializers.ValidationError(f"Payment amount {amount} exceeds remaining due {invoice.remaining_due}")
+        request = self.context.get('request')
+        org = get_request_organization(request) if request else None
+
+        if invoice and org and invoice.organization_id != org.id:
+            raise serializers.ValidationError("Invoice does not belong to your organization.")
+
+        if invoice and amount and not self.instance:
+            if amount > invoice.remaining_due:
+                raise serializers.ValidationError(
+                    f"Payment amount {amount} exceeds remaining due {invoice.remaining_due}"
+                )
         return attrs
 
 from apps.core.models import Organization
@@ -44,10 +58,18 @@ class InvoiceSerializer(serializers.ModelSerializer):
     # writable field accepts either an integer id or object with id
     customer_input = serializers.PrimaryKeyRelatedField(
         source='customer',
-        queryset=Customer.objects.all(),
+        queryset=Customer.objects.none(),
         write_only=True,
         required=True,
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request is not None:
+            self.fields['customer_input'].queryset = filter_queryset_by_organization(
+                Customer.objects.all(), request
+            )
 
     items = InvoiceItemSerializer(many=True, required=False)
     payments = PaymentSerializer(many=True, read_only=True)
@@ -69,15 +91,31 @@ class InvoiceSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = (
             'organization', 'invoice_number', 'balance', 'status', 'created_at',
+            'paid_amount',
         )
 
     def validate(self, attrs):
+        if self.instance is not None:
+            locked = ('subtotal', 'vat_amount', 'total', 'paid_amount')
+            for field in locked:
+                if field in attrs:
+                    raise serializers.ValidationError(
+                        {field: 'Financial fields cannot be updated directly. Use payments API for paid_amount.'}
+                    )
+
         paid = attrs.get('paid_amount', None)
         total = attrs.get('total', None)
         if paid is not None and total is not None:
             if paid > total and total > 0:
                 raise serializers.ValidationError("Paid amount cannot exceed total")
         return attrs
+
+    def validate_customer_input(self, customer):
+        request = self.context.get('request')
+        org = get_request_organization(request) if request else None
+        if org and customer.organization_id != org.id:
+            raise serializers.ValidationError("Customer does not belong to your organization.")
+        return customer
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])

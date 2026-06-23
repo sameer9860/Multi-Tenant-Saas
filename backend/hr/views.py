@@ -19,12 +19,16 @@ from rest_framework.views import APIView
 from django.utils import timezone
 from .utils import generate_payslip_pdf
 from apps.core.mixins import TenantScopedViewSetMixin
+from apps.core.permissions import IsOwnerOrAdminOrReadOnly, IsLeaveRequestApprover
+from apps.core.roles import get_user_role_name
+
+MAX_CSV_UPLOAD_BYTES = 5 * 1024 * 1024
 
 
 class AttendanceViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Attendance.objects.all()
     serializer_class = AttendanceSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -81,6 +85,9 @@ class AttendanceViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
             employee_id = record.get('employee')
             status_val = record.get('status')
             notes = record.get('notes', '')
+
+            if not Employee.objects.filter(id=employee_id, organization=org).exists():
+                continue
             
             attendance, created = Attendance.objects.update_or_create(
                 organization=org,
@@ -112,6 +119,13 @@ class AttendanceViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
         file = request.FILES.get('file')
         if not file:
             return Response({"error": "No file uploaded."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if file.size > MAX_CSV_UPLOAD_BYTES:
+            return Response({"error": "CSV file is too large (max 5MB)."}, status=status.HTTP_400_BAD_REQUEST)
+
+        content_type = (file.content_type or '').lower()
+        if content_type and 'csv' not in content_type and 'text' not in content_type:
+            return Response({"error": "Only CSV files are supported."}, status=status.HTTP_400_BAD_REQUEST)
             
         try:
             decoded_file = file.read().decode('utf-8')
@@ -246,7 +260,7 @@ class EmployeePagination(pagination.PageNumberPagination):
 class DepartmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrAdminOrReadOnly]
 
     def get_queryset(self):
         return super().get_queryset().annotate(
@@ -257,7 +271,7 @@ class DepartmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 class DesignationViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Designation.objects.all()
     serializer_class = DesignationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset().annotate(
@@ -273,7 +287,7 @@ class EmployeeViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     pagination_class = EmployeePagination
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -303,7 +317,7 @@ class LeaveRequestViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = LeaveRequest.objects.all()
     serializer_class = LeaveRequestSerializer
     pagination_class = None
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsLeaveRequestApprover]
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related('employee', 'approved_by')
@@ -344,6 +358,9 @@ class LeaveRequestViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
         instance = self.get_object()
         old_status = instance.status
         new_status = serializer.validated_data.get('status', old_status)
+
+        if old_status != new_status and not get_user_role_name(self.request) in ['OWNER', 'ADMIN']:
+            raise PermissionDenied("Only Owners or Admins can approve or reject leave requests.")
         
         # Set approved_by if status changed to APPROVED
         if old_status != 'APPROVED' and new_status == 'APPROVED':
@@ -406,7 +423,7 @@ class LeaveRequestViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 class PayrollViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Payroll.objects.all()
     serializer_class = PayrollSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related('employee')
@@ -604,7 +621,7 @@ class PayrollViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 class SalaryAdvanceViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = SalaryAdvance.objects.all()
     serializer_class = SalaryAdvanceSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related('employee')
