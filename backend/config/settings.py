@@ -127,7 +127,7 @@ REST_FRAMEWORK = {
         'anon': os.getenv('API_THROTTLE_ANON', '60/hour'),
         'user': os.getenv('API_THROTTLE_USER', '1000/hour'),
         
-        'DEFAULT_THROTTLE_RATES': {
+    'DEFAULT_THROTTLE_RATES': {
         'anon': os.getenv('API_THROTTLE_ANON', '60/hour'),
         'user': os.getenv('API_THROTTLE_USER', '1000/hour'),
         'token': os.getenv('API_THROTTLE_TOKEN', '10/minute'),  # new
@@ -228,12 +228,17 @@ ESEWA_USE_MOCK = env_bool('ESEWA_USE_MOCK', default=False)
 
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 
-# Email Settings for Mailhog
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'localhost'
-EMAIL_PORT = 1025
-EMAIL_USE_TLS = False
-DEFAULT_FROM_EMAIL = 'no-reply@skillswap.com'
+# Email — configure via environment variables for production
+# For local dev with Mailhog: EMAIL_HOST=localhost, EMAIL_PORT=1025, EMAIL_USE_TLS=False
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '1025'))
+EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', default=False)
+EMAIL_USE_SSL = env_bool('EMAIL_USE_SSL', default=False)
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@yourdomain.com')
+
 
 # Background Tasks
 MAX_ATTEMPTS = 5

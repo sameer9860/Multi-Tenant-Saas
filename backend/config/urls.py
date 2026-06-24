@@ -9,6 +9,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenBlacklistView,
 )
+from apps.core.views import health_check
 
 
 class TokenRateThrottle(AnonRateThrottle):
@@ -38,6 +39,8 @@ urlpatterns = [
     re_path(r'^api/token/?$', ThrottledTokenObtainPairView.as_view(), name='token_obtain_pair'),
     re_path(r'^api/token/refresh/?$', ThrottledTokenRefreshView.as_view(), name='token_refresh'),
     re_path(r'^api/token/blacklist/?$', TokenBlacklistView.as_view(), name='token_blacklist'),
+    path('api/health/', health_check, name='health'),
+
 ]
 
 from django.conf import settings
