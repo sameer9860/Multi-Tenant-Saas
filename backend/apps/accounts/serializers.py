@@ -1,13 +1,15 @@
 from rest_framework import serializers
 from .models import User, OrganizationMember
 
+
 class UserSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source='role.name', read_only=True)
-    
+
     class Meta:
         model = User
         fields = ['id', 'email', 'full_name', 'role', 'role_name']
-        read_only_fields = ['role']
+        read_only_fields = ['id', 'role']
+
 
 class OrganizationMemberSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(source='user.id', read_only=True)
@@ -15,8 +17,12 @@ class OrganizationMemberSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.full_name', read_only=True)
     phone = serializers.CharField(source='user.phone', read_only=True)
     role_name = serializers.CharField(source='role.name', read_only=True)
-    
+
     class Meta:
         model = OrganizationMember
-        fields = ['id', 'user_id', 'email', 'full_name', 'phone', 'role', 'role_name', 'created_at']
-        read_only_fields = ['role']
+        fields = [
+            'id', 'user_id', 'email', 'full_name',
+            'phone', 'role', 'role_name', 'created_at',
+        ]
+        # role is set programmatically in perform_create/update — not writable via API
+        read_only_fields = ['id', 'role', 'created_at']

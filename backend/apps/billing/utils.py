@@ -1,5 +1,3 @@
-from decimal import Decimal, InvalidOperation
-
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
@@ -15,15 +13,6 @@ def get_esewa_merchant_code():
     raise ImproperlyConfigured('ESEWA_MERCHANT_CODE must be set in production')
 
 
-def parse_payment_amount(value):
-    if value is None:
-        return None
-    try:
-        return Decimal(str(value)).quantize(Decimal('0.01'))
-    except (InvalidOperation, TypeError, ValueError):
-        return None
-
-
 def get_pending_payment_transaction(transaction_id):
     if not transaction_id:
         return None
@@ -31,3 +20,7 @@ def get_pending_payment_transaction(transaction_id):
         transaction_id=transaction_id,
         status='PENDING',
     ).first()
+
+# NOTE: parse_payment_amount() removed — identical logic lives in
+# ESewaPaymentManager._to_decimal() in payment_gateway.py.
+# Import that directly if needed outside the gateway.

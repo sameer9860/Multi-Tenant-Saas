@@ -1,10 +1,14 @@
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
 from django.db.models import Count, Sum
 from .models import Service, Staff, StaffAvailability, Appointment
-from .serializers import ServiceSerializer, StaffSerializer, StaffAvailabilitySerializer, AppointmentSerializer
+from .serializers import (
+    ServiceSerializer, StaffSerializer,
+    StaffAvailabilitySerializer, AppointmentSerializer,
+)
 from collections import defaultdict
 from apps.core.mixins import TenantScopedViewSetMixin
 
@@ -34,45 +38,55 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-
+        queryset = super().get_queryset().select_related(
+            'customer', 'service', 'staff', 'organization'
+        )
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
-
         if start_date:
             queryset = queryset.filter(date__gte=start_date)
         if end_date:
             queryset = queryset.filter(date__lte=end_date)
-
         return queryset
 
+    def _get_org(self):
+        """Return org from middleware — never fall back to request.user.organization."""
+        org = getattr(self.request, 'organization', None)
+        if not org:
+            raise PermissionDenied("Organization not found.")
+        return org
 
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
-        org = request.user.organization
+        org = self._get_org()
         today = timezone.now().date()
 
+        # Reuse scoped queryset instead of raw filter
         appointments = Appointment.objects.filter(organization=org)
 
         today_count = appointments.filter(date=today).count()
-        upcoming_count = appointments.filter(date__gte=today, status='SCHEDULED').count()
+        upcoming_count = appointments.filter(
+            date__gte=today, status='SCHEDULED'
+        ).count()
         completed_count = appointments.filter(status='COMPLETED').count()
         cancelled_count = appointments.filter(status='CANCELLED').count()
 
-        recent_appointments = appointments.order_by('-created_at')[:10]
-        serializer = self.get_serializer(recent_appointments, many=True)
+        recent = appointments.select_related(
+            'customer', 'service', 'staff'
+        ).order_by('-created_at')[:10]
+        serializer = self.get_serializer(recent, many=True)
 
         return Response({
             'today_count': today_count,
             'upcoming_count': upcoming_count,
             'completed_count': completed_count,
             'cancelled_count': cancelled_count,
-            'recent_appointments': serializer.data
+            'recent_appointments': serializer.data,
         })
 
     @action(detail=False, methods=['get'])
     def reports(self, request):
-        org = request.user.organization
+        org = self._get_org()
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
 
@@ -82,8 +96,7 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
         if end_date:
             appointments = appointments.filter(date__lte=end_date)
 
-        # 1. Appointments per day — use Python aggregation for SQLite compatibility
-        # (TruncDate uses a user-defined function that fails on some SQLite builds)
+        # Appointments per day
         day_counts = defaultdict(int)
         for appt in appointments.values('date'):
             day_counts[str(appt['date'])] += 1
@@ -92,29 +105,32 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
             for day, count in sorted(day_counts.items())
         ]
 
-        # 2. Appointments per staff
+        # Appointments per staff
         appointments_per_staff = list(
-            appointments.values('staff__name').annotate(count=Count('id')).order_by('-count')
+            appointments.values('staff__name')
+            .annotate(count=Count('id'))
+            .order_by('-count')
         )
 
-        # 3. Revenue per service (only completed)
+        # Revenue per service (completed only)
         revenue_per_service = list(
             appointments.filter(status='COMPLETED')
             .values('service__name')
             .annotate(total_revenue=Sum('service__price'))
             .order_by('-total_revenue')
         )
-        # Convert Decimal to float for clean JSON serialization
         for item in revenue_per_service:
             if item['total_revenue'] is not None:
                 item['total_revenue'] = float(item['total_revenue'])
 
-        # 4. Cancellation rate
+        # Cancellation rate
         total_count = appointments.count()
         cancelled_count = appointments.filter(status='CANCELLED').count()
-        cancellation_rate = round((cancelled_count / total_count * 100), 2) if total_count > 0 else 0
+        cancellation_rate = (
+            round(cancelled_count / total_count * 100, 2) if total_count > 0 else 0
+        )
 
-        # 5. Total revenue (completed only)
+        # Total revenue
         total_revenue = appointments.filter(
             status='COMPLETED'
         ).aggregate(total=Sum('service__price'))['total'] or 0
@@ -128,5 +144,5 @@ class AppointmentViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
                 'cancelled_appointments': cancelled_count,
                 'cancellation_rate': cancellation_rate,
                 'total_revenue': float(total_revenue),
-            }
+            },
         })

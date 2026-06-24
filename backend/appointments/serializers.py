@@ -3,25 +3,40 @@ from .models import Service, Staff, StaffAvailability, Appointment
 from apps.invoices.models import Customer
 from apps.core.serializers import filter_queryset_by_organization, get_request_organization
 
+
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
-        fields = '__all__'
-        read_only_fields = ('organization', 'created_at')
+        fields = [
+            'id', 'organization', 'name', 'description',
+            'duration_minutes', 'price', 'is_active', 'created_at',
+        ]
+        read_only_fields = ('id', 'organization', 'created_at')
+
 
 class StaffSerializer(serializers.ModelSerializer):
     class Meta:
         model = Staff
-        fields = '__all__'
-        read_only_fields = ('organization', 'created_at')
+        fields = [
+            'id', 'organization', 'name', 'email',
+            'phone', 'role', 'is_active', 'created_at',
+        ]
+        read_only_fields = ('id', 'organization', 'created_at')
+
 
 class StaffAvailabilitySerializer(serializers.ModelSerializer):
-    day_of_week_display = serializers.CharField(source='get_day_of_week_display', read_only=True)
+    day_of_week_display = serializers.CharField(
+        source='get_day_of_week_display', read_only=True
+    )
     staff_name = serializers.CharField(source='staff.name', read_only=True)
 
     class Meta:
         model = StaffAvailability
-        fields = '__all__'
+        fields = [
+            'id', 'staff', 'staff_name', 'day_of_week', 'day_of_week_display',
+            'start_time', 'end_time', 'slot_duration_minutes',
+        ]
+        read_only_fields = ('id',)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -31,25 +46,42 @@ class StaffAvailabilitySerializer(serializers.ModelSerializer):
                 Staff.objects.all(), request
             )
 
+
 class AppointmentSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     service_name = serializers.CharField(source='service.name', read_only=True)
-    service_duration = serializers.IntegerField(source='service.duration_minutes', read_only=True)
+    service_duration = serializers.IntegerField(
+        source='service.duration_minutes', read_only=True
+    )
     staff_name = serializers.CharField(source='staff.name', read_only=True)
 
     customer = serializers.PrimaryKeyRelatedField(
         queryset=Customer.objects.none(),
         required=False,
-        allow_null=True
+        allow_null=True,
     )
-    new_customer_name = serializers.CharField(write_only=True, required=False)
-    new_customer_phone = serializers.CharField(write_only=True, required=False)
-    new_customer_email = serializers.EmailField(write_only=True, required=False)
+
+    # Write-only fields for inline new customer creation
+    new_customer_name = serializers.CharField(
+        write_only=True, required=False, max_length=255
+    )
+    new_customer_phone = serializers.CharField(
+        write_only=True, required=False, max_length=20, allow_blank=True
+    )
+    new_customer_email = serializers.EmailField(
+        write_only=True, required=False, allow_blank=True
+    )
 
     class Meta:
         model = Appointment
-        fields = '__all__'
-        read_only_fields = ('organization', 'created_at')
+        fields = [
+            'id', 'organization', 'customer', 'customer_name',
+            'service', 'service_name', 'service_duration',
+            'staff', 'staff_name',
+            'date', 'time', 'status', 'notes', 'created_at',
+            'new_customer_name', 'new_customer_phone', 'new_customer_email',
+        ]
+        read_only_fields = ('id', 'organization', 'created_at')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -84,6 +116,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context['request']
         org = get_request_organization(request)
+
         new_customer_name = validated_data.pop('new_customer_name', None)
         new_customer_phone = validated_data.pop('new_customer_phone', None)
         new_customer_email = validated_data.pop('new_customer_email', None)
@@ -92,8 +125,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
             customer = Customer.objects.create(
                 organization=org,
                 name=new_customer_name,
-                phone=new_customer_phone,
-                email=new_customer_email
+                phone=new_customer_phone or None,
+                email=new_customer_email or None,
             )
             validated_data['customer'] = customer
 
