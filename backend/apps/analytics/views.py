@@ -10,7 +10,9 @@ from crm.models import Expense
 from apps.invoices.utils import generate_invoice_pdf # Reuse base PDF logic or create new one
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from apps.subscriptions.limits import PLAN_LIMITS
+from apps.billing.constants import PLAN_LIMITS   # replaces subscriptions.limits import
+# replaces subscriptions.limits import
+
 
 class UsageView(APIView):
     permission_classes = [IsAuthenticated]
@@ -18,40 +20,25 @@ class UsageView(APIView):
     def get(self, request):
         org = request.organization
         if not org:
-             return Response({"error": "Organization not found"}, status=404)
-             
-        plan = org.plan # Use org.plan if available or org.subscription.plan
-        
+            return Response({"error": "Organization not found"}, status=404)
+
+        plan = org.plan
         leads_count = org.leads.count()
         clients_count = org.clients.count()
         invoices_count = org.invoices.count()
-        
-        limits = PLAN_LIMITS.get(plan, {})
-        
-        # Determine invoice limits based on plan
-        invoice_limit = None
-        if plan == "FREE":
-            invoice_limit = 10
-        elif plan == "BASIC":
-            invoice_limit = 1000
-        # PRO and others have unlimited invoices (None)
+
+        plan_limits = PLAN_LIMITS.get(plan, {})
+
+        def _limit(val):
+            return None if val in (None, -1) else val
 
         return Response({
             "plan": plan,
             "organization_name": org.name,
             "usage": {
-                "leads": {
-                    "used": leads_count,
-                    "limit": limits.get("leads"),
-                },
-                "clients": {
-                    "used": clients_count,
-                    "limit": limits.get("clients"),
-                },
-                "invoices": {
-                    "used": invoices_count,
-                    "limit": invoice_limit,
-                }
+                "leads":    {"used": leads_count,    "limit": _limit(plan_limits.get("leads"))},
+                "clients":  {"used": clients_count,  "limit": _limit(plan_limits.get("clients"))},
+                "invoices": {"used": invoices_count, "limit": _limit(plan_limits.get("invoices"))},
             },
             # Flat fields for simple dashboard summary
             "leads_count": leads_count,
@@ -59,6 +46,7 @@ class UsageView(APIView):
             "invoices_count": invoices_count,
             "subscription_plan": plan,
         })
+
 
 class VATSummaryView(APIView):
     permission_classes = [IsAuthenticated]

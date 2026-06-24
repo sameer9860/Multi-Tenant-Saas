@@ -16,13 +16,13 @@ from .models import Lead, Client, LeadActivity, Expense, Note, Interaction, Remi
 
 from apps.invoices.models import Invoice, Customer, Payment
 from .serializers import (
-    LeadSerializer, ClientSerializer, LeadActivitySerializer, 
+    LeadSerializer, ClientSerializer, LeadActivitySerializer,
     ExpenseSerializer, NoteSerializer, InteractionSerializer, ReminderSerializer,
     TagSerializer
 )
 from apps.core.mixins import TenantScopedViewSetMixin
 from .permissions import IsAdminOrReadOnly, IsAdminOwnerOrStaffUpdate
-from apps.subscriptions.limits import PLAN_LIMITS
+from apps.billing.constants import PLAN_LIMITS   # unified source of truth
 from apps.core.roles import get_user_role_name
 
 
@@ -33,6 +33,38 @@ class LeadPagination(pagination.PageNumberPagination):
         if request.query_params.get('no_pagination') == 'true':
             return None
         return super().paginate_queryset(queryset, request, view)
+
+
+# ---------------------------------------------------------------------------
+# Shared mixin for Note / Interaction / Reminder viewsets
+# ---------------------------------------------------------------------------
+
+class CrmRelatedObjectMixin:
+    """
+    Shared get_queryset + perform_create for Note, Interaction, Reminder.
+    Subclasses must define `filter_params` — a list of query param names
+    that map directly to FK field names on the model.
+    """
+    filter_params = []   # e.g. ['lead', 'client', 'customer']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        for param in self.filter_params:
+            value = self.request.query_params.get(param)
+            if value:
+                queryset = queryset.filter(**{f'{param}_id': value})
+        return queryset
+
+    def perform_create(self, serializer):
+        org = self.get_organization()
+        if not org:
+            raise PermissionDenied("User is not associated with an organization.")
+        serializer.save(organization=org, user=self.request.user)
+
+
+# ---------------------------------------------------------------------------
+# ViewSets
+# ---------------------------------------------------------------------------
 
 class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Lead.objects.all()
@@ -56,8 +88,6 @@ class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
             )
 
         return queryset.order_by('-created_at')
-
-
 
     def perform_create(self, serializer):
         org = self.get_organization()
@@ -84,7 +114,6 @@ class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
         updated_lead = serializer.save()
         org = self.get_organization()
 
-        # Log Status Change
         if old_status != updated_lead.status:
             LeadActivity.objects.create(
                 organization=org,
@@ -94,8 +123,7 @@ class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
                 old_value=old_status,
                 new_value=updated_lead.status
             )
-        
-        # Log Assignee Change
+
         if old_assignee != updated_lead.assigned_to:
             LeadActivity.objects.create(
                 organization=org,
@@ -111,24 +139,21 @@ class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     def convert_to_customer(self, request, pk=None):
         lead = self.get_object()
         org = lead.organization
-        
+
         if lead.status == "CONVERTED":
             return Response({"error": "Lead is already converted"}, status=400)
-            
-        # Create Customer in invoices app
+
         customer = Customer.objects.create(
             organization=org,
             name=lead.name,
             email=lead.email,
             phone=lead.phone
         )
-        
-        # Update Lead status
+
         old_status = lead.status
         lead.status = "CONVERTED"
         lead.save()
-        
-        # Log Activity
+
         LeadActivity.objects.create(
             organization=org,
             lead=lead,
@@ -137,7 +162,7 @@ class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
             old_value=old_status,
             new_value="CONVERTED"
         )
-        
+
         return Response({
             "status": "Lead converted successfully",
             "customer_id": customer.id
@@ -155,12 +180,12 @@ class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 
         org = self.get_organization()
         leads = Lead.objects.filter(id__in=ids, organization=org)
-        
+
         updated_count = 0
         for lead in leads:
             old_status = lead.status
             old_assignee = lead.assigned_to
-            
+
             changed = False
             if status and old_status != status:
                 lead.status = status
@@ -173,7 +198,7 @@ class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
                     old_value=old_status,
                     new_value=status
                 )
-                
+
             if assigned_to_id is not None:
                 new_assignee = None
                 if assigned_to_id:
@@ -197,19 +222,18 @@ class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
                         old_value=str(old_assignee) if old_assignee else "None",
                         new_value=str(new_assignee) if new_assignee else "None"
                     )
-            
+
             if changed:
                 lead.save()
                 updated_count += 1
-                
+
         return Response({"status": f"Successfully updated {updated_count} leads"})
+
 
 class TagViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-
-
 
 
 class LeadActivityViewSet(TenantScopedViewSetMixin, viewsets.ReadOnlyModelViewSet):
@@ -221,7 +245,6 @@ class LeadActivityViewSet(TenantScopedViewSetMixin, viewsets.ReadOnlyModelViewSe
         queryset = super().get_queryset()
         user = self.request.user
 
-        # Staff only see their assigned leads' activities
         user_role = get_user_role_name(self.request)
         if user_role == 'STAFF':
             queryset = queryset.filter(lead__assigned_to=user)
@@ -255,120 +278,69 @@ class ExpenseViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     serializer_class = ExpenseSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
-class NoteViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+
+class NoteViewSet(CrmRelatedObjectMixin, TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Note.objects.all()
     serializer_class = NoteSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+    filter_params = ['lead', 'client', 'customer']
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        lead_id = self.request.query_params.get('lead')
-        client_id = self.request.query_params.get('client')
-        customer_id = self.request.query_params.get('customer')
 
-        if lead_id: queryset = queryset.filter(lead_id=lead_id)
-        if client_id: queryset = queryset.filter(client_id=client_id)
-        if customer_id: queryset = queryset.filter(customer_id=customer_id)
-
-        return queryset
-
-    def perform_create(self, serializer):
-        org = self.get_organization()
-        if not org:
-            raise PermissionDenied("User is not associated with an organization.")
-        serializer.save(organization=org, user=self.request.user)
-
-class InteractionViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+class InteractionViewSet(CrmRelatedObjectMixin, TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Interaction.objects.all()
     serializer_class = InteractionSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+    filter_params = ['lead', 'client', 'customer']
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        lead_id = self.request.query_params.get('lead')
-        client_id = self.request.query_params.get('client')
-        customer_id = self.request.query_params.get('customer')
+        return super().get_queryset().order_by('-date')
 
-        if lead_id: queryset = queryset.filter(lead_id=lead_id)
-        if client_id: queryset = queryset.filter(client_id=client_id)
-        if customer_id: queryset = queryset.filter(customer_id=customer_id)
 
-        return queryset.order_by('-date')
-
-    def perform_create(self, serializer):
-        org = self.get_organization()
-        if not org:
-            raise PermissionDenied("User is not associated with an organization.")
-        serializer.save(organization=org, user=self.request.user)
-
-class ReminderViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
+class ReminderViewSet(CrmRelatedObjectMixin, TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Reminder.objects.all()
     serializer_class = ReminderSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+    filter_params = ['lead']
 
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        if self.request.query_params.get('completed') == 'true':
+        completed = self.request.query_params.get('completed')
+        if completed == 'true':
             queryset = queryset.filter(is_completed=True)
-        elif self.request.query_params.get('completed') == 'false':
+        elif completed == 'false':
             queryset = queryset.filter(is_completed=False)
 
-        lead_id = self.request.query_params.get('lead')
-        if lead_id:
-            queryset = queryset.filter(lead_id=lead_id)
-
         return queryset.order_by('remind_at')
-
-    def perform_create(self, serializer):
-        org = self.get_organization()
-        if not org:
-            raise PermissionDenied("User is not associated with an organization.")
-        serializer.save(organization=org, user=self.request.user)
 
 
 class DashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        org = getattr(request, 'organization', None) or getattr(request.user, 'organization', None)
-        
+        org = getattr(request, 'organization', None)
+
         if not org:
             return Response(
-                {"error": "User is not associated with an organization"}, 
+                {"error": "User is not associated with an organization"},
                 status=400
             )
 
         total_leads = org.leads.count()
-        # Unifying CRM Clients and Invoice Customers into one count
         crm_clients_count = org.clients.count()
         invoice_customers_count = Customer.objects.filter(organization=org).count()
         total_clients = crm_clients_count + invoice_customers_count
-        
-        # Helper to safely get counts
-        def safe_count(queryset):
-            return queryset.count() if queryset is not None else 0
-
-        # Analytics specific aggregations for Dashboard
-        # Fetching Total Invoices
         total_invoices = Invoice.objects.filter(organization=org).count()
-        
-        # Keep separate total_customers for now, but total_clients is now unified
         total_customers = invoice_customers_count
 
-        # Fetching Total Revenue (Sum of all Payment amounts)
-        total_revenue_agg = Payment.objects.filter(
-            organization=org
-        ).aggregate(total=Sum("amount"))
-        total_revenue = total_revenue_agg["total"] or 0
+        total_revenue = Payment.objects.filter(organization=org).aggregate(
+            total=Sum("amount")
+        )["total"] or 0
 
-        # Fetching Total Due Amount (Sum of 'balance' for all invoices)
-        total_due_agg = Invoice.objects.filter(
-            organization=org
-        ).aggregate(due=Sum("balance"))
-        total_due = total_due_agg["due"] or 0
+        total_due = Invoice.objects.filter(organization=org).aggregate(
+            due=Sum("balance")
+        )["due"] or 0
 
-        # Fetching Monthly Revenue (Sum of all Payment amounts grouped by month)
         monthly_revenue_data = (
             Payment.objects.filter(organization=org)
             .annotate(month=TruncMonth("date"))
@@ -376,7 +348,6 @@ class DashboardView(APIView):
             .annotate(total=Sum("amount"))
             .order_by("month")
         )
-        # Convert month dates to string format for JSON serialization
         monthly_revenue = [
             {
                 "month": item["month"].strftime("%Y-%m") if item["month"] else None,
@@ -386,66 +357,37 @@ class DashboardView(APIView):
         ]
 
         status_counts = {
-            "NEW": org.leads.filter(status="NEW").count(),
-            "CONTACTED": org.leads.filter(status="CONTACTED").count(),
-            "INTERESTED": org.leads.filter(status="INTERESTED").count(),
-            "CONVERTED": org.leads.filter(status="CONVERTED").count(),
-            "LOST": org.leads.filter(status="LOST").count(),
+            s: org.leads.filter(status=s).count()
+            for s in ["NEW", "CONTACTED", "INTERESTED", "CONVERTED", "LOST"]
         }
 
-        # Fetching Total Expenses
-        total_expense_agg = Expense.objects.filter(
-            organization=org
-        ).aggregate(total=Sum("amount"))
-        total_expenses = total_expense_agg["total"] or 0
+        total_expenses = Expense.objects.filter(organization=org).aggregate(
+            total=Sum("amount")
+        )["total"] or 0
 
-        # Calculating Profit
         total_profit = float(total_revenue) - float(total_expenses)
-
-        conversion_rate = 0
-        if total_leads > 0:
-            conversion_rate = (status_counts["CONVERTED"] / total_leads) * 100
-
-        # Get plan usage details
-        usage_leads = total_leads
-        limit_leads = -1
-        
-        usage_clients = total_clients
-        limit_clients = -1
-        
-        usage_invoices = 0
-        limit_invoices = None
+        conversion_rate = (
+            (status_counts["CONVERTED"] / total_leads) * 100 if total_leads > 0 else 0
+        )
 
         current_plan = org.plan
-        if current_plan in PLAN_LIMITS:
-            limit_leads = PLAN_LIMITS[current_plan].get("leads", -1)
-            limit_clients = PLAN_LIMITS[current_plan].get("clients", -1)
-        
-        from apps.billing.constants import PLAN_LIMITS as BILLING_LIMITS
-        plan_invoice_limit = BILLING_LIMITS.get(current_plan, {}).get('invoices', None)
+        plan_limits = PLAN_LIMITS.get(current_plan, {})
 
+        def _limit(val):
+            """None (unlimited) stays None; -1 also becomes None for the API."""
+            return None if val in (None, -1) else val
+
+        usage_invoices = 0
+        limit_invoices = _limit(plan_limits.get('invoices'))
         if hasattr(org, 'usage'):
             usage_invoices = org.usage.invoices_created
-            limit_invoices = org.usage.get_plan_limit('invoices')
-            if limit_invoices == -1:
-                limit_invoices = None
-
-        if limit_invoices is None:
-            limit_invoices = plan_invoice_limit
+            raw = org.usage.get_plan_limit('invoices')
+            limit_invoices = _limit(raw)
 
         usage_data = {
-            "leads": {
-                "used": usage_leads,
-                "limit": limit_leads
-            },
-            "clients": {
-                "used": usage_clients,
-                "limit": limit_clients
-            },
-            "invoices": {
-                "used": usage_invoices,
-                "limit": limit_invoices
-            }
+            "leads":    {"used": total_leads,   "limit": _limit(plan_limits.get("leads"))},
+            "clients":  {"used": total_clients,  "limit": _limit(plan_limits.get("clients"))},
+            "invoices": {"used": usage_invoices, "limit": limit_invoices},
         }
 
         return Response({
@@ -462,5 +404,5 @@ class DashboardView(APIView):
             "conversion_rate": conversion_rate,
             "plan": current_plan,
             "usage": usage_data,
-            "organization_name": org.name
+            "organization_name": org.name,
         })
