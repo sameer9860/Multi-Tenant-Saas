@@ -199,6 +199,11 @@ class LeaveRequest(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError({'end_date': 'End date must be on or after start date.'})
+
     def __str__(self):
         return f"{self.employee.full_name} - {self.leave_type} ({self.status})"
 
@@ -226,9 +231,13 @@ class SalaryAdvance(models.Model):
     class Meta:
         ordering = ['-date']
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError({'amount': 'Salary advance amount must be positive.'})
+
     def __str__(self):
         return f"{self.employee.full_name} - {self.amount} ({self.deduct_in_month.strftime('%B %Y')})"
-
 
 class Payroll(models.Model):
     STATUS_CHOICES = [
@@ -305,6 +314,13 @@ class Payroll(models.Model):
     def save(self, *args, **kwargs):
         self.calculate_net_salary()
         super().save(*args, **kwargs)
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        for field in ('basic_salary', 'allowances', 'deductions', 'advance_deduction'):
+            val = getattr(self, field, None)
+            if val is not None and val < 0:
+                raise ValidationError({field: f'{field} cannot be negative.'})
+    
 
     def __str__(self):
         return f"{self.employee.full_name} - {self.month.strftime('%B %Y')} - {self.status}"

@@ -74,6 +74,8 @@ INSTALLED_APPS = [
     'appointments',
     'corsheaders',
     'background_task',
+    'rest_framework_simplejwt.token_blacklist',
+
 ]
 
 MIDDLEWARE = [
@@ -124,6 +126,13 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': os.getenv('API_THROTTLE_ANON', '60/hour'),
         'user': os.getenv('API_THROTTLE_USER', '1000/hour'),
+        
+        'DEFAULT_THROTTLE_RATES': {
+        'anon': os.getenv('API_THROTTLE_ANON', '60/hour'),
+        'user': os.getenv('API_THROTTLE_USER', '1000/hour'),
+        'token': os.getenv('API_THROTTLE_TOKEN', '10/minute'),  # new
+    },
+   
     },
 }
 
@@ -208,7 +217,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=int(os.getenv('JWT_ACCESS_HOURS', '24'))),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=int(os.getenv('JWT_REFRESH_DAYS', '7'))),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': False,
+    'BLACKLIST_AFTER_ROTATION': True,  # was False
 }
 
 # eSewa Settings

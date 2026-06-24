@@ -21,9 +21,9 @@ class TenantMiddleware:
             if member:
                 request.organization = member.organization
                 request.user_role = member.role
-            elif request.user.organization_id:
-                # Legacy users without membership rows — keep working but no role.
-                request.organization = request.user.organization
+            # Legacy fallback removed: users without an OrganizationMember row
+            # get no org on the request. Views using get_organization() will
+            # raise PermissionDenied cleanly instead of silently granting access.
 
             if request.organization:
                 try:

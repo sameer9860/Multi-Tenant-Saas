@@ -40,50 +40,74 @@ class OrgScopedCrmSerializerMixin:
 
 class NoteSerializer(OrgScopedCrmSerializerMixin, serializers.ModelSerializer):
     user_name = serializers.StringRelatedField(source="user", read_only=True)
+
     class Meta:
         model = Note
-        fields = "__all__"
-        read_only_fields = ["organization", "user"]
+        fields = [
+            'id', 'organization', 'lead', 'client', 'customer',
+            'user', 'user_name', 'content', 'created_at',
+        ]
+        read_only_fields = ['id', 'organization', 'user', 'created_at']
+
 
 class InteractionSerializer(OrgScopedCrmSerializerMixin, serializers.ModelSerializer):
     user_name = serializers.StringRelatedField(source="user", read_only=True)
+
     class Meta:
         model = Interaction
-        fields = "__all__"
-        read_only_fields = ["organization", "user"]
+        fields = [
+            'id', 'organization', 'lead', 'client', 'customer',
+            'user', 'user_name', 'type', 'summary', 'date', 'created_at',
+        ]
+        read_only_fields = ['id', 'organization', 'user', 'created_at']
+
 
 class ReminderSerializer(OrgScopedCrmSerializerMixin, serializers.ModelSerializer):
     user_name = serializers.StringRelatedField(source="user", read_only=True)
-    # Using StringRelatedField is safer for null foreign keys
     lead_name = serializers.StringRelatedField(source="lead", read_only=True)
     client_name = serializers.StringRelatedField(source="client", read_only=True)
+
     class Meta:
         model = Reminder
-        fields = "__all__"
-        read_only_fields = ["organization", "user"]
+        fields = [
+            'id', 'organization', 'lead', 'lead_name', 'client', 'client_name',
+            'customer', 'user', 'user_name', 'title', 'description',
+            'remind_at', 'is_completed', 'created_at',
+        ]
+        read_only_fields = ['id', 'organization', 'user', 'created_at']
+
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = "__all__"
-        read_only_fields = ["organization"]
+        fields = ['id', 'organization', 'name', 'color']
+        read_only_fields = ['id', 'organization']
+
 
 class LeadActivitySerializer(serializers.ModelSerializer):
-
     user = serializers.StringRelatedField()
     lead_name = serializers.StringRelatedField(source="lead", read_only=True)
+
     class Meta:
         model = LeadActivity
-        fields = ["id", "organization", "lead", "lead_name", "user", "action", "old_value", "new_value", "created_at"]
+        fields = [
+            'id', 'organization', 'lead', 'lead_name',
+            'user', 'action', 'old_value', 'new_value', 'created_at',
+        ]
+
 
 class LeadSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.StringRelatedField(source="assigned_to", read_only=True)
     tags_detail = TagSerializer(source="tags", many=True, read_only=True)
-    
+
     class Meta:
         model = Lead
-        fields = "__all__"
-        read_only_fields = ["organization"]
+        fields = [
+            'id', 'organization', 'name', 'email', 'phone', 'source',
+            'status', 'assigned_to', 'assigned_to_name',
+            'tags', 'tags_detail', 'created_at',
+        ]
+        read_only_fields = ['id', 'organization', 'created_at']
 
     def validate_assigned_to(self, user):
         if user is None:
@@ -95,16 +119,23 @@ class LeadSerializer(serializers.ModelSerializer):
         return user
 
 
-
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
-        fields = "__all__"
-        read_only_fields = ["organization"]
+        fields = [
+            'id', 'organization', 'name', 'email',
+            'phone', 'company', 'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'organization', 'created_at']
 
 
 class ExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
-        fields = "__all__"
-        read_only_fields = ["organization"]
+        fields = ['id', 'organization', 'title', 'amount', 'category', 'created_at']
+        read_only_fields = ['id', 'organization', 'created_at']
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be positive.")
+        return value

@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from django.utils import timezone
+from apps.core.permissions import IsOwnerOrAdminOrReadOnly, IsLeaveRequestApprover, IsPayrollManager
 from .utils import generate_payslip_pdf
 from apps.core.mixins import TenantScopedViewSetMixin
 from apps.core.permissions import IsOwnerOrAdminOrReadOnly, IsLeaveRequestApprover
@@ -423,7 +424,7 @@ class LeaveRequestViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 class PayrollViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = Payroll.objects.all()
     serializer_class = PayrollSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrAdminOrReadOnly]
+    permission_classes = [IsAuthenticated, IsPayrollManager]  # was IsOwnerOrAdminOrReadOnly
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related('employee')
@@ -621,7 +622,7 @@ class PayrollViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 class SalaryAdvanceViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = SalaryAdvance.objects.all()
     serializer_class = SalaryAdvanceSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrAdminOrReadOnly]
+    permission_classes = [IsAuthenticated, IsPayrollManager]  # was IsOwnerOrAdminOrReadOnly
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related('employee')
@@ -655,7 +656,7 @@ class SalaryAdvanceViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
         serializer.save(organization=org)
 
 class HRDashboardView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsPayrollManager]
 
     def get(self, request):
         org = getattr(request, 'organization', None) or getattr(request.user, 'organization', None)

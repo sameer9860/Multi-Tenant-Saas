@@ -3,10 +3,26 @@ URL configuration for config project.
 """
 from django.contrib import admin
 from django.urls import path, include, re_path
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
+    TokenBlacklistView,
 )
+
+
+class TokenRateThrottle(AnonRateThrottle):
+    """Dedicated tight throttle for login/refresh endpoints."""
+    scope = 'token'
+
+
+class ThrottledTokenObtainPairView(TokenObtainPairView):
+    throttle_classes = [TokenRateThrottle]
+
+
+class ThrottledTokenRefreshView(TokenRefreshView):
+    throttle_classes = [TokenRateThrottle]
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -19,9 +35,9 @@ urlpatterns = [
     path('api/crm/', include('crm.urls')),
     path('api/hr/', include('hr.urls')),
     path('api/appointments/', include('appointments.urls')),
-    # allow both `/api/token` and `/api/token/` (optional trailing slash)
-    re_path(r'^api/token/?$', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    re_path(r'^api/token/refresh/?$', TokenRefreshView.as_view(), name='token_refresh'),
+    re_path(r'^api/token/?$', ThrottledTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    re_path(r'^api/token/refresh/?$', ThrottledTokenRefreshView.as_view(), name='token_refresh'),
+    re_path(r'^api/token/blacklist/?$', TokenBlacklistView.as_view(), name='token_blacklist'),
 ]
 
 from django.conf import settings

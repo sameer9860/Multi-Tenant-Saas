@@ -1,5 +1,5 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
-from .roles import get_user_role_name
+from .roles import get_user_role_name, has_any_role  # fix: has_any_role was missing
 
 
 class IsOwnerOrAdmin(BasePermission):
@@ -30,3 +30,15 @@ class IsLeaveRequestApprover(BasePermission):
         if request.method in SAFE_METHODS or request.method == "POST":
             return True
         return has_any_role(request, ["OWNER", "ADMIN"])
+
+
+class IsPayrollManager(BasePermission):
+    """Salary/payroll data: OWNER/ADMIN/ACCOUNTANT only.
+
+    Blocks STAFF from reading salary, payroll, and advance data.
+    """
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return has_any_role(request, ["OWNER", "ADMIN", "ACCOUNTANT"])

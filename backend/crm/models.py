@@ -124,8 +124,14 @@ class Expense(models.Model):
     category = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.amount is not None and self.amount < 0:
+            raise ValidationError({'amount': 'Expense amount cannot be negative.'})
+
     def __str__(self):
         return f"{self.title} - {self.amount}"
+
 
 class Note(models.Model):
     organization = models.ForeignKey(
