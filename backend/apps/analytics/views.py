@@ -40,7 +40,6 @@ class UsageView(APIView):
                 "clients":  {"used": clients_count,  "limit": _limit(plan_limits.get("clients"))},
                 "invoices": {"used": invoices_count, "limit": _limit(plan_limits.get("invoices"))},
             },
-            # Flat fields for simple dashboard summary
             "leads_count": leads_count,
             "clients_count": clients_count,
             "invoices_count": invoices_count,

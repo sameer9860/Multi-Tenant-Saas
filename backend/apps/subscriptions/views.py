@@ -14,47 +14,37 @@ class UpgradePlanView(APIView):
     """
     POST /api/subscription/upgrade/
 
-    Thin wrapper kept for backwards compatibility.
-    All real upgrade logic lives in apps.billing.views.UpgradePlanAPIView
-    and apps.billing.views.InitiateEsewaPaymentView.
-
-    FREE downgrades are applied immediately.
-    Paid plans return an eSewa payment URL — plan is only activated
-    after the eSewa callback confirms payment.
+    FREE downgrades apply immediately.
+    Paid plans require eSewa payment — plan only activates after callback confirms payment.
+    Trial users cannot switch to paid plans for free.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         plan = (request.data.get("plan") or "").strip().upper()
 
-        valid_plans = list(PLAN_PRICES.keys())
-        if plan not in valid_plans:
+        if plan not in PLAN_PRICES:
             return Response(
-                {"error": f"Invalid plan. Choose from {valid_plans}"},
+                {"error": f"Invalid plan. Choose from {list(PLAN_PRICES.keys())}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        organization = getattr(request, 'organization', None) or getattr(request.user, 'organization', None)
+        organization = getattr(request, 'organization', None)
         if not organization:
             return Response({"error": "Organization not found."}, status=status.HTTP_403_FORBIDDEN)
 
         subscription, _ = Subscription.objects.get_or_create(organization=organization)
 
-        # Block trial users from switching to paid plans without payment
-        if subscription.is_trial and plan != "FREE":
-            # Fall through to payment flow — do NOT upgrade for free
-            pass
-
         # FREE downgrade — apply immediately, no payment needed
         if plan == "FREE":
             subscription.plan = "FREE"
             subscription.is_trial = False
-            subscription.save()
+            subscription.save(update_fields=['plan', 'is_trial'])
             organization.plan = "FREE"
             organization.save(update_fields=["plan"])
             return Response({"message": "Moved to FREE plan.", "plan": "FREE"})
 
-        # Paid plan — initiate eSewa payment
+        # Paid plan — always require payment (blocks trial free upgrades too)
         from apps.billing.models import PaymentTransaction, Payment
 
         transaction_id = str(uuid.uuid4())
@@ -80,15 +70,10 @@ class UpgradePlanView(APIView):
         failure_url = request.build_absolute_uri('/api/billing/esewa/failure/')
 
         params = {
-            'amt': amount,
-            'pdc': 0,
-            'psc': 0,
-            'txAmt': 0,
-            'tAmt': amount,
-            'pid': transaction_id,
+            'amt': amount, 'pdc': 0, 'psc': 0, 'txAmt': 0,
+            'tAmt': amount, 'pid': transaction_id,
             'scd': get_esewa_merchant_code(),
-            'su': success_url,
-            'fu': failure_url,
+            'su': success_url, 'fu': failure_url,
         }
 
         base = getattr(settings, 'ESEWA_BASE_URL', 'https://rc-epay.esewa.com.np/epay/main')
@@ -96,10 +81,8 @@ class UpgradePlanView(APIView):
 
         if getattr(settings, 'ESEWA_USE_MOCK', False):
             mock_params = {
-                'amt': params['amt'],
-                'pid': params['pid'],
-                'su': params['su'],
-                'fu': params['fu'],
+                'amt': params['amt'], 'pid': params['pid'],
+                'su': params['su'], 'fu': params['fu'],
             }
             esewa_url = request.build_absolute_uri(
                 '/api/billing/mock/esewa/?' + urllib.parse.urlencode(mock_params)
