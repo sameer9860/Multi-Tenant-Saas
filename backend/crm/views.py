@@ -73,7 +73,11 @@ class LeadViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminOwnerOrStaffUpdate]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related(
+            'assigned_to', 'organization'
+        ).prefetch_related('tags')
+    # ... rest unchanged
+
 
         status = self.request.query_params.get('status')
         if status:
@@ -280,14 +284,21 @@ class ExpenseViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
 
 
 class NoteViewSet(CrmRelatedObjectMixin, TenantScopedViewSetMixin, viewsets.ModelViewSet):
-    queryset = Note.objects.all()
+    def get_queryset(self):
+        return super().get_queryset().select_related(
+            'user', 'lead', 'client', 'customer', 'organization'
+        )
     serializer_class = NoteSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_params = ['lead', 'client', 'customer']
 
 
 class InteractionViewSet(CrmRelatedObjectMixin, TenantScopedViewSetMixin, viewsets.ModelViewSet):
-    queryset = Interaction.objects.all()
+    def get_queryset(self):
+        return super().get_queryset().select_related(
+            'user', 'lead', 'client', 'customer', 'organization'
+        ).order_by('-date')
+
     serializer_class = InteractionSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     filter_params = ['lead', 'client', 'customer']
@@ -356,10 +367,15 @@ class DashboardView(APIView):
             for item in monthly_revenue_data
         ]
 
-        status_counts = {
-            s: org.leads.filter(status=s).count()
-            for s in ["NEW", "CONTACTED", "INTERESTED", "CONVERTED", "LOST"]
-        }
+        from django.db.models import Count, Case, When, IntegerField
+        status_agg = org.leads.aggregate(
+            NEW=Count(Case(When(status="NEW", then=1), output_field=IntegerField())),
+            CONTACTED=Count(Case(When(status="CONTACTED", then=1), output_field=IntegerField())),
+            INTERESTED=Count(Case(When(status="INTERESTED", then=1), output_field=IntegerField())),
+            CONVERTED=Count(Case(When(status="CONVERTED", then=1), output_field=IntegerField())),
+            LOST=Count(Case(When(status="LOST", then=1), output_field=IntegerField())),
+        )
+        status_counts = status_agg
 
         total_expenses = Expense.objects.filter(organization=org).aggregate(
             total=Sum("amount")

@@ -20,7 +20,7 @@ from django.utils import timezone
 from apps.core.permissions import IsOwnerOrAdminOrReadOnly, IsLeaveRequestApprover, IsPayrollManager
 from .utils import generate_payslip_pdf
 from apps.core.mixins import TenantScopedViewSetMixin
-from apps.core.permissions import IsOwnerOrAdminOrReadOnly, IsLeaveRequestApprover
+from apps.core.permissions import IsOwnerOrAdminOrReadOnly, IsLeaveRequestApprover, IsPayrollManager
 from apps.core.roles import get_user_role_name
 
 MAX_CSV_UPLOAD_BYTES = 5 * 1024 * 1024
@@ -32,8 +32,9 @@ class AttendanceViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOrAdminOrReadOnly]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related('employee', 'employee__department')
         return self.filter_queryset_by_params(queryset).order_by('-date', 'employee__full_name')
+
 
     def filter_queryset_by_params(self, queryset):
         # Filters
@@ -427,8 +428,11 @@ class PayrollViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsPayrollManager]  # was IsOwnerOrAdminOrReadOnly
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('employee')
+        queryset = super().get_queryset().select_related(
+            'employee', 'employee__department', 'employee__designation'
+        )
         return self.filter_queryset_by_params(queryset).order_by('-month', 'employee__full_name')
+
 
     def filter_queryset_by_params(self, queryset):
         employee = self.request.query_params.get('employee')
@@ -604,20 +608,17 @@ class PayrollViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def download_payslip(self, request, pk=None):
         payroll = self.get_object()
-        
-        # Security check: Ensure user belongs to the same organization
-        org = self.get_org()
+
+        org = self.get_organization()   # fix: was self.get_org() which doesn't exist
         if payroll.organization != org:
             raise PermissionDenied("You do not have permission to download this payslip.")
-            
+
         buffer = generate_payslip_pdf(payroll)
-        
         filename = f"payslip_{payroll.employee.full_name.replace(' ', '_')}_{payroll.month.strftime('%b_%Y')}.pdf"
-        
         response = HttpResponse(buffer, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
         return response
+
 
 class SalaryAdvanceViewSet(TenantScopedViewSetMixin, viewsets.ModelViewSet):
     queryset = SalaryAdvance.objects.all()

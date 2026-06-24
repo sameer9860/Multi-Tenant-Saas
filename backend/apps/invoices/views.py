@@ -34,7 +34,7 @@ class CustomerViewSet(TenantScopedViewSetMixin, ModelViewSet):
     pagination_class = InvoicePagination
 
     def get_queryset(self):
-        queryset = super().get_queryset().order_by('-created_at')
+        queryset = super().get_queryset().select_related('organization').order_by('-created_at')
         search = self.request.query_params.get('search')
         if search:
             from django.db.models import Q
