@@ -12,6 +12,7 @@ class TenantScopedViewSetMixin:
     def get_organization(self):
         return getattr(self.request, 'organization', None)
 
+
     def get_queryset(self):
         org = self.get_organization()
         if not org:

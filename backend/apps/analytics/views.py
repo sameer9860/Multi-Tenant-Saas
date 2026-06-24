@@ -10,7 +10,7 @@ from crm.models import Expense
 from apps.invoices.utils import generate_invoice_pdf # Reuse base PDF logic or create new one
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from apps.billing.constants import PLAN_LIMITS   # replaces subscriptions.limits import
+from apps.billing.constants import PLAN_LIMITS
 # replaces subscriptions.limits import
 
 
