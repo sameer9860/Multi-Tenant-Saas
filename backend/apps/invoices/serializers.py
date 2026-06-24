@@ -5,8 +5,11 @@ from apps.core.serializers import filter_queryset_by_organization, get_request_o
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = '__all__'
-        read_only_fields = ('organization',)
+        fields = [
+            'id', 'organization', 'name', 'phone',
+            'email', 'address', 'vat_number', 'created_at',
+        ]
+        read_only_fields = ('id', 'organization', 'created_at')
 
 class InvoiceItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,8 +20,11 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
-        fields = '__all__'
-        read_only_fields = ('organization',)
+        fields = [
+            'id', 'invoice', 'organization', 'amount',
+            'date', 'payment_method', 'reference', 'created_at',
+        ]
+        read_only_fields = ('id', 'organization', 'created_at')
 
     def validate_invoice(self, invoice):
         request = self.context.get('request')

@@ -53,8 +53,23 @@ class VATSummaryView(APIView):
 
     def get(self, request):
         org = request.organization
-        now = timezone.now()
+        if not org:
+            return Response({"error": "Organization not found"}, status=404)
+
+    # Feature gate: reports require BASIC plan or above
+        try:
+            usage = getattr(org, 'usage', None)
+            if usage:
+                limit = usage.get_plan_limit('reports')
+                if limit == 0:
+                    return Response(
+                        {"error": "VAT reports are not available on your current plan. Upgrade to access."},
+                        status=403
+                    )
+        except Exception:
+            pass
         
+        now = timezone.now()
         # Monthly VAT Summary
         month = int(request.query_params.get('month', now.month))
         year = int(request.query_params.get('year', now.year))
@@ -136,6 +151,22 @@ class MonthlyReportView(APIView):
 
     def get(self, request):
         org = request.organization
+        if not org:
+            return Response({"error": "Organization not found"}, status=404)
+
+    # Feature gate: reports require BASIC plan or above
+        try:
+            usage = getattr(org, 'usage', None)
+            if usage:
+                limit = usage.get_plan_limit('reports')
+                if limit == 0:
+                    return Response(
+                        {"error": "Monthly reports are not available on your current plan. Upgrade to access."},
+                        status=403
+                    )
+        except Exception:
+            pass
+        
         now = timezone.now()
         month = int(request.query_params.get('month', now.month))
         year = int(request.query_params.get('year', now.year))
